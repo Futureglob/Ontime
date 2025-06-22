@@ -144,14 +144,14 @@ export const realtimeService = {
     tableName: string,
     filterString: string,
     onUpdate: (payload: RealtimePostgresChangesPayload<T>) => void,
-    dbEvent: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL // Use enum for type and default
+    dbEvent: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL
   ): RealtimeSubscription {
     const channelName = `${tableName.replace(/_/g, "-")}-changes-${Date.now()}`;
 
-    // Explicitly type the filter configuration object
-    const filterConfig: RealtimePostgresChangesFilter<typeof dbEvent> = {
+    // Construct filterConfig with explicit typing matching the expected structure
+    const filterConfigInput = {
       event: dbEvent,
-      schema: "public",
+      schema: "public" as const, // Added 'as const' for more specific typing
       table: tableName,
       filter: filterString,
     };
@@ -159,8 +159,8 @@ export const realtimeService = {
     const channel = supabase
       .channel(channelName)
       .on(
-        "postgres_changes", // This is the event type for the channel subscription
-        filterConfig, // Pass the explicitly typed filter object
+        "postgres_changes",
+        filterConfigInput as RealtimePostgresChangesFilter<REALTIME_POSTGRES_CHANGES_LISTEN_EVENT>, // Use the enum type directly in assertion
         onUpdate
       )
       .subscribe();
