@@ -124,7 +124,7 @@ export default function FieldWork() {
         if (payload.eventType === 'INSERT' && payload.new) {
           // payload.new is TaskRow, which doesn't have assigned_by_profile directly.
           // Use a generic name or fetch profile if critical. For notification, generic is fine.
-          const assignerName = (payload.new as any).assigned_by_profile?.full_name || userProfile?.full_name || "Task Manager";
+          const assignerName = "Task Manager"; // Simplified to avoid any cast
           notificationService.showTaskAssignedNotification(payload.new.title || 'New Task', assignerName);
         } else if (payload.eventType === 'UPDATE' && payload.new) {
           notificationService.showTaskStatusNotification(

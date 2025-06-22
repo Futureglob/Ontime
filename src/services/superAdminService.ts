@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface SuperAdmin {
@@ -36,7 +37,7 @@ export const superAdminService = {
   async isSuperAdmin(userId: string): Promise<boolean> {
     try {
       const { data, error } = await supabase
-        .from("super_admins" as any) // Temporary cast
+        .from("super_admins")
         .select("id")
         .eq("user_id", userId)
         .single();
@@ -53,7 +54,7 @@ export const superAdminService = {
   async getSuperAdmins(): Promise<SuperAdmin[]> {
     try {
       const { data, error } = await supabase
-        .from("super_admins" as any) // Temporary cast
+        .from("super_admins")
         .select(`
           *,
           user:profiles!super_admins_user_id_fkey( 
@@ -64,7 +65,7 @@ export const superAdminService = {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data as any) || []; // Temporary cast
+      return data || [];
     } catch (error) {
       console.error("Error fetching super admins:", error);
       throw error;
@@ -76,7 +77,7 @@ export const superAdminService = {
     try {
       const currentUser = (await supabase.auth.getUser()).data.user;
       const { data, error } = await supabase
-        .from("super_admins" as any) // Temporary cast
+        .from("super_admins")
         .insert([
           {
             user_id: userId,
@@ -88,7 +89,7 @@ export const superAdminService = {
         .single();
 
       if (error) throw error;
-      return data as SuperAdmin; // Temporary cast
+      return data;
     } catch (error) {
       console.error("Error adding super admin:", error);
       throw error;
@@ -99,7 +100,7 @@ export const superAdminService = {
   async removeSuperAdmin(superAdminId: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from("super_admins" as any) // Temporary cast
+        .from("super_admins")
         .delete()
         .eq("id", superAdminId);
 
@@ -114,7 +115,7 @@ export const superAdminService = {
   async updateSuperAdminPermissions(superAdminId: string, permissions: Record<string, boolean>): Promise<void> {
     try {
       const { error } = await supabase
-        .from("super_admins" as any) // Temporary cast
+        .from("super_admins")
         .update({ permissions })
         .eq("id", superAdminId);
 
@@ -129,12 +130,12 @@ export const superAdminService = {
   async getSystemSettings(): Promise<SystemSettings[]> {
     try {
       const { data, error } = await supabase
-        .from("system_settings" as any) // Temporary cast
+        .from("system_settings")
         .select("*")
         .order("key");
 
       if (error) throw error;
-      return (data as any) || []; // Temporary cast
+      return data || [];
     } catch (error) {
       console.error("Error fetching system settings:", error);
       throw error;
@@ -146,13 +147,13 @@ export const superAdminService = {
     try {
       const currentUser = (await supabase.auth.getUser()).data.user;
       const { error } = await supabase
-        .from("system_settings" as any) // Temporary cast
+        .from("system_settings")
         .upsert({
           key,
           value,
           description,
           updated_by: currentUser?.id
-        } as any); // Temporary cast for upsert data
+        });
 
       if (error) throw error;
     } catch (error) {
@@ -261,7 +262,7 @@ export const superAdminService = {
     try {
       const { error } = await supabase
         .from("organizations")
-        .update({ is_active: isActive } as any) // Temporary cast for update data
+        .update({ is_active: isActive })
         .eq("id", organizationId);
 
       if (error) throw error;
@@ -272,7 +273,7 @@ export const superAdminService = {
   },
 
   // Get user activity across all organizations
-  async getUserActivity(): Promise<Array<{ // Removed unused 'limit' parameter
+  async getUserActivity(): Promise<Array<{
     user_id: string;
     user_name: string;
     organization: string;
