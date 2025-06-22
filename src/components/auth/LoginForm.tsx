@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,8 @@ export default function LoginForm() {
 
     try {
       await login(email, password);
-    } catch (err) {
+    } catch (err: unknown) { // Specify type for err or use it
+      console.error("Login failed:", err); // Example: log the error
       setError("Invalid credentials. Please try again.");
     }
   };

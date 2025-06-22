@@ -102,6 +102,6 @@ export interface Notification {
   message: string;
   type: "task_assigned" | "task_updated" | "message" | "reminder";
   isRead: boolean;
-  data?: any;
+  data?: Record<string, unknown>; // Changed from any to Record<string, unknown>
   createdAt: Date;
 }

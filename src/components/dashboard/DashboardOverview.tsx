@@ -1,14 +1,13 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
   ClipboardList, 
-  Users, 
+  // Users, // Removed unused import
   Clock, 
   CheckCircle, 
-  AlertCircle, 
-  TrendingUp 
+  AlertCircle 
+  // TrendingUp // Removed unused import
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 

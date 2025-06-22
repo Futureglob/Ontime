@@ -1,12 +1,12 @@
-
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+// import { Badge } from "@/components/ui/badge"; // Removed unused import
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Filter, MapPin, Clock, User, Calendar } from "lucide-react";
+// Removed MapPin, Clock, User, Calendar as they are not used directly here
+import { Plus, Search, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Task } from "@/types";
 import TaskForm from "./TaskForm";
@@ -108,26 +108,8 @@ export default function TaskManagement() {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "assigned": return "bg-yellow-100 text-yellow-800";
-      case "accepted": return "bg-blue-100 text-blue-800";
-      case "in_progress": return "bg-purple-100 text-purple-800";
-      case "on_hold": return "bg-orange-100 text-orange-800";
-      case "completed": return "bg-green-100 text-green-800";
-      case "returned": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high": return "text-red-600";
-      case "medium": return "text-yellow-600";
-      case "low": return "text-green-600";
-      default: return "text-gray-600";
-    }
-  };
+  // Removed getStatusColor function as it's not used in this component
+  // Removed getPriorityColor function as it's not used in this component
 
   const canCreateTasks = user?.role === "org_admin" || user?.role === "task_manager";
 

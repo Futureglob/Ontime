@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "./Sidebar";
@@ -14,7 +13,7 @@ import Settings from "@/components/settings/Settings";
 
 export default function DashboardLayout() {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const { user } = useAuth();
+  // const { user } = useAuth(); // Removed unused variable assignment
 
   const renderContent = () => {
     switch (activeTab) {
