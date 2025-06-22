@@ -15,10 +15,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock authentication check
-    const mockUser = localStorage.getItem("ontime_user");
-    if (mockUser) {
-      setUser(JSON.parse(mockUser));
+    // Only access localStorage on the client side
+    if (typeof window !== "undefined") {
+      const mockUser = localStorage.getItem("ontime_user");
+      if (mockUser) {
+        setUser(JSON.parse(mockUser));
+      }
     }
     setLoading(false);
   }, []);

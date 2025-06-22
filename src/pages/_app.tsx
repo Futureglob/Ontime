@@ -9,12 +9,15 @@ import Head from "next/head";
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    // Only run PWA service registration on the client side
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       pwaService.registerServiceWorker()
         .then(() => {
           console.log("Service Worker registered from _app.tsx");
-          // Attempt to register background sync
-          pwaService.registerBackgroundSync();
+          // Only attempt background sync if the browser supports it
+          if ("serviceWorker" in navigator && "sync" in window.ServiceWorkerRegistration.prototype) {
+            pwaService.registerBackgroundSync();
+          }
         })
         .catch(error => console.error("Service Worker registration failed in _app.tsx:", error));
     }
