@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { RealtimeChannel, RealtimePostgresChangesPayload, RealtimePostgresChangesFilter } from "@supabase/supabase-js";
 import type { Task, Message, Profile, TaskPhoto, TaskStatusHistory } from "@/types/database";
 
 type TaskChangesPayload = RealtimePostgresChangesPayload<Task>;
@@ -23,13 +22,13 @@ export const realtimeService = {
     const channel = supabase
       .channel(`tasks-${organizationId}`)
       .on(
-        "postgres_changes",
+        "postgres_changes" as const,
         {
-          event: "*",
+          event: "*" as RealtimePostgresChangesFilter<"*">["event"],
           schema: "public",
           table: "tasks",
           filter: `organization_id=eq.${organizationId}`
-        },
+        } as RealtimePostgresChangesFilter<"*">,
         onTaskUpdate
       )
       .subscribe();
@@ -47,13 +46,13 @@ export const realtimeService = {
     const channel = supabase
       .channel(`messages-${taskId}`)
       .on(
-        "postgres_changes",
+        "postgres_changes" as const,
         {
-          event: "INSERT",
+          event: "INSERT" as RealtimePostgresChangesFilter<"INSERT">["event"],
           schema: "public",
           table: "messages",
           filter: `task_id=eq.${taskId}`
-        },
+        } as RealtimePostgresChangesFilter<"INSERT">,
         onMessageReceived
       )
       .subscribe();
@@ -71,13 +70,13 @@ export const realtimeService = {
     const channel = supabase
       .channel(`employees-${organizationId}`)
       .on(
-        "postgres_changes",
+        "postgres_changes" as const,
         {
-          event: "*",
+          event: "*" as RealtimePostgresChangesFilter<"*">["event"],
           schema: "public",
           table: "profiles",
           filter: `organization_id=eq.${organizationId}`
-        },
+        } as RealtimePostgresChangesFilter<"*">,
         onEmployeeUpdate
       )
       .subscribe();
@@ -95,13 +94,13 @@ export const realtimeService = {
     const channel = supabase
       .channel(`photos-${taskId}`)
       .on(
-        "postgres_changes",
+        "postgres_changes" as const,
         {
-          event: "INSERT",
+          event: "INSERT" as RealtimePostgresChangesFilter<"INSERT">["event"],
           schema: "public",
           table: "task_photos",
           filter: `task_id=eq.${taskId}`
-        },
+        } as RealtimePostgresChangesFilter<"INSERT">,
         onPhotoUploaded
       )
       .subscribe();
@@ -119,13 +118,13 @@ export const realtimeService = {
     const channel = supabase
       .channel(`status-${taskId}`)
       .on(
-        "postgres_changes",
+        "postgres_changes" as const,
         {
-          event: "INSERT",
+          event: "INSERT" as RealtimePostgresChangesFilter<"INSERT">["event"],
           schema: "public",
           table: "task_status_history",
           filter: `task_id=eq.${taskId}`
-        },
+        } as RealtimePostgresChangesFilter<"INSERT">,
         onStatusChange
       )
       .subscribe();
@@ -146,13 +145,13 @@ export const realtimeService = {
     const channel = supabase
       .channel(channelName)
       .on(
-        "postgres_changes",
+        "postgres_changes" as const,
         {
-          event: dbEvent,
+          event: dbEvent as RealtimePostgresChangesFilter<typeof dbEvent>["event"],
           schema: "public",
           table: tableName,
           filter: filterString
-        },
+        } as RealtimePostgresChangesFilter<typeof dbEvent>,
         onUpdate
       )
       .subscribe((status, err) => {
