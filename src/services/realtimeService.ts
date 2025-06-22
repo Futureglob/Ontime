@@ -1,14 +1,14 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import type { Task, Message, Profile, TaskPhoto, TaskStatusHistory } from "@/types/database";
+import { RealtimeChannel } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
-type TaskChangesPayload = RealtimePostgresChangesPayload<Task>;
-type MessageChangesPayload = RealtimePostgresChangesPayload<Message>;
-type ProfileChangesPayload = RealtimePostgresChangesPayload<Profile>;
-type TaskPhotoChangesPayload = RealtimePostgresChangesPayload<TaskPhoto>;
-type TaskStatusHistoryChangesPayload = RealtimePostgresChangesPayload<TaskStatusHistory>;
-type GenericChangesPayload<T extends Record<string, unknown>> = RealtimePostgresChangesPayload<T>;
+type Tables = Database["public"]["Tables"];
+type TaskRow = Tables["tasks"]["Row"];
+type MessageRow = Tables["messages"]["Row"];
+type ProfileRow = Tables["profiles"]["Row"];
+type TaskPhotoRow = Tables["task_photos"]["Row"];
+type TaskStatusHistoryRow = Tables["task_status_history"]["Row"];
 
 export interface RealtimeSubscription {
   channel: RealtimeChannel;
@@ -18,7 +18,7 @@ export interface RealtimeSubscription {
 export const realtimeService = {
   subscribeToTaskUpdates(
     organizationId: string,
-    onTaskUpdate: (payload: TaskChangesPayload) => void
+    onTaskUpdate: (payload: any) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`tasks-${organizationId}`)
@@ -30,7 +30,7 @@ export const realtimeService = {
           table: "tasks",
           filter: `organization_id=eq.${organizationId}`
         },
-        (payload) => onTaskUpdate(payload as TaskChangesPayload)
+        onTaskUpdate
       )
       .subscribe();
 
@@ -42,7 +42,7 @@ export const realtimeService = {
 
   subscribeToTaskMessages(
     taskId: string,
-    onMessageReceived: (payload: MessageChangesPayload) => void
+    onMessageReceived: (payload: any) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`messages-${taskId}`)
@@ -54,7 +54,7 @@ export const realtimeService = {
           table: "messages",
           filter: `task_id=eq.${taskId}`
         },
-        (payload) => onMessageReceived(payload as MessageChangesPayload)
+        onMessageReceived
       )
       .subscribe();
 
@@ -66,7 +66,7 @@ export const realtimeService = {
 
   subscribeToEmployeeUpdates(
     organizationId: string,
-    onEmployeeUpdate: (payload: ProfileChangesPayload) => void
+    onEmployeeUpdate: (payload: any) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`employees-${organizationId}`)
@@ -78,7 +78,7 @@ export const realtimeService = {
           table: "profiles",
           filter: `organization_id=eq.${organizationId}`
         },
-        (payload) => onEmployeeUpdate(payload as ProfileChangesPayload)
+        onEmployeeUpdate
       )
       .subscribe();
 
@@ -90,7 +90,7 @@ export const realtimeService = {
 
   subscribeToTaskPhotos(
     taskId: string,
-    onPhotoUploaded: (payload: TaskPhotoChangesPayload) => void
+    onPhotoUploaded: (payload: any) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`photos-${taskId}`)
@@ -102,7 +102,7 @@ export const realtimeService = {
           table: "task_photos",
           filter: `task_id=eq.${taskId}`
         },
-        (payload) => onPhotoUploaded(payload as TaskPhotoChangesPayload)
+        onPhotoUploaded
       )
       .subscribe();
 
@@ -114,7 +114,7 @@ export const realtimeService = {
 
   subscribeToTaskStatusHistory(
     taskId: string,
-    onStatusChange: (payload: TaskStatusHistoryChangesPayload) => void
+    onStatusChange: (payload: any) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`status-${taskId}`)
@@ -126,7 +126,7 @@ export const realtimeService = {
           table: "task_status_history",
           filter: `task_id=eq.${taskId}`
         },
-        (payload) => onStatusChange(payload as TaskStatusHistoryChangesPayload)
+        onStatusChange
       )
       .subscribe();
 
@@ -136,10 +136,10 @@ export const realtimeService = {
     };
   },
 
-  subscribeToTable<T extends Record<string, unknown>>(
+  subscribeToTable(
     tableName: string,
     filterString: string,
-    onUpdate: (payload: GenericChangesPayload<T>) => void,
+    onUpdate: (payload: any) => void,
     dbEvent: "*" | "INSERT" | "UPDATE" | "DELETE" = "*"
   ): RealtimeSubscription {
     const channelName = `${tableName.replace(/_/g, "-")}-changes-${Date.now()}`;
@@ -153,18 +153,23 @@ export const realtimeService = {
           table: tableName,
           filter: filterString
         },
-        (payload) => onUpdate(payload as GenericChangesPayload<T>)
+        onUpdate
       )
-      .subscribe((status, err) => {
-        if (err) {
-          console.error(`Error subscribing to ${channelName}:`, err);
-        }
-      });
+      .subscribe();
 
     return {
       channel,
       unsubscribe: () => supabase.removeChannel(channel)
     };
+  },
+
+  // Utility methods for managing subscriptions
+  unsubscribeAll() {
+    supabase.removeAllChannels();
+  },
+
+  getActiveChannels() {
+    return supabase.getChannels();
   }
 };
 
