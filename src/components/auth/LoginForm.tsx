@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
-import { authService } from "@/services/authService";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 
 export default function LoginForm() {
   const router = useRouter();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -28,7 +29,7 @@ export default function LoginForm() {
 
     try {
       setLoading(true);
-      await authService.signIn(formData.email, formData.password);
+      await login(formData.email, formData.password);
       router.push("/");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -127,9 +128,7 @@ export default function LoginForm() {
                   onClick={() => {
                     const email = prompt("Enter your email for password reset:");
                     if (email) {
-                      authService.resetPassword(email)
-                        .then(() => alert("Password reset email sent!"))
-                        .catch(() => alert("Failed to send reset email"));
+                      alert("Password reset functionality will be implemented with Supabase integration");
                     }
                   }}
                 >
