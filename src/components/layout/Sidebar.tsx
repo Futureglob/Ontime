@@ -9,8 +9,8 @@ import {
   MapPin, 
   MessageSquare, 
   BarChart3, 
-  Building, 
-  Settings,
+  Settings, 
+  Building2,
   User
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,15 +18,15 @@ import { profileService } from "@/services/profileService";
 import { Profile, UserRole } from "@/types/database";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] },
-  { name: "Employees", href: "/employees", icon: Users, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-  { name: "Field Work", href: "/field", icon: MapPin, roles: [UserRole.EMPLOYEE] },
-  { name: "Chat", href: "/chat", icon: MessageSquare, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] },
-  { name: "Analytics", href: "/analytics", icon: BarChart3, roles: [UserRole.ADMIN, UserRole.MANAGER] },
-  { name: "Organization", href: "/organization", icon: Building, roles: [UserRole.ADMIN] },
-  { name: "Profile", href: "/profile", icon: User, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] },
-  { name: "Settings", href: "/settings", icon: Settings, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] }
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Employees", href: "/employees", icon: Users },
+  { name: "Field Work", href: "/field", icon: MapPin },
+  { name: "Messages", href: "/chat", icon: MessageSquare },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Organization", href: "/organization", icon: Building2 },
+  { name: "Profile", href: "/profile", icon: User },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
