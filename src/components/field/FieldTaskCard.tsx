@@ -281,9 +281,16 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
                         accept="image/*"
                         capture="environment"
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handlePhotoCapture(file);
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            const file = files[0];
+                            // Explicitly check if the selected item is a File object
+                            if (file instanceof File) {
+                              handlePhotoCapture(file);
+                            } else {
+                              console.error("Selected item is not a File object:", file);
+                              // Optionally, display an error message to the user here
+                            }
                           }
                         }}
                         className="w-full"
