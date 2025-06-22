@@ -33,7 +33,7 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
     employee_id: employee?.employee_id || "",
     designation: employee?.designation || "",
     mobile_number: employee?.mobile_number || "",
-    role: employee?.role || UserRole.EMPLOYEE,
+    role: (employee?.role as UserRole) || UserRole.EMPLOYEE,
     email: "",
     password: ""
   });
