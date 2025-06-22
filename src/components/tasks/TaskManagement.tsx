@@ -1,18 +1,18 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card"; // Removed CardHeader, CardTitle
-// Removed Badge import
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, Clock, User } from "lucide-react"; // Removed MapPin
+import { Plus, Search, Filter, Clock, User, MapPin, Zap } from "lucide-react";
 import { taskService } from "@/services/taskService";
 import { profileService } from "@/services/profileService";
+import { realtimeService } from "@/services/realtimeService";
 import { useAuth } from "@/contexts/AuthContext";
-import { TaskStatus, UserRole, Profile, Task as TaskType } from "@/types/database"; // Renamed Task to TaskType to avoid conflict
+import { TaskStatus, UserRole, Profile, Task as TaskType } from "@/types/database";
 import TaskCard from "./TaskCard";
 import TaskForm from "./TaskForm";
 
-// Define a more specific type for the task that includes profile data
 interface EnrichedTask extends TaskType {
   assigned_to_profile?: { full_name: string; employee_id?: string | null };
   assigned_by_profile?: { full_name: string };
@@ -27,6 +27,21 @@ export default function TaskManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Real-time subscription and offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const loadUserProfile = useCallback(async () => {
     if (user) {
@@ -40,7 +55,7 @@ export default function TaskManagement() {
   }, [user]);
 
   const loadTasks = useCallback(async () => {
-    if (user && userProfile) { // Ensure userProfile is loaded before fetching tasks based on role
+    if (user && userProfile) {
       try {
         setLoading(true);
         let tasksData;
@@ -56,11 +71,7 @@ export default function TaskManagement() {
         setLoading(false);
       }
     } else if (user && !userProfile) {
-      // If userProfile is not yet loaded but user exists, it might be the initial load.
-      // loadUserProfile will trigger a re-render, and then loadTasks will run with userProfile.
-      // Alternatively, you could chain them or ensure profile is fetched first.
-      // For now, this handles the case where userProfile might not be immediately available.
-      setLoading(true); // Keep loading true until profile and tasks are fetched
+      setLoading(true);
     }
   }, [user, userProfile]);
 
@@ -75,6 +86,24 @@ export default function TaskManagement() {
     }
   }, [user, userProfile]);
 
+  // Set up real-time subscriptions
+  useEffect(() => {
+    if (!userProfile?.organization_id) return;
+
+    const subscription = realtimeService.subscribeToTable(
+      "tasks",
+      `organization_id=eq.${userProfile.organization_id}`,
+      (payload) => {
+        console.log("Real-time task update:", payload);
+        loadTasks();
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [userProfile?.organization_id, loadTasks]);
+
   useEffect(() => {
     if (user) {
       loadUserProfile();
@@ -82,12 +111,11 @@ export default function TaskManagement() {
   }, [user, loadUserProfile]);
 
   useEffect(() => {
-    if (userProfile) { // Load tasks and employees once userProfile is available
+    if (userProfile) {
       loadTasks();
       loadEmployees();
     }
   }, [userProfile, loadTasks, loadEmployees]);
-
 
   const handleTaskCreated = () => {
     setShowTaskForm(false);
@@ -97,8 +125,6 @@ export default function TaskManagement() {
   const handleTaskUpdated = () => {
     loadTasks();
   };
-
-  // getStatusColor function is removed as it's not used here (it's in TaskCard)
 
   const filteredTasks = tasks.filter(task => {
     const titleMatch = task.title?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -114,8 +140,16 @@ export default function TaskManagement() {
     const assigned = tasks.filter(t => t.status === TaskStatus.ASSIGNED).length;
     const inProgress = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
     const completed = tasks.filter(t => t.status === TaskStatus.COMPLETED).length;
+    const urgent = tasks.filter(t => {
+      if (!t.deadline) return false;
+      const deadline = new Date(t.deadline);
+      const now = new Date();
+      const timeDiff = deadline.getTime() - now.getTime();
+      const daysDiff = timeDiff / (1000 * 3600 * 24);
+      return daysDiff <= 1 && t.status !== TaskStatus.COMPLETED;
+    }).length;
     
-    return { total, assigned, inProgress, completed };
+    return { total, assigned, inProgress, completed, urgent };
   };
 
   const stats = getTaskStats();
@@ -129,83 +163,100 @@ export default function TaskManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Task Management</h1>
-          <p className="text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-bold">Task Management</h1>
+            {!isOnline && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                Offline
+              </div>
+            )}
+            {isOnline && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                <Zap className="w-3 h-3" />
+                Live
+              </div>
+            )}
+          </div>
+          <p className="text-muted-foreground text-sm md:text-base">
             {userProfile?.role === UserRole.EMPLOYEE 
               ? "View and manage your assigned tasks" 
               : "Create, assign, and monitor tasks"}
           </p>
         </div>
         {userProfile?.role !== UserRole.EMPLOYEE && (
-          <Button onClick={() => setShowTaskForm(true)} className="flex items-center gap-2">
+          <Button onClick={() => setShowTaskForm(true)} className="flex items-center gap-2 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             Create Task
           </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Tasks</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-xl md:text-2xl font-bold">{stats.total}</p>
               </div>
-              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <Clock className="h-4 w-4 text-blue-600" />
+              <div className="h-6 w-6 md:h-8 md:w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <Clock className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Assigned</p>
-                <p className="text-2xl font-bold">{stats.assigned}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Assigned</p>
+                <p className="text-xl md:text-2xl font-bold">{stats.assigned}</p>
               </div>
-              <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-yellow-600" />
+              <div className="h-6 w-6 md:h-8 md:w-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                <User className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">In Progress</p>
-                <p className="text-2xl font-bold">{stats.inProgress}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Active</p>
+                <p className="text-xl md:text-2xl font-bold">{stats.inProgress}</p>
               </div>
-              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <Clock className="h-4 w-4 text-orange-600" />
+              <div className="h-6 w-6 md:h-8 md:w-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <MapPin className="h-3 w-3 md:h-4 md:w-4 text-orange-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold">{stats.completed}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Urgent</p>
+                <p className="text-xl md:text-2xl font-bold text-red-600">{stats.urgent}</p>
               </div>
-              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                <Clock className="h-4 w-4 text-green-600" />
+              <div className="h-6 w-6 md:h-8 md:w-8 bg-red-100 rounded-full flex items-center justify-center">
+                <Clock className="h-3 w-3 md:h-4 md:w-4 text-red-600" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
@@ -232,7 +283,8 @@ export default function TaskManagement() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Task Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {filteredTasks.map((task) => (
           <TaskCard
             key={task.id}
@@ -246,7 +298,7 @@ export default function TaskManagement() {
 
       {filteredTasks.length === 0 && (
         <Card>
-          <CardContent className="p-12 text-center">
+          <CardContent className="p-8 md:p-12 text-center">
             <div className="text-muted-foreground">
               {searchTerm || statusFilter !== "all" 
                 ? "No tasks match your search criteria" 
