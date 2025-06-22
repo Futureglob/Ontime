@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-// Removed unused Button import
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// Removed unused Filter, Clock, Zap imports. Kept Search, MapPin, Wifi, WifiOff
-import { Search, MapPin, Wifi, WifiOff } from "lucide-react";
+import { Search, MapPin, Wifi, WifiOff, Bell, BellOff } from "lucide-react";
 import { taskService } from "@/services/taskService";
 import { profileService } from "@/services/profileService";
 import { realtimeService } from "@/services/realtimeService";
+import { notificationService } from "@/services/notificationService";
+import { offlineService } from "@/services/offlineService";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskStatus, UserRole, Profile, Task as TaskType } from "@/types/database";
 import FieldTaskCard from "./FieldTaskCard";
@@ -25,10 +25,15 @@ export default function FieldWork() {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   // Real-time subscription and offline detection
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Sync offline data when back online
+      offlineService.syncOfflineData();
+    };
     const handleOffline = () => setIsOnline(false);
     
     window.addEventListener("online", handleOnline);
@@ -38,6 +43,11 @@ export default function FieldWork() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
+  }, []);
+
+  // Check notification permission status
+  useEffect(() => {
+    setNotificationsEnabled(Notification.permission === 'granted');
   }, []);
 
   // Get current location
@@ -72,24 +82,49 @@ export default function FieldWork() {
       try {
         setLoading(true);
         const tasksData = await taskService.getTasksByEmployee(user.id);
-        setTasks((tasksData as EnrichedTask[]) || []);
+        const enrichedTasks = (tasksData as EnrichedTask[]) || [];
+        setTasks(enrichedTasks);
+        
+        // Cache tasks for offline access
+        if (isOnline) {
+          offlineService.cacheTaskData(enrichedTasks);
+        }
       } catch (error) {
         console.error("Error loading tasks:", error);
+        
+        // Load cached data if offline
+        if (!isOnline) {
+          const cachedTasks = offlineService.getCachedTaskData();
+          if (cachedTasks) {
+            setTasks(cachedTasks);
+          }
+        }
       } finally {
         setLoading(false);
       }
     }
-  }, [user, userProfile]);
+  }, [user, userProfile, isOnline]);
 
   // Set up real-time subscriptions for employee tasks
   useEffect(() => {
-    if (!user || userProfile?.role !== UserRole.EMPLOYEE) return;
+    if (!user || userProfile?.role !== UserRole.EMPLOYEE || !isOnline) return;
 
     const subscription = realtimeService.subscribeToTable(
       "tasks",
       `assigned_to=eq.${user.id}`,
       (payload) => {
         console.log("Real-time task update:", payload);
+        
+        // Show notification for task updates
+        if (payload.eventType === 'INSERT' && payload.new) {
+          notificationService.notifyTaskAssigned(payload.new.title || 'New Task');
+        } else if (payload.eventType === 'UPDATE' && payload.new) {
+          notificationService.notifyTaskUpdated(
+            payload.new.title || 'Task', 
+            payload.new.status || 'Updated'
+          );
+        }
+        
         loadTasks();
       }
     );
@@ -97,7 +132,7 @@ export default function FieldWork() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [user, userProfile?.role, loadTasks]);
+  }, [user, userProfile?.role, loadTasks, isOnline]);
 
   useEffect(() => {
     if (user) {
@@ -113,6 +148,20 @@ export default function FieldWork() {
 
   const handleTaskUpdated = () => {
     loadTasks();
+  };
+
+  const toggleNotifications = async () => {
+    try {
+      if (notificationsEnabled) {
+        // Can't programmatically disable, just update state
+        setNotificationsEnabled(false);
+      } else {
+        const permission = await notificationService.requestPermission();
+        setNotificationsEnabled(permission === 'granted');
+      }
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+    }
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -179,6 +228,17 @@ export default function FieldWork() {
                   Online
                 </div>
               )}
+              <button
+                onClick={toggleNotifications}
+                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                  notificationsEnabled 
+                    ? 'bg-blue-100 text-blue-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {notificationsEnabled ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
+                {notificationsEnabled ? 'Notifications On' : 'Notifications Off'}
+              </button>
             </div>
             <p className="text-muted-foreground text-sm">
               Manage your assigned tasks and field activities
