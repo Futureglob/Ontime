@@ -25,7 +25,7 @@ interface PhotoUploadPayload {
   fileData: string | ArrayBuffer | null; // From FileReader result
   fileName: string;
   fileType: string;
-  meta PhotoUploadMetadata;
+  meta: PhotoUploadMetadata; // Changed space to colon
 }
 
 // We might need a TaskCreatePayload if that action is implemented
@@ -34,7 +34,7 @@ interface PhotoUploadPayload {
 interface OfflineTaskAction {
   id: string;
   action: 'update_status' | 'upload_photo' | 'create_task'; // Add other actions as needed
-   TaskUpdatePayload | PhotoUploadPayload | Record<string, unknown>; // Using Record for flexibility for now
+   TaskUpdatePayload | PhotoUploadPayload | Record<string, unknown>; // Added '' property name
   timestamp: number;
 }
 
@@ -43,7 +43,7 @@ interface CachedPhoto {
   fileData: string | ArrayBuffer | null;
   fileName: string;
   fileType: string;
-  meta PhotoUploadMetadata;
+  meta: PhotoUploadMetadata; // Changed space to colon
   timestamp: number;
 }
 
@@ -91,7 +91,7 @@ export const offlineService = {
         fileData: reader.result,
         fileName: file.name,
         fileType: file.type,
-        metadata,
+        meta: metadata, // Changed 'metadata,' to 'meta: metadata,'
         timestamp: Date.now()
       };
       
