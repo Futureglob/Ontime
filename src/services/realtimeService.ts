@@ -1,9 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
   RealtimeChannel,
-  RealtimePostgresChangesPayload,
-  RealtimePostgresChangesFilter, // Import this
-  REALTIME_POSTGRES_CHANGES_LISTEN_EVENT // Import this
+  RealtimePostgresChangesPayload
+  // Removed RealtimePostgresChangesFilter, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT
 } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -140,7 +139,7 @@ export const realtimeService = {
     };
   },
 
-  subscribeToTable<T extends Record<string, unknown>>( // eslint-disable-line @typescript-eslint/no-explicit-any
+  subscribeToTable<T extends Record<string, unknown>>(
     tableName: string,
     filterString: string,
     onUpdate: (payload: RealtimePostgresChangesPayload<T>) => void,
@@ -148,16 +147,19 @@ export const realtimeService = {
   ): RealtimeSubscription {
     const channelName = `${tableName.replace(/_/g, "-")}-changes-${Date.now()}`;
 
+    const filterConfig = {
+      event: dbEvent,
+      schema: "public",
+      table: tableName,
+      filter: filterString,
+    };
+
     const channel = supabase
       .channel(channelName)
       .on(
         "postgres_changes",
-        {
-          event: dbEvent,
-          schema: "public",
-          table: tableName,
-          filter: filterString,
-        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        filterConfig as any, // Cast to any to bypass complex type inference issues
         onUpdate
       )
       .subscribe();
