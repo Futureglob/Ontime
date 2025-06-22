@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause, WifiOff } from "lucide-react"; // Removed Wifi
+import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause, WifiOff } from "lucide-react";
 import { TaskStatus, Task, PhotoType } from "@/types/database";
 import { taskService } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
@@ -27,8 +27,8 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Monitor online/offline status
-  useState(() => {
+  // Monitor online/offline status - Fixed useEffect usage
+  useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     
@@ -39,7 +39,7 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  });
+  }, []);
 
   const getStatusColor = (status: string | null | undefined) => {
     switch (status) {
@@ -95,7 +95,6 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
       if (isOnline) {
         await taskService.updateTaskStatus(task.id, { status: newStatus, notes }, task.assigned_to!);
         
-        // Show success notification
         notificationService.showNotification('Task Updated', {
           body: `Task status changed to ${newStatus.replace('_', ' ')}`,
           tag: 'task-status-update'
@@ -103,15 +102,13 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
         
         onTaskUpdated();
       } else {
-        // Store offline action
         offlineService.storeOfflineAction({
           id: `${task.id}-${Date.now()}`,
           action: 'update_status',
-          payload: { taskId: task.id, status: newStatus, notes, assignedTo: task.assigned_to }, // Changed 'data' to 'payload'
+          payload: { taskId: task.id, status: newStatus, notes, assignedTo: task.assigned_to },
           timestamp: Date.now()
         });
         
-        // Show offline notification
         notificationService.showNotification('Task Update Queued', {
           body: 'Your update will sync when you\'re back online',
           tag: 'offline-update'
@@ -129,7 +126,6 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
     try {
       setUpdating(true);
       
-      // Get current location with enhanced accuracy
       let location = currentLocation;
       if (!location) {
         try {
@@ -153,10 +149,8 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
       };
 
       if (isOnline) {
-        // Upload photo immediately
         await photoService.uploadTaskPhoto(task.id, file, photoMetadata);
         
-        // Auto-update task status based on photo type
         if (photoType === PhotoType.CHECK_IN && task.status === TaskStatus.ACCEPTED) {
           await handleStatusUpdate(TaskStatus.IN_PROGRESS);
         } else if (photoType === PhotoType.COMPLETION) {
@@ -168,7 +162,6 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
           tag: 'photo-upload'
         });
       } else {
-        // Cache photo for offline upload
         offlineService.cachePhotoForUpload(task.id, file, photoMetadata);
         
         notificationService.showNotification('Photo Cached', {
@@ -273,7 +266,6 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex flex-col gap-2 pt-2">
           {canAccept && (
             <Button 
