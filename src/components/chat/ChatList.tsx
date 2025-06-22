@@ -108,13 +108,13 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
     }
   };
 
-  const getOtherParticipant = (task: Task) => {
+  const getOtherParticipant = (conversationTask: Task & { assigned_to_profile?: { full_name: string; role: string; avatar_url?: string }; assigned_by_profile?: { full_name: string; role: string; avatar_url?: string } }) => {
     if (!user) return null;
     
-    if (user.id === task.assigned_to) {
-      return task.assigned_by_profile;
+    if (user.id === conversationTask.assigned_to) {
+      return conversationTask.assigned_by_profile;
     } else {
-      return task.assigned_to_profile;
+      return conversationTask.assigned_to_profile;
     }
   };
 

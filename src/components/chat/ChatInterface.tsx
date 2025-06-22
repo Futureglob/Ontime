@@ -12,6 +12,7 @@ import {
   CheckCheck,
   Check
 } from "lucide-react";
+import Image from "next/image"; // Import next/image
 import { useAuth } from "@/contexts/AuthContext";
 import { messageService } from "@/services/messageService"; // Removed MessageWithSender as it's not directly used here
 import { realtimeService } from "@/services/realtimeService";
@@ -296,10 +297,12 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
                         {message.attachment_url && (
                           <div className="mt-2">
                             {message.attachment_type?.startsWith("image/") ? (
-                              <img
+                              <Image
                                 src={message.attachment_url}
                                 alt="Attachment"
-                                className="max-w-full h-auto rounded"
+                                width={200} // Provide appropriate width
+                                height={150} // Provide appropriate height
+                                className="max-w-full h-auto rounded object-cover"
                               />
                             ) : (
                               <div className="flex items-center gap-2 p-2 bg-background/10 rounded">

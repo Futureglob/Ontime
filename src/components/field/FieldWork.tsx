@@ -9,11 +9,11 @@ import { realtimeService } from "@/services/realtimeService";
 import { notificationService } from "@/services/notificationService";
 import { offlineService } from "@/services/offlineService";
 import { useAuth } from "@/contexts/AuthContext";
-import { TaskStatus, UserRole, Profile, Task as TaskType, UpdateTaskStatusRequest } from "@/types/database";
+import { TaskStatus, UserRole, Profile, Task as TaskType } from "@/types/database";
 import FieldTaskCard from "./FieldTaskCard";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { useToast } from "@/components/ui/use-toast";
+// import { useToast } from "@/hooks/use-toast"; // Removed unused useToast
 
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 
@@ -31,7 +31,7 @@ export default function FieldWork() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const { toast } = useToast(); // Initialize toast
+  // const { toast } = useToast(); // Removed toast initialization
 
   // Real-time subscription and offline detection
   useEffect(() => {
@@ -122,14 +122,15 @@ export default function FieldWork() {
         console.log("Real-time task update:", payload);
         
         if (payload.eventType === 'INSERT' && payload.new) {
-          // Corrected notification call
-          notificationService.showTaskAssignedNotification(payload.new.title || 'New Task', userProfile?.full_name || "System");
+          // payload.new is TaskRow, which doesn't have assigned_by_profile directly.
+          // Use a generic name or fetch profile if critical. For notification, generic is fine.
+          const assignerName = (payload.new as any).assigned_by_profile?.full_name || userProfile?.full_name || "Task Manager";
+          notificationService.showTaskAssignedNotification(payload.new.title || 'New Task', assignerName);
         } else if (payload.eventType === 'UPDATE' && payload.new) {
-          // Corrected notification call
           notificationService.showTaskStatusNotification(
             payload.new.title || 'Task', 
             payload.new.status || 'Updated',
-            userProfile?.full_name || "System"
+            userProfile?.full_name || "System" // Assuming update is triggered by current user or system
           );
         }
         
@@ -140,7 +141,7 @@ export default function FieldWork() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [user, userProfile?.role, loadTasks, isOnline]);
+  }, [user, userProfile?.role, userProfile?.full_name, loadTasks, isOnline]); // Added userProfile?.full_name
 
   useEffect(() => {
     if (user) {
@@ -218,18 +219,6 @@ export default function FieldWork() {
   }
 
   // Removed unused handleUpdateTaskStatus as FieldTaskCard likely handles its own updates
-  // const handleUpdateTaskStatus = async (taskId: string, status: TaskStatus, notes?: string) => {
-  //   try {
-  //     const updateRequest: UpdateTaskStatusRequest = { status, notes };
-  //     const updatedTask = await taskService.updateTaskStatus(taskId, updateRequest);
-  //     setTasks(tasks.map(t => t.id === taskId ? { ...t, ...updatedTask } : t));
-  //     await notificationService.showTaskStatusNotification(updatedTask.title, status, userProfile?.full_name || "Manager");
-  //     toast({ title: "Task Status Updated", description: `Task ${updatedTask.title} updated to ${status}.` });
-  //   } catch (error) {
-  //     console.error("Error updating task status:", error);
-  //     toast({ title: "Error", description: "Failed to update task status.", variant: "destructive" });
-  //   }
-  // };
 
   return (
     <div className="space-y-4 px-4 pb-20">

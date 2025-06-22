@@ -11,13 +11,15 @@ import {
   BarChart3, 
   Settings, 
   Building2,
-  User
+  User,
+  ShieldCheck // Added for Super Admin
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
 import { Profile } from "@/types/database"; // Removed unused UserRole import
+import { superAdminService } from "@/services/superAdminService"; // Import superAdminService
 
-const navigation = [
+const baseNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Employees", href: "/employees", icon: Users },
@@ -33,15 +35,20 @@ export default function Sidebar() {
   const router = useRouter();
   const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [navigation, setNavigation] = useState(baseNavigation);
 
   const loadUserProfile = useCallback(async () => {
     if (user) {
       try {
         const profile = await profileService.getProfile(user.id);
         setUserProfile(profile);
+        const superAdminStatus = await superAdminService.isSuperAdmin(user.id);
+        setIsSuperAdmin(superAdminStatus);
       } catch (error) {
-        console.error("Error loading user profile:", error);
+        console.error("Error loading user profile or super admin status:", error);
         setUserProfile(null);
+        setIsSuperAdmin(false);
       }
     }
   }, [user]);
@@ -50,8 +57,30 @@ export default function Sidebar() {
     loadUserProfile();
   }, [loadUserProfile]);
 
+  useEffect(() => {
+    if (isSuperAdmin) {
+      const adminNav = { name: "Super Admin", href: "/superadmin", icon: ShieldCheck };
+      // Add Super Admin link if not already present
+      if (!baseNavigation.find(item => item.name === "Super Admin")) {
+        setNavigation([...baseNavigation, adminNav]);
+      } else {
+        // Ensure it's there if baseNavigation somehow got modified elsewhere (defensive)
+        const currentNav = [...baseNavigation];
+        const existingIndex = currentNav.findIndex(item => item.name === "Super Admin");
+        if (existingIndex === -1) {
+            currentNav.push(adminNav);
+        }
+        setNavigation(currentNav);
+      }
+    } else {
+      // Remove Super Admin link if present and user is not super admin
+      setNavigation(baseNavigation.filter(item => item.name !== "Super Admin"));
+    }
+  }, [isSuperAdmin]);
+
+
   // Show all navigation items for now - role-based filtering can be added later
-  const filteredNavigation = navigation;
+  const filteredNavigation = navigation; // Use the dynamic navigation state
 
   const handleNavigation = (href: string) => {
     if (href === "/") {
