@@ -82,4 +82,5 @@ export function useAuth() {
   return context;
 }
 
-export default AuthProvider;
+// Remove the default export as AuthProvider is already exported as a named export
+// export default AuthProvider;
