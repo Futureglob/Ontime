@@ -238,7 +238,7 @@ export default function TaskManagement() {
             key={task.id}
             task={task}
             onTaskUpdated={handleTaskUpdated}
-            userRole={userProfile?.role}
+            userRole={userProfile?.role as UserRole | undefined}
             employees={employees}
           />
         ))}
