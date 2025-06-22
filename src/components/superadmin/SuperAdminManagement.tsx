@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,7 +109,7 @@ export default function SuperAdminManagement() {
                   {superAdmins.map((admin) => (
                     <li key={admin.id} className="flex justify-between items-center">
                       <span>
-                        {admin.user?.full_name || "Unknown Name"} ({admin.user?.email || admin.user_id})
+                        {admin.user_name || "Unknown Name"} ({admin.user_email || admin.user_id})
                       </span>
                       <Button
                         variant="destructive"

@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+// import type { Database } from "@/integrations/supabase/types"; // Ensure this line is removed or stays commented
 
 export interface SuperAdmin {
   id: string; 
@@ -64,7 +63,7 @@ interface ProfileData {
 export const superAdminService = {
   async isSuperAdmin(userId: string): Promise<boolean> {
     try {
-      const {  profileData, error: profileError } = await supabase
+      const {  data, error: profileError } = await supabase // Ensure 'data' is used here
         .from("profiles")
         .select("role")
         .eq("id", userId)
@@ -75,7 +74,7 @@ export const superAdminService = {
         return false;
       }
       
-      return profileData?.role === "admin";
+      return data?.role === "admin"; // Ensure 'data' is used here
     } catch (error) {
       console.error("Error checking super admin status:", error);
       return false;
@@ -184,7 +183,7 @@ export const superAdminService = {
     return MOCK_SYSTEM_STATS;
   },
 
-  async loginSuperAdmin(email: string, password: string): Promise<{ user: any; isSuperAdmin: boolean }> {
+  async loginSuperAdmin(email: string, password: string): Promise<{ user: { id: string; email: string; name?: string }; isSuperAdmin: boolean }> { // Type for user is specific
     console.log("superAdminService.loginSuperAdmin called with", email);
     if (email === "superadmin@system.com" && password === "password123") {
       return { user: { id: "mock_sa_user_id", email, name: "Mock Super Admin" }, isSuperAdmin: true };
