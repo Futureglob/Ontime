@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { RealtimeChannel, REALTIME_LISTEN_TYPES, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 type Tables = Database["public"]["Tables"];
@@ -18,12 +17,12 @@ export interface RealtimeSubscription {
 export const realtimeService = {
   subscribeToTaskUpdates(
     organizationId: string,
-    onTaskUpdate: (payload: any) => void
+    onTaskUpdate: (payload: RealtimePostgresChangesPayload<TaskRow>) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`tasks-${organizationId}`)
       .on(
-        "postgres_changes",
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: "*",
           schema: "public",
@@ -42,12 +41,12 @@ export const realtimeService = {
 
   subscribeToTaskMessages(
     taskId: string,
-    onMessageReceived: (payload: any) => void
+    onMessageReceived: (payload: RealtimePostgresChangesPayload<MessageRow>) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`messages-${taskId}`)
       .on(
-        "postgres_changes",
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: "INSERT",
           schema: "public",
@@ -66,12 +65,12 @@ export const realtimeService = {
 
   subscribeToEmployeeUpdates(
     organizationId: string,
-    onEmployeeUpdate: (payload: any) => void
+    onEmployeeUpdate: (payload: RealtimePostgresChangesPayload<ProfileRow>) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`employees-${organizationId}`)
       .on(
-        "postgres_changes",
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: "*",
           schema: "public",
@@ -90,12 +89,12 @@ export const realtimeService = {
 
   subscribeToTaskPhotos(
     taskId: string,
-    onPhotoUploaded: (payload: any) => void
+    onPhotoUploaded: (payload: RealtimePostgresChangesPayload<TaskPhotoRow>) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`photos-${taskId}`)
       .on(
-        "postgres_changes",
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: "INSERT",
           schema: "public",
@@ -114,12 +113,12 @@ export const realtimeService = {
 
   subscribeToTaskStatusHistory(
     taskId: string,
-    onStatusChange: (payload: any) => void
+    onStatusChange: (payload: RealtimePostgresChangesPayload<TaskStatusHistoryRow>) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`status-${taskId}`)
       .on(
-        "postgres_changes",
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: "INSERT",
           schema: "public",
@@ -136,17 +135,17 @@ export const realtimeService = {
     };
   },
 
-  subscribeToTable(
+  subscribeToTable<T extends { [key: string]: any }>(
     tableName: string,
     filterString: string,
-    onUpdate: (payload: any) => void,
+    onUpdate: (payload: RealtimePostgresChangesPayload<T>) => void,
     dbEvent: "*" | "INSERT" | "UPDATE" | "DELETE" = "*"
   ): RealtimeSubscription {
     const channelName = `${tableName.replace(/_/g, "-")}-changes-${Date.now()}`;
     const channel = supabase
       .channel(channelName)
       .on(
-        "postgres_changes",
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: dbEvent,
           schema: "public",
