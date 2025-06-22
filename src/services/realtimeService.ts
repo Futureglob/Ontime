@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import {
+  RealtimeChannel,
+  RealtimePostgresChangesPayload,
+  RealtimePostgresChangesFilter, // Import this
+  REALTIME_POSTGRES_CHANGES_LISTEN_EVENT // Import this
+} from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 type Tables = Database["public"]["Tables"];
@@ -135,23 +140,27 @@ export const realtimeService = {
     };
   },
 
-  subscribeToTable<T extends { [key: string]: any }>( // Reverted generic constraint
+  subscribeToTable<T extends { [key: string]: any }>(
     tableName: string,
     filterString: string,
     onUpdate: (payload: RealtimePostgresChangesPayload<T>) => void,
-    dbEvent: "*" | "INSERT" | "UPDATE" | "DELETE" = "*"
+    dbEvent: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL // Use enum for type and default
   ): RealtimeSubscription {
     const channelName = `${tableName.replace(/_/g, "-")}-changes-${Date.now()}`;
+
+    // Explicitly type the filter configuration object
+    const filterConfig: RealtimePostgresChangesFilter<typeof dbEvent> = {
+      event: dbEvent,
+      schema: "public",
+      table: tableName,
+      filter: filterString,
+    };
+
     const channel = supabase
       .channel(channelName)
       .on(
-        "postgres_changes",
-        {
-          event: dbEvent,
-          schema: "public",
-          table: tableName,
-          filter: filterString
-        },
+        "postgres_changes", // This is the event type for the channel subscription
+        filterConfig, // Pass the explicitly typed filter object
         onUpdate
       )
       .subscribe();
