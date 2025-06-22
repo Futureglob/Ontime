@@ -45,25 +45,19 @@ export const superAdminService = {
   // Check if current user is super admin
   async isSuperAdmin(userId: string): Promise<boolean> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await supabase.rpc('check_super_admin' as any, { user_id: userId });
+      // Direct profile role check instead of RPC call
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
       
-      if (error) {
-        console.warn("RPC 'check_super_admin' failed or doesn't exist, falling back to profile role check:", error.message);
-        const { data: profileData, error: profileError } = await supabase // Corrected destructuring here
-          .from("profiles")
-          .select("role")
-          .eq("id", userId)
-          .single();
-        
-        if (profileError) {
-          console.error("Error fetching profile for super admin check:", profileError);
-          return false;
-        }
-        return profileData?.role === "admin";
+      if (profileError) {
+        console.error("Error fetching profile for super admin check:", profileError);
+        return false;
       }
       
-      return !!data;
+      return profileData?.role === "admin";
     } catch (error) {
       console.error("Error checking super admin status:", error);
       return false;
