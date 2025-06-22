@@ -1,9 +1,12 @@
-import { Task, PhotoType } from "@/types/database"; // Assuming Task is the correct type
+import { Task, PhotoType } from "@/types/database";
+import { taskService } from "@/services/taskService";
+import { photoService } from "@/services/photoService";
+import { notificationService } from "@/services/notificationService";
 
 // Define specific payload types for offline actions
 interface TaskUpdatePayload {
   taskId: string;
-  status: string; // Should be TaskStatus ideally
+  status: string;
   notes?: string;
   assignedTo?: string;
 }
@@ -22,19 +25,16 @@ interface PhotoUploadMetadata {
 
 interface PhotoUploadPayload {
   taskId: string;
-  fileData: string | ArrayBuffer | null; // From FileReader result
+  fileData: string | ArrayBuffer | null;
   fileName: string;
   fileType: string;
-  meta: PhotoUploadMetadata; // Changed space to colon
+  meta: PhotoUploadMetadata;
 }
-
-// We might need a TaskCreatePayload if that action is implemented
-// interface TaskCreatePayload { ... }
 
 interface OfflineTaskAction {
   id: string;
-  action: 'update_status' | 'upload_photo' | 'create_task'; // Add other actions as needed
-  payload: TaskUpdatePayload | PhotoUploadPayload | Record<string, unknown>; // Added property name 'payload'
+  action: 'update_status' | 'upload_photo' | 'create_task';
+  payload: TaskUpdatePayload | PhotoUploadPayload | Record<string, unknown>;
   timestamp: number;
 }
 
@@ -43,7 +43,7 @@ interface CachedPhoto {
   fileData: string | ArrayBuffer | null;
   fileName: string;
   fileType: string;
-  meta: PhotoUploadMetadata; // Changed space to colon
+  meta: PhotoUploadMetadata;
   timestamp: number;
 }
 
@@ -53,6 +53,12 @@ export const offlineService = {
     const offlineActions = this.getOfflineActions();
     offlineActions.push(action);
     localStorage.setItem('ontime_offline_actions', JSON.stringify(offlineActions));
+    
+    // Show notification about queued action
+    notificationService.showNotification('Action Queued', {
+      body: 'Your action will sync when you\'re back online',
+      tag: 'offline-queue'
+    });
   },
 
   getOfflineActions(): OfflineTaskAction[] {
@@ -65,25 +71,25 @@ export const offlineService = {
   },
 
   // Cache task data for offline access
-  cacheTaskData(tasks: Task[]) { // Changed any[] to Task[]
+  cacheTaskData(tasks: Task[]) {
     localStorage.setItem('ontime_cached_tasks', JSON.stringify({
-       tasks,
+      tasks,
       timestamp: Date.now()
     }));
   },
 
-  getCachedTaskData(): Task[] | null { // Added return type
+  getCachedTaskData(): Task[] | null {
     const cached = localStorage.getItem('ontime_cached_tasks');
     if (!cached) return null;
     
     const parsed = JSON.parse(cached);
     const isExpired = Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000; // 24 hours
     
-    return isExpired ? null : parsed.data as Task[];
+    return isExpired ? null : parsed.tasks as Task[];
   },
 
   // Cache photos for offline upload
-  cachePhotoForUpload(taskId: string, file: File, meta: PhotoUploadMetadata) { // Corrected parameter syntax
+  cachePhotoForUpload(taskId: string, file: File, meta: PhotoUploadMetadata) {
     const reader = new FileReader();
     reader.onload = () => {
       const photoData: CachedPhoto = {
@@ -91,18 +97,24 @@ export const offlineService = {
         fileData: reader.result,
         fileName: file.name,
         fileType: file.type,
-        meta: meta, // Use the corrected 'meta' parameter
+        meta: meta,
         timestamp: Date.now()
       };
       
       const cachedPhotos = this.getCachedPhotos();
       cachedPhotos.push(photoData);
       localStorage.setItem('ontime_cached_photos', JSON.stringify(cachedPhotos));
+      
+      // Show notification about cached photo
+      notificationService.showNotification('Photo Cached', {
+        body: 'Photo will upload when you\'re back online',
+        tag: 'offline-photo-cache'
+      });
     };
     reader.readAsDataURL(file);
   },
 
-  getCachedPhotos(): CachedPhoto[] { // Typed return
+  getCachedPhotos(): CachedPhoto[] {
     const cached = localStorage.getItem('ontime_cached_photos');
     return cached ? JSON.parse(cached) : [];
   },
@@ -116,13 +128,23 @@ export const offlineService = {
     const offlineActions = this.getOfflineActions();
     const cachedPhotos = this.getCachedPhotos();
     
+    if (offlineActions.length === 0 && cachedPhotos.length === 0) {
+      return; // Nothing to sync
+    }
+
+    let syncedActions = 0;
+    let syncedPhotos = 0;
+    let failedActions: OfflineTaskAction[] = [];
+    let failedPhotos: CachedPhoto[] = [];
+
     // Process offline actions
     for (const action of offlineActions) {
       try {
         await this.processOfflineAction(action);
+        syncedActions++;
       } catch (error) {
         console.error('Failed to sync offline action:', error);
-        // Potentially re-queue or notify user
+        failedActions.push(action);
       }
     }
     
@@ -130,33 +152,123 @@ export const offlineService = {
     for (const photo of cachedPhotos) {
       try {
         await this.uploadCachedPhoto(photo);
+        syncedPhotos++;
       } catch (error) {
         console.error('Failed to upload cached photo:', error);
-        // Potentially re-queue or notify user
+        failedPhotos.push(photo);
       }
     }
     
-    // Clear synced data only if successful, or handle partial sync
-    this.clearOfflineActions();
-    this.clearCachedPhotos();
+    // Clear successfully synced data
+    if (failedActions.length === 0) {
+      this.clearOfflineActions();
+    } else {
+      // Keep only failed actions
+      localStorage.setItem('ontime_offline_actions', JSON.stringify(failedActions));
+    }
+
+    if (failedPhotos.length === 0) {
+      this.clearCachedPhotos();
+    } else {
+      // Keep only failed photos
+      localStorage.setItem('ontime_cached_photos', JSON.stringify(failedPhotos));
+    }
+
+    // Show sync results notification
+    if (syncedActions > 0 || syncedPhotos > 0) {
+      notificationService.showNotification('Sync Complete', {
+        body: `Synced ${syncedActions} actions and ${syncedPhotos} photos`,
+        tag: 'sync-complete'
+      });
+    }
+
+    if (failedActions.length > 0 || failedPhotos.length > 0) {
+      notificationService.showNotification('Partial Sync', {
+        body: `${failedActions.length + failedPhotos.length} items failed to sync`,
+        tag: 'sync-partial'
+      });
+    }
   },
 
   async processOfflineAction(action: OfflineTaskAction) {
-    // Implementation depends on action type
-    // Example:
-    // if (action.action === 'update_status') {
-    //   const payload = action.data as TaskUpdatePayload;
-    //   await taskService.updateTaskStatus(payload.taskId, { status: payload.status, notes: payload.notes }, payload.assignedTo);
-    // }
-    console.log('Processing offline action:', action);
+    switch (action.action) {
+      case 'update_status':
+        const updatePayload = action.payload as TaskUpdatePayload;
+        await taskService.updateTaskStatus(
+          updatePayload.taskId,
+          { 
+            status: updatePayload.status, 
+            notes: updatePayload.notes 
+          },
+          updatePayload.assignedTo!
+        );
+        break;
+
+      case 'upload_photo':
+        const photoPayload = action.payload as PhotoUploadPayload;
+        if (photoPayload.fileData && typeof photoPayload.fileData === 'string') {
+          // Convert base64 back to file
+          const response = await fetch(photoPayload.fileData);
+          const blob = await response.blob();
+          const file = new File([blob], photoPayload.fileName, { type: photoPayload.fileType });
+          
+          await photoService.uploadTaskPhoto(
+            photoPayload.taskId,
+            file,
+            photoPayload.meta
+          );
+        }
+        break;
+
+      case 'create_task':
+        // Implementation for task creation if needed
+        console.log('Task creation sync not implemented yet');
+        break;
+
+      default:
+        console.warn('Unknown offline action type:', action.action);
+    }
   },
 
-  async uploadCachedPhoto(photoData: CachedPhoto) { // Typed photoData
-    // Convert base64 back to file and upload
-    // Example:
-    // const file = await (await fetch(photoData.fileData as string)).blob();
-    // await photoService.uploadTaskPhoto(photoData.taskId, new File([file], photoData.fileName, { type: photoData.fileType }), photoData.metadata);
-    console.log('Uploading cached photo:', photoData);
+  async uploadCachedPhoto(photoData: CachedPhoto) {
+    if (photoData.fileData && typeof photoData.fileData === 'string') {
+      // Convert base64 back to file
+      const response = await fetch(photoData.fileData);
+      const blob = await response.blob();
+      const file = new File([blob], photoData.fileName, { type: photoData.fileType });
+      
+      await photoService.uploadTaskPhoto(
+        photoData.taskId,
+        file,
+        photoData.meta
+      );
+    }
+  },
+
+  // Get sync status for UI
+  getSyncStatus() {
+    const offlineActions = this.getOfflineActions();
+    const cachedPhotos = this.getCachedPhotos();
+    
+    return {
+      pendingActions: offlineActions.length,
+      pendingPhotos: cachedPhotos.length,
+      hasPendingSync: offlineActions.length > 0 || cachedPhotos.length > 0
+    };
+  },
+
+  // Manual sync trigger
+  async forceSyncNow() {
+    if (navigator.onLine) {
+      await this.syncOfflineData();
+      return true;
+    } else {
+      notificationService.showNotification('Sync Failed', {
+        body: 'Cannot sync while offline',
+        tag: 'sync-failed'
+      });
+      return false;
+    }
   }
 };
 
