@@ -1,21 +1,41 @@
-import React from 'react'
-import Head from 'next/head'
+
+import { useAuth } from "@/contexts/AuthContext";
+import LoginForm from "@/components/auth/LoginForm";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import Head from "next/head";
 
 export default function Home() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <Head>
+          <title>OnTime - Field Service Management</title>
+          <meta name="description" content="Professional field service management platform" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
+        <LoginForm />
+      </>
+    );
+  }
+
   return (
     <>
       <Head>
-        <title>Hello World</title>
-        <meta name="description" content="Welcome to my app" />
+        <title>OnTime - Dashboard</title>
+        <meta name="description" content="OnTime field service management dashboard" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      
-      <main className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900">Hello World</h1>
-          <p className="text-lg text-gray-600">This is going to be your softgen app, start by describing your project.</p>
-        </div>
-      </main>
+      <DashboardLayout />
     </>
-  )
+  );
 }
