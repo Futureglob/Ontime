@@ -4,10 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause } from "lucide-react";
+import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause, Wifi, WifiOff } from "lucide-react";
 import { TaskStatus, Task, PhotoType } from "@/types/database";
 import { taskService } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
+import { offlineService } from "@/services/offlineService";
+import { notificationService } from "@/services/notificationService";
 
 interface FieldTaskCardProps {
   task: Task & {
@@ -22,7 +24,22 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
   const [photoType, setPhotoType] = useState<PhotoType>(PhotoType.CHECK_IN);
   const [notes, setNotes] = useState("");
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Monitor online/offline status
+  useState(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  });
 
   const getStatusColor = (status: string | null | undefined) => {
     switch (status) {
@@ -74,8 +91,32 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
   const handleStatusUpdate = async (newStatus: TaskStatus) => {
     try {
       setUpdating(true);
-      await taskService.updateTaskStatus(task.id, { status: newStatus, notes }, task.assigned_to!);
-      onTaskUpdated();
+      
+      if (isOnline) {
+        await taskService.updateTaskStatus(task.id, { status: newStatus, notes }, task.assigned_to!);
+        
+        // Show success notification
+        notificationService.showNotification('Task Updated', {
+          body: `Task status changed to ${newStatus.replace('_', ' ')}`,
+          tag: 'task-status-update'
+        });
+        
+        onTaskUpdated();
+      } else {
+        // Store offline action
+        offlineService.storeOfflineAction({
+          id: `${task.id}-${Date.now()}`,
+          action: 'update_status',
+          data: { taskId: task.id, status: newStatus, notes, assignedTo: task.assigned_to },
+          timestamp: Date.now()
+        });
+        
+        // Show offline notification
+        notificationService.showNotification('Task Update Queued', {
+          body: 'Your update will sync when you\'re back online',
+          tag: 'offline-update'
+        });
+      }
     } catch (error) {
       console.error("Error updating task status:", error);
       alert("Failed to update task status. Please try again.");
@@ -88,7 +129,7 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
     try {
       setUpdating(true);
       
-      // Get current location
+      // Get current location with enhanced accuracy
       let location = currentLocation;
       if (!location) {
         try {
@@ -99,27 +140,49 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
         }
       }
 
-      // Upload photo with metadata
-      await photoService.uploadTaskPhoto(task.id, file, {
+      const photoMetadata = {
         type: photoType,
         location: location || undefined,
         timestamp: new Date().toISOString(),
-        notes
-      });
+        notes,
+        accuracy: location ? 'high' : 'unavailable',
+        deviceInfo: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform
+        }
+      };
 
-      // Auto-update task status based on photo type
-      if (photoType === PhotoType.CHECK_IN && task.status === TaskStatus.ACCEPTED) {
-        await handleStatusUpdate(TaskStatus.IN_PROGRESS);
-      } else if (photoType === PhotoType.COMPLETION) {
-        await handleStatusUpdate(TaskStatus.COMPLETED);
+      if (isOnline) {
+        // Upload photo immediately
+        await photoService.uploadTaskPhoto(task.id, file, photoMetadata);
+        
+        // Auto-update task status based on photo type
+        if (photoType === PhotoType.CHECK_IN && task.status === TaskStatus.ACCEPTED) {
+          await handleStatusUpdate(TaskStatus.IN_PROGRESS);
+        } else if (photoType === PhotoType.COMPLETION) {
+          await handleStatusUpdate(TaskStatus.COMPLETED);
+        }
+        
+        notificationService.showNotification('Photo Uploaded', {
+          body: `${photoType.replace('_', ' ')} photo uploaded successfully`,
+          tag: 'photo-upload'
+        });
+      } else {
+        // Cache photo for offline upload
+        offlineService.cachePhotoForUpload(task.id, file, photoMetadata);
+        
+        notificationService.showNotification('Photo Cached', {
+          body: 'Photo will upload when you\'re back online',
+          tag: 'offline-photo'
+        });
       }
 
       setShowCamera(false);
       setNotes("");
       onTaskUpdated();
     } catch (error) {
-      console.error("Error uploading photo:", error);
-      alert("Failed to upload photo. Please try again.");
+      console.error("Error handling photo:", error);
+      alert("Failed to process photo. Please try again.");
     } finally {
       setUpdating(false);
     }
@@ -141,14 +204,21 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
   const canTakePhoto = [TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS].includes(task.status as TaskStatus);
 
   return (
-    <Card className={`hover:shadow-lg transition-all duration-200 ${urgency === "urgent" ? "ring-2 ring-red-200" : ""}`}>
+    <Card className={`hover:shadow-lg transition-all duration-200 ${urgency === "urgent" ? "ring-2 ring-red-200" : ""} ${!isOnline ? "border-orange-200 bg-orange-50/30" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg font-semibold line-clamp-2 flex-1">{task.title}</CardTitle>
           <div className="flex flex-col gap-1 items-end">
-            <Badge className={getStatusColor(task.status)}>
-              {task.status?.replace("_", " ").toUpperCase()}
-            </Badge>
+            <div className="flex items-center gap-1">
+              <Badge className={getStatusColor(task.status)}>
+                {task.status?.replace("_", " ").toUpperCase()}
+              </Badge>
+              {!isOnline && (
+                <div className="flex items-center gap-1 px-1 py-0.5 bg-orange-100 text-orange-800 rounded text-xs">
+                  <WifiOff className="w-3 h-3" />
+                </div>
+              )}
+            </div>
             {urgency && (
               <Badge variant="outline" className={
                 urgency === "overdue" ? "text-red-600 border-red-300" :
@@ -246,11 +316,19 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
                   <Button variant="outline" className="flex-1">
                     <Camera className="h-4 w-4 mr-2" />
                     Take Photo
+                    {!isOnline && <WifiOff className="w-3 h-3 ml-1" />}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Capture Photo</DialogTitle>
+                    <DialogTitle>
+                      Capture Photo
+                      {!isOnline && (
+                        <span className="text-sm font-normal text-orange-600 ml-2">
+                          (Offline - will sync later)
+                        </span>
+                      )}
+                    </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
@@ -275,6 +353,7 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
                       />
                     </div>
                     <div>
+                      <label className="text-sm font-medium">Camera</label>
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -284,17 +363,18 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
                           const files = e.target.files;
                           if (files && files.length > 0) {
                             const file = files[0];
-                            // Explicitly check if the selected item is a File object
                             if (file instanceof File) {
                               handlePhotoCapture(file);
                             } else {
                               console.error("Selected item is not a File object:", file);
-                              // Optionally, display an error message to the user here
                             }
                           }
                         }}
-                        className="w-full"
+                        className="w-full p-2 border rounded-md"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {currentLocation ? "📍 Location will be included" : "📍 Getting location..."}
+                      </p>
                     </div>
                   </div>
                 </DialogContent>
