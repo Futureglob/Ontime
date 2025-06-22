@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,6 +135,17 @@ export default function LoginForm() {
                 >
                   Forgot your password?
                 </Button>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-600 font-medium mb-2">Demo Accounts:</p>
+                <div className="text-xs text-blue-500 space-y-1">
+                  <div>Super Admin: superadmin@system.com</div>
+                  <div>Org Admin: admin@company.com</div>
+                  <div>Task Manager: manager@company.com</div>
+                  <div>Employee: employee@company.com</div>
+                  <div className="mt-1 font-medium">Password: password123</div>
+                </div>
               </div>
             </form>
           </CardContent>

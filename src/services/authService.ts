@@ -1,45 +1,53 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { profileService } from "./profileService";
-import { UserRole, Profile } from "@/types/database";
+import { User } from "@supabase/supabase-js";
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  role?: string;
+  organizationId?: string;
+  employeeId?: string;
+  designation?: string;
+  mobileNumber?: string;
+  isActive?: boolean;
+}
 
 export const authService = {
-  async signUp(email: string, password: string, userData: {
-    full_name: string;
-    organization_id?: string | null; // Allow null
-    employee_id?: string;
-    designation?: string;
-    mobile_number?: string;
-    role?: UserRole;
-  }) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password
-    });
-
-    if (error) throw error;
-
-    if (data.user) {
-      await profileService.createEmployee({
-        id: data.user.id,
-        full_name: userData.full_name,
-        organization_id: userData.organization_id || null, // Ensure null if undefined
-        employee_id: userData.employee_id || null,
-        designation: userData.designation || null,
-        mobile_number: userData.mobile_number || null,
-        // role is set within createEmployee
-      } as Omit<Profile, "created_at" | "updated_at" | "role">);
-    }
-
-    return data;
-  },
-
   async signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     });
 
     if (error) throw error;
+
+    // Get user profile after successful login
+    if (data.user) {
+      const profile = await this.getUserProfile(data.user.id);
+      return { user: data.user, profile };
+    }
+
+    return { user: data.user, profile: null };
+  },
+
+  async signUp(email: string, password: string, userData?: Partial<AuthUser>) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+
+    // Create profile after successful signup
+    if (data.user && userData) {
+      await this.createUserProfile(data.user.id, {
+        ...userData,
+        email: data.user.email || email,
+      });
+    }
+
     return data;
   },
 
@@ -48,20 +56,101 @@ export const authService = {
     if (error) throw error;
   },
 
+  async getCurrentUser() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    
+    if (user) {
+      const profile = await this.getUserProfile(user.id);
+      return { user, profile };
+    }
+    
+    return { user: null, profile: null };
+  },
+
+  async getUserProfile(userId: string) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(`
+        *,
+        organization:organizations(*)
+      `)
+      .eq("id", userId)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      console.error("Error fetching user profile:", error);
+      return null;
+    }
+
+    return data;
+  },
+
+  async createUserProfile(userId: string, userData: Partial<AuthUser> & { email: string }) {
+    // Get system organization ID for super admin
+    let organizationId = userData.organizationId;
+    
+    if (userData.role === "super_admin") {
+      const { data: systemOrg } = await supabase
+        .from("organizations")
+        .select("id")
+        .eq("name", "System Administration")
+        .single();
+      
+      organizationId = systemOrg?.id;
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        full_name: userData.name || "User",
+        role: userData.role || "employee",
+        organization_id: organizationId,
+        employee_id: userData.employeeId,
+        designation: userData.designation,
+        mobile_number: userData.mobileNumber,
+        is_active: userData.isActive !== false,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // If super admin, add to super_admins table
+    if (userData.role === "super_admin") {
+      await supabase
+        .from("super_admins")
+        .insert({
+          user_id: userId,
+          permissions: {
+            can_manage_all: true,
+            can_view_reports: true,
+            can_manage_organizations: true,
+            can_manage_users: true
+          },
+          created_by: userId
+        });
+    }
+
+    return data;
+  },
+
   async resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
     if (error) throw error;
   },
 
-  async getCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user;
-  },
-
-  async getCurrentUserProfile() {
-    const user = await this.getCurrentUser();
-    if (!user) return null;
+  async updatePassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
     
-    return await profileService.getProfile(user.id);
+    if (error) throw error;
   }
 };
+
+export default authService;

@@ -1,83 +1,91 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User, UserRole } from "@/types"; // Import UserRole
+import { User as SupabaseUser } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { authService, AuthUser } from "@/services/authService";
 
 interface AuthContextType {
-  user: User | null;
+  user: SupabaseUser | null;
+  profile: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Only access localStorage on the client side after component mounts
-    if (typeof window !== "undefined") {
+    // Get initial session
+    const getInitialSession = async () => {
       try {
-        const mockUser = localStorage.getItem("ontime_user");
-        if (mockUser) {
-          setUser(JSON.parse(mockUser));
-        }
+        const { user: currentUser, profile: currentProfile } = await authService.getCurrentUser();
+        setUser(currentUser);
+        setProfile(currentProfile);
       } catch (error) {
-        console.error("Error loading user from localStorage:", error);
+        console.error("Error getting initial session:", error);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          try {
+            const userProfile = await authService.getUserProfile(session.user.id);
+            setProfile(userProfile);
+          } catch (error) {
+            console.error("Error fetching user profile:", error);
+            setProfile(null);
+          }
+        } else {
+          setProfile(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const login = async (email: string, password: string) => {
     setLoading(true);
-    
     try {
-      // Mock login - replace with actual authentication
-      let role: UserRole = "employee"; // UserRole is now correctly referenced
-      if (email.includes("superadmin@system.com")) {
-        role = "super_admin";
-      } else if (email.includes("admin")) {
-        role = "org_admin";
-      } else if (email.includes("manager")) {
-        role = "task_manager";
-      }
-
-      const mockUser: User = {
-        id: "1",
-        name: "John Doe",
-        email: email,
-        role: role,
-        organizationId: role === "super_admin" ? "system" : "org_1",
-        employeeId: "EMP001",
-        designation: "Field Agent",
-        mobileNumber: "+1234567890",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("ontime_user", JSON.stringify(mockUser));
-      }
-      setUser(mockUser);
+      const { user: authUser, profile: userProfile } = await authService.signIn(email, password);
+      setUser(authUser);
+      setProfile(userProfile);
     } catch (error) {
       console.error("Login error:", error);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("ontime_user");
+  const logout = async () => {
+    try {
+      await authService.signOut();
+      setUser(null);
+      setProfile(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+      throw error;
     }
-    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, profile, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -90,6 +98,3 @@ export function useAuth() {
   }
   return context;
 }
-
-// Remove the default export as AuthProvider is already exported as a named export
-// export default AuthProvider;
