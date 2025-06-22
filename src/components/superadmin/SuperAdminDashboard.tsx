@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,36 +14,22 @@ import {
   Edit,
   Trash2
 } from "lucide-react";
-import { superAdminService } from "@/services/superAdminService";
+import { superAdminService, SuperAdmin, Organization, SystemStats } from "@/services/superAdminService";
+import Image from "next/image"; // Import next/image
 
-interface Organization {
-  id: string;
-  name: string;
-  logo_url?: string;
-  primary_color?: string;
-  secondary_color?: string;
-  created_at: string;
-  user_count?: number;
-  task_count?: number;
-}
-
-interface SuperAdmin {
-  id: string;
-  user_id: string;
-  permissions: any;
-  created_at: string;
-  user_email?: string;
-  user_name?: string;
+interface DashboardStats extends SystemStats {
+  activeSuperAdmins: number; // Add this if not part of SystemStats directly
 }
 
 export default function SuperAdminDashboard() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
-  const [stats, setStats] = useState({
+  // Use the more specific DashboardStats type
+  const [stats, setStats] = useState<DashboardStats>({
     totalOrganizations: 0,
     totalUsers: 0,
     totalTasks: 0,
-    activeSuperAdmins: 0
+    activeSuperAdmins: 0 // Initialize this field
   });
   const [loading, setLoading] = useState(true);
 
@@ -55,15 +40,19 @@ export default function SuperAdminDashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [orgsData, adminsData, statsData] = await Promise.all([
-        superAdminService.getAllOrganizations(),
-        superAdminService.getAllSuperAdmins(),
-        superAdminService.getSystemStats()
-      ]);
+      // Corrected function calls based on typical service patterns
+      // Assuming superAdminService will have these methods or similar
+      const orgsData = await superAdminService.getOrganizations(); 
+      const adminsData = await superAdminService.getSuperAdmins();
+      const systemStatsData = await superAdminService.getSystemStats();
       
       setOrganizations(orgsData);
       setSuperAdmins(adminsData);
-      setStats(statsData);
+      // Ensure all fields of DashboardStats are covered
+      setStats({
+        ...systemStatsData,
+        activeSuperAdmins: adminsData.length // Example: derive from fetched admins
+      });
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
@@ -169,8 +158,9 @@ export default function SuperAdminDashboard() {
                   {organizations.map((org) => (
                     <div key={org.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative">
                           {org.logo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={org.logo_url} alt={org.name} className="w-8 h-8 object-contain" />
                           ) : (
                             <Building2 className="h-6 w-6 text-gray-400" />

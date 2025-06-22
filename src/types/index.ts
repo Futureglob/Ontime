@@ -1,9 +1,10 @@
+export type UserRole = "org_admin" | "task_manager" | "employee" | "super_admin";
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: "org_admin" | "task_manager" | "employee";
+  role: UserRole;
   organizationId: string;
   employeeId?: string;
   designation?: string;

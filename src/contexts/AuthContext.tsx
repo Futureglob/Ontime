@@ -35,12 +35,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       // Mock login - replace with actual authentication
+      let role: UserRole = "employee";
+      if (email.includes("superadmin@system.com")) {
+        role = "super_admin";
+      } else if (email.includes("admin")) {
+        role = "org_admin";
+      } else if (email.includes("manager")) {
+        role = "task_manager";
+      }
+
       const mockUser: User = {
         id: "1",
         name: "John Doe",
         email: email,
-        role: email.includes("admin") ? "org_admin" : email.includes("manager") ? "task_manager" : "employee",
-        organizationId: "org_1",
+        role: role,
+        organizationId: role === "super_admin" ? "system" : "org_1",
         employeeId: "EMP001",
         designation: "Field Agent",
         mobileNumber: "+1234567890",
