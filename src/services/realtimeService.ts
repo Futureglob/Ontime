@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimeChannel, RealtimePostgresChangesPayload, RealtimePostgresChangesFilter } from "@supabase/supabase-js";
+import { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import type { Task, Message, Profile, TaskPhoto, TaskStatusHistory } from "@/types/database";
 
 type TaskChangesPayload = RealtimePostgresChangesPayload<Task>;
@@ -22,14 +23,14 @@ export const realtimeService = {
     const channel = supabase
       .channel(`tasks-${organizationId}`)
       .on(
-        "postgres_changes" as const,
+        "postgres_changes",
         {
-          event: "*" as RealtimePostgresChangesFilter<"*">["event"],
+          event: "*",
           schema: "public",
           table: "tasks",
           filter: `organization_id=eq.${organizationId}`
-        } as RealtimePostgresChangesFilter<"*">,
-        onTaskUpdate
+        },
+        (payload) => onTaskUpdate(payload as TaskChangesPayload)
       )
       .subscribe();
 
@@ -46,14 +47,14 @@ export const realtimeService = {
     const channel = supabase
       .channel(`messages-${taskId}`)
       .on(
-        "postgres_changes" as const,
+        "postgres_changes",
         {
-          event: "INSERT" as RealtimePostgresChangesFilter<"INSERT">["event"],
+          event: "INSERT",
           schema: "public",
           table: "messages",
           filter: `task_id=eq.${taskId}`
-        } as RealtimePostgresChangesFilter<"INSERT">,
-        onMessageReceived
+        },
+        (payload) => onMessageReceived(payload as MessageChangesPayload)
       )
       .subscribe();
 
@@ -70,14 +71,14 @@ export const realtimeService = {
     const channel = supabase
       .channel(`employees-${organizationId}`)
       .on(
-        "postgres_changes" as const,
+        "postgres_changes",
         {
-          event: "*" as RealtimePostgresChangesFilter<"*">["event"],
+          event: "*",
           schema: "public",
           table: "profiles",
           filter: `organization_id=eq.${organizationId}`
-        } as RealtimePostgresChangesFilter<"*">,
-        onEmployeeUpdate
+        },
+        (payload) => onEmployeeUpdate(payload as ProfileChangesPayload)
       )
       .subscribe();
 
@@ -94,14 +95,14 @@ export const realtimeService = {
     const channel = supabase
       .channel(`photos-${taskId}`)
       .on(
-        "postgres_changes" as const,
+        "postgres_changes",
         {
-          event: "INSERT" as RealtimePostgresChangesFilter<"INSERT">["event"],
+          event: "INSERT",
           schema: "public",
           table: "task_photos",
           filter: `task_id=eq.${taskId}`
-        } as RealtimePostgresChangesFilter<"INSERT">,
-        onPhotoUploaded
+        },
+        (payload) => onPhotoUploaded(payload as TaskPhotoChangesPayload)
       )
       .subscribe();
 
@@ -118,14 +119,14 @@ export const realtimeService = {
     const channel = supabase
       .channel(`status-${taskId}`)
       .on(
-        "postgres_changes" as const,
+        "postgres_changes",
         {
-          event: "INSERT" as RealtimePostgresChangesFilter<"INSERT">["event"],
+          event: "INSERT",
           schema: "public",
           table: "task_status_history",
           filter: `task_id=eq.${taskId}`
-        } as RealtimePostgresChangesFilter<"INSERT">,
-        onStatusChange
+        },
+        (payload) => onStatusChange(payload as TaskStatusHistoryChangesPayload)
       )
       .subscribe();
 
@@ -145,14 +146,14 @@ export const realtimeService = {
     const channel = supabase
       .channel(channelName)
       .on(
-        "postgres_changes" as const,
+        "postgres_changes",
         {
-          event: dbEvent as RealtimePostgresChangesFilter<typeof dbEvent>["event"],
+          event: dbEvent,
           schema: "public",
           table: tableName,
           filter: filterString
-        } as RealtimePostgresChangesFilter<typeof dbEvent>,
-        onUpdate
+        },
+        (payload) => onUpdate(payload as GenericChangesPayload<T>)
       )
       .subscribe((status, err) => {
         if (err) {
