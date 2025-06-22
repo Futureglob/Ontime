@@ -1,15 +1,14 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, User, Phone, MapPin, Calendar, Edit, Trash2 } from "lucide-react";
+// Removed Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
+// Removed Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+import { Plus, Search, User, Phone, Calendar, Edit, Trash2 } from "lucide-react"; // Removed MapPin
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
-import { authService } from "@/services/authService";
+// Removed authService
 import { Profile, UserRole } from "@/types/database";
 import EmployeeForm from "./EmployeeForm";
 
