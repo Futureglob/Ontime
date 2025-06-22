@@ -107,7 +107,7 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
         offlineService.storeOfflineAction({
           id: `${task.id}-${Date.now()}`,
           action: 'update_status',
-          data: { taskId: task.id, status: newStatus, notes, assignedTo: task.assigned_to },
+          payload: { taskId: task.id, status: newStatus, notes, assignedTo: task.assigned_to }, // Changed 'data' to 'payload'
           timestamp: Date.now()
         });
         
