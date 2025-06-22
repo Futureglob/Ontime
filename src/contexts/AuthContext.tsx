@@ -15,11 +15,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Only access localStorage on the client side
+    // Only access localStorage on the client side after component mounts
     if (typeof window !== "undefined") {
-      const mockUser = localStorage.getItem("ontime_user");
-      if (mockUser) {
-        setUser(JSON.parse(mockUser));
+      try {
+        const mockUser = localStorage.getItem("ontime_user");
+        if (mockUser) {
+          setUser(JSON.parse(mockUser));
+        }
+      } catch (error) {
+        console.error("Error loading user from localStorage:", error);
       }
     }
     setLoading(false);
@@ -29,28 +33,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoading(true);
     
-    // Mock login - replace with actual authentication
-    const mockUser: User = {
-      id: "1",
-      name: "John Doe",
-      email: email,
-      role: email.includes("admin") ? "org_admin" : email.includes("manager") ? "task_manager" : "employee",
-      organizationId: "org_1",
-      employeeId: "EMP001",
-      designation: "Field Agent",
-      mobileNumber: "+1234567890",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    try {
+      // Mock login - replace with actual authentication
+      const mockUser: User = {
+        id: "1",
+        name: "John Doe",
+        email: email,
+        role: email.includes("admin") ? "org_admin" : email.includes("manager") ? "task_manager" : "employee",
+        organizationId: "org_1",
+        employeeId: "EMP001",
+        designation: "Field Agent",
+        mobileNumber: "+1234567890",
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-    localStorage.setItem("ontime_user", JSON.stringify(mockUser));
-    setUser(mockUser);
-    setLoading(false);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("ontime_user", JSON.stringify(mockUser));
+      }
+      setUser(mockUser);
+    } catch (error) {
+      console.error("Login error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem("ontime_user");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("ontime_user");
+    }
     setUser(null);
   };
 

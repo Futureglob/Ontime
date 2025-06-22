@@ -3,23 +3,28 @@ import type { AppProps } from "next/app";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { useEffect } from "react";
-import { pwaService } from "@/services/pwaService";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
 import Head from "next/head";
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
-    // Only run PWA service registration on the client side
+    // Only run PWA service registration on the client side after mount
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      pwaService.registerServiceWorker()
-        .then(() => {
-          console.log("Service Worker registered from _app.tsx");
-          // Only attempt background sync if the browser supports it
-          if ("serviceWorker" in navigator && "sync" in window.ServiceWorkerRegistration.prototype) {
+      // Delay PWA registration to avoid build issues
+      setTimeout(async () => {
+        try {
+          const { pwaService } = await import("@/services/pwaService");
+          await pwaService.registerServiceWorker();
+          console.log("Service Worker registered successfully");
+          
+          // Only attempt background sync if supported
+          if ("sync" in window.ServiceWorkerRegistration.prototype) {
             pwaService.registerBackgroundSync();
           }
-        })
-        .catch(error => console.error("Service Worker registration failed in _app.tsx:", error));
+        } catch (error) {
+          console.error("PWA service registration failed:", error);
+        }
+      }, 1000);
     }
   }, []);
 
