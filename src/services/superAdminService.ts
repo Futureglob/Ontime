@@ -36,7 +36,7 @@ export interface OrganizationStats {
 interface ProfileData {
   id: string;
   full_name?: string | null;
-  email?: string | null;
+  email?: string | null; // Ensure email is part of the profile data
   role?: string | null;
   created_at?: string | null;
   // Add other fields from profiles table if needed by this service
@@ -47,11 +47,13 @@ export const superAdminService = {
   // Check if current user is super admin
   async isSuperAdmin(userId: string): Promise<boolean> {
     try {
+      // Cast the RPC name to 'any' to bypass strict typing if 'check_super_admin' is not in generated types
       const { data, error } = await supabase.rpc('check_super_admin' as any, { user_id: userId });
       
       if (error) {
         console.warn("RPC 'check_super_admin' failed or doesn't exist, falling back to profile role check:", error.message);
-        const {  profile, error: profileError } = await supabase
+        // Ensure the select query is correct and handles potential null profile
+        const {  profileData, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", userId)
@@ -61,7 +63,7 @@ export const superAdminService = {
           console.error("Error fetching profile for super admin check:", profileError);
           return false;
         }
-        return profile?.role === "admin";
+        return profileData?.role === "admin";
       }
       
       return !!data;
@@ -76,19 +78,19 @@ export const superAdminService = {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email, role, created_at")
+        .select("id, full_name, email, role, created_at") // Ensure all needed fields are selected
         .eq("role", "admin");
 
       if (error) throw error;
       
       return (data || []).map(profile => {
-        const p = profile as ProfileData;
+        const p = profile as ProfileData; // Cast to our interim type
         return {
           id: p.id,
           user_id: p.id,
-          permissions: {},
+          permissions: {}, // Default permissions
           created_at: p.created_at || new Date().toISOString(),
-          created_by: "system", // This should ideally be the user who granted super admin
+          created_by: "system", 
           user: {
             email: p.email || "N/A",
             full_name: p.full_name || "N/A"
@@ -108,18 +110,18 @@ export const superAdminService = {
         .from("profiles")
         .update({ role: "admin" })
         .eq("id", userId)
-        .select("id, full_name, email, role, created_at")
+        .select("id, full_name, email, role, created_at") // Ensure all needed fields are selected
         .single();
 
       if (error) throw error;
       
-      const p = data as ProfileData;
+      const p = data as ProfileData; // Cast to our interim type
       return {
         id: p.id,
         user_id: p.id,
         permissions,
         created_at: p.created_at || new Date().toISOString(),
-        created_by: "system", // This should ideally be the user who granted super admin
+        created_by: "system", 
         user: {
           email: p.email || "N/A",
           full_name: p.full_name || "N/A"
@@ -136,7 +138,7 @@ export const superAdminService = {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ role: "manager" }) // Or "employee", depending on desired default
+        .update({ role: "manager" }) 
         .eq("id", userIdToRemove);
 
       if (error) throw error;
@@ -146,28 +148,18 @@ export const superAdminService = {
     }
   },
 
-  // Update super admin permissions (Placeholder - requires a dedicated super_admins table)
   async updateSuperAdminPermissions(superAdminId: string, permissions: Record<string, boolean>): Promise<void> {
     try {
       console.log("Permissions update called for (placeholder):", superAdminId, permissions);
-      // This would be implemented when we have proper super_admins table with a permissions column
-      // For now, this function doesn't do anything to the DB regarding permissions.
-      // Example:
-      // const { error } = await supabase
-      //   .from("super_admins" as any) // Assuming 'super_admins' table exists
-      //   .update({ permissions })
-      //   .eq("id", superAdminId); // Or .eq("user_id", superAdminId)
-      // if (error) throw error;
+      // This would be implemented when we have a proper super_admins table with a permissions column
     } catch (error) {
       console.error("Error updating super admin permissions:", error);
       throw error;
     }
   },
 
-  // Get system settings (Placeholder - requires a system_settings table)
   async getSystemSettings(): Promise<SystemSettings[]> {
     try {
-      // Mock data as 'system_settings' table might not exist or be typed
       console.warn("'getSystemSettings' is returning mock data.");
       return [
         {
@@ -187,36 +179,22 @@ export const superAdminService = {
           updated_at: new Date().toISOString()
         }
       ];
-      // Example for actual table:
-      // const { data, error } = await supabase
-      //   .from("system_settings" as any) // Assuming 'system_settings' table exists
-      //   .select("*");
-      // if (error) throw error;
-      // return data || [];
     } catch (error) {
       console.error("Error fetching system settings:", error);
       return [];
     }
   },
 
-  // Update system setting (Placeholder)
-  async updateSystemSetting(key: string, value: Record<string, unknown>, description?: string): Promise<void> {
+  async updateSystemSetting(key: string, newValue: Record<string, unknown>, newDescription?: string): Promise<void> {
     try {
-      console.warn(`'updateSystemSetting' for key '${key}' is a placeholder.`);
-      // Example for actual table:
-      // const currentUser = (await supabase.auth.getUser()).data.user;
-      // const { error } = await supabase
-      //   .from("system_settings" as any) // Assuming 'system_settings' table exists
-      //   .update({ value, description, updated_by: currentUser?.id, updated_at: new Date().toISOString() })
-      //   .eq("key", key);
-      // if (error) throw error;
+      console.warn(`'updateSystemSetting' for key '${key}' with value '${JSON.stringify(newValue)}' and description '${newDescription}' is a placeholder.`);
+      // Actual implementation would update a 'system_settings' table
     } catch (error) {
       console.error("Error updating system setting:", error);
       throw error;
     }
   },
 
-  // Get organization statistics
   async getOrganizationStats(): Promise<OrganizationStats[]> {
     try {
       const { data, error } = await supabase
@@ -271,7 +249,7 @@ export const superAdminService = {
       const [orgsResult, usersResult, tasksResult] = await Promise.all([
         supabase.from("organizations").select("id", { count: "exact" }),
         supabase.from("profiles").select("id", { count: "exact" }),
-        supabase.from("tasks").select("id, status") // Fetch all statuses to filter locally
+        supabase.from("tasks").select("id, status") 
       ]);
 
       const totalOrganizations = orgsResult.count || 0;
@@ -304,13 +282,12 @@ export const superAdminService = {
       };
     } catch (error) {
       console.error("Error fetching system analytics:", error);
-      throw error; // Re-throw to allow caller to handle
+      throw error; 
     }
   },
   
   async updateOrganizationStatus(organizationId: string, isActive: boolean): Promise<void> {
     try {
-      // Assuming 'organizations' table has an 'is_active' boolean column
       const { error } = await supabase
         .from("organizations")
         .update({ is_active: isActive } as any) // Cast to any if 'is_active' not in generated types
@@ -334,7 +311,6 @@ export const superAdminService = {
   }>> {
     try {
       console.warn("'getUserActivity' is returning mock data.");
-      // This would typically involve querying an audit log table.
       return [
         {
           user_id: "example-user-1",
@@ -342,7 +318,7 @@ export const superAdminService = {
           organization: "Org A",
           activity_type: "task_created",
           description: "Created task 'Fix Leaky Faucet'",
-          timestamp: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+          timestamp: new Date(Date.now() - 3600000).toISOString() 
         },
         {
           user_id: "example-user-2",
@@ -350,7 +326,7 @@ export const superAdminService = {
           organization: "Org B",
           activity_type: "login_success",
           description: "User logged in successfully",
-          timestamp: new Date(Date.now() - 7200000).toISOString() // 2 hours ago
+          timestamp: new Date(Date.now() - 7200000).toISOString() 
         }
       ];
     } catch (error) {
