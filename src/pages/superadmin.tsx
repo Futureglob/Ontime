@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
 import SuperAdminDashboard from "@/components/superadmin/SuperAdminDashboard";
-// import { superAdminService } from "@/services/superAdminService"; // Keep if planning to use its login
-import { useAuth } from "@/contexts/AuthContext"; 
+// import { superAdminService } from "@/services/superAdminService"; // Correctly commented out or remove if not used here
+// import { useAuth } from "@/contexts/AuthContext"; // Removed unused import
 
 export default function SuperAdminPage() {
   const [isSuperAdminAuthenticated, setIsSuperAdminAuthenticated] = useState(false);

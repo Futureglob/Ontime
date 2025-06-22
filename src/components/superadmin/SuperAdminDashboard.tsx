@@ -17,7 +17,6 @@ import {
 import { superAdminService, SuperAdmin, OrganizationForSuperAdminView, SystemStats } from "@/services/superAdminService";
 import Image from "next/image";
 
-// This interface combines SystemStats with any additional stats the dashboard might compute or display
 interface DashboardDisplayStats extends SystemStats {
   activeSuperAdmins: number;
 }
@@ -26,9 +25,9 @@ export default function SuperAdminDashboard() {
   const [organizations, setOrganizations] = useState<OrganizationForSuperAdminView[]>([]);
   const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
   const [stats, setStats] = useState<DashboardDisplayStats>({
-    total_organizations: 0, // Align with SystemStats from service
-    total_users: 0,         // Align with SystemStats from service
-    total_tasks: 0,         // Align with SystemStats from service
+    total_organizations: 0,
+    total_users: 0,
+    total_tasks: 0,
     activeSuperAdmins: 0
   });
   const [loading, setLoading] = useState(true);
@@ -40,15 +39,14 @@ export default function SuperAdminDashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      // Use the corrected function names from superAdminService
       const orgsData = await superAdminService.getOrganizations(); 
       const adminsData = await superAdminService.getSuperAdmins();
-      const systemStatsData = await superAdminService.getSystemStats(); // Corrected call
+      const systemStatsData = await superAdminService.getSystemStats(); 
       
       setOrganizations(orgsData);
       setSuperAdmins(adminsData);
       setStats({
-        ...systemStatsData, // Spread properties from SystemStats (total_organizations, etc.)
+        ...systemStatsData, 
         activeSuperAdmins: adminsData.length 
       });
     } catch (error) {
@@ -69,7 +67,6 @@ export default function SuperAdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-purple-100 rounded-lg">
@@ -80,7 +77,6 @@ export default function SuperAdminDashboard() {
           <p className="text-gray-600">System-wide management and oversight</p>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
@@ -131,7 +127,6 @@ export default function SuperAdminDashboard() {
           </Card>
         </div>
 
-        {/* Main Content */}
         <Tabs defaultValue="organizations" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="organizations">Organizations</TabsTrigger>
@@ -139,7 +134,6 @@ export default function SuperAdminDashboard() {
             <TabsTrigger value="settings">System Settings</TabsTrigger>
           </TabsList>
 
-          {/* Organizations Tab */}
           <TabsContent value="organizations">
             <Card>
               <CardHeader>
@@ -189,7 +183,6 @@ export default function SuperAdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Super Admins Tab */}
           <TabsContent value="admins">
             <Card>
               <CardHeader>
@@ -230,7 +223,6 @@ export default function SuperAdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* System Settings Tab */}
           <TabsContent value="settings">
             <Card>
               <CardHeader>
