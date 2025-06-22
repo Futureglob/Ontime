@@ -1,4 +1,4 @@
-import { Task, PhotoType } from "@/types/database";
+import { Task, PhotoType, TaskStatus } from "@/types/database";
 import { taskService } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
 import { notificationService } from "@/services/notificationService";
