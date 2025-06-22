@@ -81,23 +81,44 @@ export const pwaService = {
   },
 
   // Register for background sync
-  async registerBackgroundSync(tag: string = 'background-sync-ontime') {
-    if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-      try {
-        const registration = await navigator.serviceWorker.ready as ServiceWorkerRegistrationWithSync;
-        await registration.sync.register(tag);
-        console.log('Background sync registered:', tag);
-        return true;
-      } catch (error) {
-        console.error('Background sync registration failed:', error);
+  async registerBackgroundSync(tag: string = 'sync-ontime') {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') {
+      console.warn('Background sync not available in server environment');
+      return false;
+    }
+
+    // Check for service worker and sync support
+    if (!('serviceWorker' in navigator) || !('sync' in window.ServiceWorkerRegistration.prototype)) {
+      console.warn('Background sync not supported');
+      return false;
+    }
+
+    try {
+      // Wait for service worker to be ready
+      const registration = await navigator.serviceWorker.ready;
+      
+      // Check if registration has sync capability
+      if (!registration || !('sync' in registration)) {
+        console.warn('Service worker registration does not support sync');
         return false;
       }
+
+      // Register background sync with shorter tag
+      await (registration as ServiceWorkerRegistrationWithSync).sync.register(tag);
+      console.log('Background sync registered:', tag);
+      return true;
+    } catch (error) {
+      console.error('Background sync registration failed:', error);
+      return false;
     }
-    return false;
   },
 
   // Check if app is installed
   isInstalled() {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') return false;
+    
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isInWebAppiOS = (window.navigator as NavigatorWithStandalone).standalone === true;
     return isStandalone || isInWebAppiOS;
@@ -105,13 +126,25 @@ export const pwaService = {
 
   // Get app info
   getAppInfo() {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      return {
+        isInstalled: false,
+        isOnline: false,
+        hasServiceWorker: false,
+        hasNotifications: false,
+        hasPushManager: false,
+        hasBackgroundSync: false
+      };
+    }
+
     return {
       isInstalled: this.isInstalled(),
       isOnline: navigator.onLine,
       hasServiceWorker: 'serviceWorker' in navigator,
       hasNotifications: 'Notification' in window,
       hasPushManager: 'PushManager' in window,
-      hasBackgroundSync: 'sync' in (ServiceWorkerRegistration.prototype as ServiceWorkerRegistrationWithSync)
+      hasBackgroundSync: 'sync' in window.ServiceWorkerRegistration.prototype
     };
   },
 
