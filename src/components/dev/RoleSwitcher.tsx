@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,13 +46,7 @@ export default function RoleSwitcher() {
   const [selectedTestUser, setSelectedTestUser] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadCurrentRole();
-    }
-  }, [user]);
-
-  const loadCurrentRole = async () => {
+  const loadCurrentRole = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -62,7 +55,13 @@ export default function RoleSwitcher() {
     } catch (error) {
       console.error("Error loading current role:", error);
     }
-  };
+  }, [user]); // Added user to dependency array
+
+  useEffect(() => {
+    if (user) {
+      loadCurrentRole();
+    }
+  }, [user, loadCurrentRole]); // Added loadCurrentRole to dependency array
 
   const switchRole = async () => {
     if (!user || !selectedTestUser) return;

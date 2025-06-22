@@ -1,10 +1,9 @@
-
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import RoleSwitcher from "@/components/dev/RoleSwitcher";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { profileService } from "@/services/profileService";
 import { UserRole } from "@/types/database";
 
@@ -12,13 +11,7 @@ export default function RolesTestPage() {
   const { user } = useAuth();
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadCurrentRole();
-    }
-  }, [user]);
-
-  const loadCurrentRole = async () => {
+  const loadCurrentRole = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -27,7 +20,13 @@ export default function RolesTestPage() {
     } catch (error) {
       console.error("Error loading current role:", error);
     }
-  };
+  }, [user]); // Added user to dependency array
+
+  useEffect(() => {
+    if (user) {
+      loadCurrentRole();
+    }
+  }, [user, loadCurrentRole]); // Added loadCurrentRole to dependency array
 
   const roleFeatures = {
     [UserRole.ADMIN]: [
