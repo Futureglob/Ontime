@@ -19,15 +19,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     const getInitialSession = async () => {
       try {
-        const { user: currentUser, profile: currentProfile } = await authService.getCurrentUser();
+        const { user: currentUser, profile: profileDataFromService } = await authService.getCurrentUser();
         setUser(currentUser);
-        // Ensure currentProfile is compatible with AuthUser | null
-        setProfile(currentProfile as AuthUser | null); 
+        if (currentUser && profileDataFromService) {
+          const combinedProfile: AuthUser = {
+            id: currentUser.id,
+            email: currentUser.email!,
+            name: (profileDataFromService as { full_name?: string }).full_name || undefined,
+            role: (profileDataFromService as { role?: string }).role || undefined,
+            organizationId: (profileDataFromService as { organization_id?: string }).organization_id || undefined,
+            employeeId: (profileDataFromService as { employee_id?: string }).employee_id || undefined,
+            designation: (profileDataFromService as { designation?: string }).designation || undefined,
+            mobileNumber: (profileDataFromService as { mobile_number?: string }).mobile_number || undefined,
+            isActive: (profileDataFromService as { is_active?: boolean }).is_active !== undefined ? (profileDataFromService as { is_active: boolean }).is_active : true,
+          };
+          setProfile(combinedProfile);
+        } else {
+          setProfile(null);
+        }
       } catch (error) {
         console.error("Error getting initial session:", error);
+        setProfile(null); // Ensure profile is null on error
       } finally {
         setLoading(false);
       }
@@ -35,24 +49,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     getInitialSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         setUser(session?.user ?? null);
-        
         if (session?.user) {
           try {
-            const userProfile = await authService.getUserProfile(session.user.id);
-            // Ensure userProfile is compatible with AuthUser | null
-            setProfile(userProfile as AuthUser | null);
+            const profileDataFromService = await authService.getUserProfile(session.user.id);
+            if (profileDataFromService) {
+              const combinedProfile: AuthUser = {
+                id: session.user.id,
+                email: session.user.email!,
+                name: (profileDataFromService as { full_name?: string }).full_name || undefined,
+                role: (profileDataFromService as { role?: string }).role || undefined,
+                organizationId: (profileDataFromService as { organization_id?: string }).organization_id || undefined,
+                employeeId: (profileDataFromService as { employee_id?: string }).employee_id || undefined,
+                designation: (profileDataFromService as { designation?: string }).designation || undefined,
+                mobileNumber: (profileDataFromService as { mobile_number?: string }).mobile_number || undefined,
+                isActive: (profileDataFromService as { is_active?: boolean }).is_active !== undefined ? (profileDataFromService as { is_active: boolean }).is_active : true,
+              };
+              setProfile(combinedProfile);
+            } else {
+              setProfile(null);
+            }
           } catch (error) {
-            console.error("Error fetching user profile:", error);
+            console.error("Error fetching user profile on auth change:", error);
             setProfile(null);
           }
         } else {
           setProfile(null);
         }
-        
         setLoading(false);
       }
     );
@@ -63,12 +88,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const { user: authUser, profile: userProfile } = await authService.signIn(email, password);
+      const { user: authUser, profile: profileDataFromService } = await authService.signIn(email, password);
       setUser(authUser);
-      // Ensure userProfile is compatible with AuthUser | null
-      setProfile(userProfile as AuthUser | null);
+      if (authUser && profileDataFromService) {
+        const combinedProfile: AuthUser = {
+          id: authUser.id,
+          email: authUser.email!,
+          name: (profileDataFromService as { full_name?: string }).full_name || undefined,
+          role: (profileDataFromService as { role?: string }).role || undefined,
+          organizationId: (profileDataFromService as { organization_id?: string }).organization_id || undefined,
+          employeeId: (profileDataFromService as { employee_id?: string }).employee_id || undefined,
+          designation: (profileDataFromService as { designation?: string }).designation || undefined,
+          mobileNumber: (profileDataFromService as { mobile_number?: string }).mobile_number || undefined,
+          isActive: (profileDataFromService as { is_active?: boolean }).is_active !== undefined ? (profileDataFromService as { is_active: boolean }).is_active : true,
+        };
+        setProfile(combinedProfile);
+      } else {
+        setProfile(null);
+      }
     } catch (error) {
       console.error("Login error:", error);
+      setProfile(null); // Ensure profile is null on error
       throw error;
     } finally {
       setLoading(false);

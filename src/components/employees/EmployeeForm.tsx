@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { profileService } from "@/services/profileService";
-import { authService } from "@/services/authService";
+import { authService } from "@/services/authService"; 
 import { Profile, UserRole } from "@/types/database";
 
 interface EmployeeFormProps {
@@ -61,13 +61,13 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
     }
 
     try {
-      const userToSave: Partial<AuthUser> = {
-        email: formData.email,
-        name: formData.name, // Changed from full_name to name
-        role: formData.role as UserRole,
-        employeeId: formData.employeeId,
-        // Add other properties as needed
-      };
+      // const userToSave: Partial<AuthUser> = { // Removed unused variable
+      //   email: formData.email,
+      //   name: formData.full_name, // Corrected: AuthUser expects 'name', EmployeeFormData has 'full_name'
+      //   role: formData.role as UserRole,
+      //   employeeId: formData.employee_id, // Corrected: AuthUser expects 'employeeId', EmployeeFormData has 'employee_id'
+      //   // Add other properties as needed
+      // };
 
       if (employee) {
         await profileService.updateProfile(employee.id, {
@@ -79,12 +79,14 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
         });
       } else {
         await authService.signUp(formData.email, formData.password, {
-          full_name: formData.full_name,
-          organization_id: organizationId,
-          employee_id: formData.employee_id,
+          name: formData.full_name, // Map full_name to name
+          organizationId: organizationId, // Changed from organization_id to organizationId
+          employeeId: formData.employee_id, // Map employee_id to employeeId
           designation: formData.designation,
-          mobile_number: formData.mobile_number,
-          role: formData.role
+          mobileNumber: formData.mobile_number, // Map mobile_number to mobileNumber
+          role: formData.role,
+          email: formData.email, // Ensure email is passed
+          isActive: true // Default to active
         });
       }
       

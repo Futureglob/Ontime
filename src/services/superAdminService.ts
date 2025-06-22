@@ -63,7 +63,7 @@ interface ProfileData {
 export const superAdminService = {
   async isSuperAdmin(userId: string): Promise<boolean> {
     try {
-      const {  data, error: profileError } = await supabase // Ensure 'data' is used here
+      const {  data, error: profileError } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", userId)
@@ -74,7 +74,7 @@ export const superAdminService = {
         return false;
       }
       
-      return data?.role === "admin"; // Ensure 'data' is used here
+      return data?.role === "super_admin"; // Changed "admin" to "super_admin"
     } catch (error) {
       console.error("Error checking super admin status:", error);
       return false;
@@ -90,7 +90,7 @@ export const superAdminService = {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .update({ role: "admin" })
+        .update({ role: "super_admin" }) // Changed "admin" to "super_admin"
         .eq("id", userId)
         .select("id, full_name, role, created_at") 
         .single();
