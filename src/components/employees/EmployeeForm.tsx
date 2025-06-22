@@ -15,10 +15,20 @@ interface EmployeeFormProps {
   onEmployeeCreated: () => void;
 }
 
+interface EmployeeFormData {
+  full_name: string;
+  employee_id: string;
+  designation: string;
+  mobile_number: string;
+  role: UserRole;
+  email: string;
+  password: string;
+}
+
 export default function EmployeeForm({ employee, organizationId, onClose, onEmployeeCreated }: EmployeeFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EmployeeFormData>({
     full_name: employee?.full_name || "",
     employee_id: employee?.employee_id || "",
     designation: employee?.designation || "",
@@ -28,7 +38,7 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
     password: ""
   });
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof EmployeeFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: field === "role" ? (value as UserRole) : value
