@@ -140,27 +140,24 @@ export const realtimeService = {
     };
   },
 
-  subscribeToTable<T extends { [key: string]: any }>(
+  subscribeToTable<T extends Record<string, unknown>>( // eslint-disable-line @typescript-eslint/no-explicit-any
     tableName: string,
     filterString: string,
     onUpdate: (payload: RealtimePostgresChangesPayload<T>) => void,
-    dbEvent: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL
+    dbEvent: "*" | "INSERT" | "UPDATE" | "DELETE" = "*"
   ): RealtimeSubscription {
     const channelName = `${tableName.replace(/_/g, "-")}-changes-${Date.now()}`;
-
-    // Construct filterConfig with explicit typing matching the expected structure
-    const filterConfigInput = {
-      event: dbEvent,
-      schema: "public" as const, // Added 'as const' for more specific typing
-      table: tableName,
-      filter: filterString,
-    };
 
     const channel = supabase
       .channel(channelName)
       .on(
         "postgres_changes",
-        filterConfigInput as RealtimePostgresChangesFilter<REALTIME_POSTGRES_CHANGES_LISTEN_EVENT>, // Use the enum type directly in assertion
+        {
+          event: dbEvent,
+          schema: "public",
+          table: tableName,
+          filter: filterString,
+        },
         onUpdate
       )
       .subscribe();
