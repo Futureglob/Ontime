@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/types/database";
 
@@ -37,10 +36,10 @@ export const profileService = {
     return data as Profile[];
   },
 
-  async createEmployee(newEmployee: Partial<Profile>) {
+  async createEmployee(newEmployeeData: Omit<Profile, "created_at" | "updated_at" | "role">) {
     const { data, error } = await supabase
       .from("profiles")
-      .insert([{ ...newEmployee, role: UserRole.EMPLOYEE }])
+      .insert([{ ...newEmployeeData, role: UserRole.EMPLOYEE }])
       .select()
       .single();
 
