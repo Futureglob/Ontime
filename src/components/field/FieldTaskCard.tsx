@@ -280,9 +280,11 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
                         type="file"
                         accept="image/*"
                         capture="environment"
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           const file = e.target.files?.[0];
-                          if (file) handlePhotoCapture(file);
+                          if (file) {
+                            handlePhotoCapture(file);
+                          }
                         }}
                         className="w-full"
                       />
