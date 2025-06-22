@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause } from "lucide-react";
-import { TaskStatus, Task } from "@/types/database";
+import { TaskStatus, Task, PhotoType } from "@/types/database";
 import { taskService } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
 
@@ -19,7 +19,7 @@ interface FieldTaskCardProps {
 export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProps) {
   const [updating, setUpdating] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
-  const [photoType, setPhotoType] = useState<"checkin" | "progress" | "completion">("checkin");
+  const [photoType, setPhotoType] = useState<PhotoType>(PhotoType.CHECK_IN);
   const [notes, setNotes] = useState("");
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,9 +108,9 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
       });
 
       // Auto-update task status based on photo type
-      if (photoType === "checkin" && task.status === TaskStatus.ACCEPTED) {
+      if (photoType === PhotoType.CHECK_IN && task.status === TaskStatus.ACCEPTED) {
         await handleStatusUpdate(TaskStatus.IN_PROGRESS);
-      } else if (photoType === "completion") {
+      } else if (photoType === PhotoType.COMPLETION) {
         await handleStatusUpdate(TaskStatus.COMPLETED);
       }
 
@@ -257,12 +257,12 @@ export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProp
                       <label className="text-sm font-medium">Photo Type</label>
                       <select 
                         value={photoType} 
-                        onChange={(e) => setPhotoType(e.target.value as typeof photoType)}
+                        onChange={(e) => setPhotoType(e.target.value as PhotoType)}
                         className="w-full mt-1 p-2 border rounded-md"
                       >
-                        <option value="checkin">Check-in Photo</option>
-                        <option value="progress">Progress Photo</option>
-                        <option value="completion">Completion Photo</option>
+                        <option value={PhotoType.CHECK_IN}>Check-in Photo</option>
+                        <option value={PhotoType.PROGRESS}>Progress Photo</option>
+                        <option value={PhotoType.COMPLETION}>Completion Photo</option>
                       </select>
                     </div>
                     <div>
