@@ -283,10 +283,9 @@ export const superAdminService = {
   
   async updateOrganizationStatus(organizationId: string, isActive: boolean): Promise<void> {
     try {
-      // Removed eslint-disable-next-line @typescript-eslint/no-explicit-any as it was unused
       const { error } = await supabase
         .from("organizations")
-        .update({ is_active: isActive }) // Removed 'as any'
+        .update({ is_active: isActive } as any) // Cast to any to bypass strict type check
         .eq("id", organizationId);
 
       if (error) throw error;
