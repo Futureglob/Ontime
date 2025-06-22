@@ -1,11 +1,15 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { TaskPhoto, PhotoType, CreatePhotoRequest } from "@/types/database";
 
 export const photoService = {
-  async uploadTaskPhoto(file: File, taskId: string, photoType: PhotoType, latitude?: number, longitude?: number) {
+  async uploadTaskPhoto(taskId: string, file: File, metadata: {
+    type: PhotoType;
+    location?: { lat: number; lng: number };
+    timestamp: string;
+    notes?: string;
+  }) {
     const fileExt = file.name.split(".").pop();
-    const fileName = `${taskId}/${photoType}_${Date.now()}.${fileExt}`;
+    const fileName = `${taskId}/${metadata.type}_${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("task-photos")
@@ -19,10 +23,10 @@ export const photoService = {
 
     const photoData: CreatePhotoRequest = {
       task_id: taskId,
-      photo_type: photoType,
+      photo_type: metadata.type,
       photo_url: publicUrl,
-      latitude,
-      longitude
+      latitude: metadata.location?.lat,
+      longitude: metadata.location?.lng
     };
 
     const { data, error } = await supabase
