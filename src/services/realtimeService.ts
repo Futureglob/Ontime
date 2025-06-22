@@ -1,6 +1,17 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { RealtimeChannel, RealtimePostgresChangesPayload, REALTIME_LISTEN_TYPES } from "@supabase/supabase-js";
+import type { Task, Message, Profile, TaskPhoto, TaskStatusHistory } from "@/types/database";
+
+// Define specific payload types, using 'any' for the record type if specific fields are not critical for the callback signature.
+// Alternatively, define more precise types if needed.
+type TaskChangesPayload = RealtimePostgresChangesPayload<Task>;
+type MessageChangesPayload = RealtimePostgresChangesPayload<Message>;
+type ProfileChangesPayload = RealtimePostgresChangesPayload<Profile>;
+type TaskPhotoChangesPayload = RealtimePostgresChangesPayload<TaskPhoto>;
+type TaskStatusHistoryChangesPayload = RealtimePostgresChangesPayload<TaskStatusHistory>;
+type GenericChangesPayload<T extends { [key: string]: any }> = RealtimePostgresChangesPayload<T>;
+
 
 export interface RealtimeSubscription {
   channel: RealtimeChannel;
@@ -8,19 +19,18 @@ export interface RealtimeSubscription {
 }
 
 export const realtimeService = {
-  // Subscribe to task updates for real-time status changes
   subscribeToTaskUpdates(
     organizationId: string,
-    onTaskUpdate: (payload: any) => void
+    onTaskUpdate: (payload: TaskChangesPayload) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`tasks-${organizationId}`)
-      .on(
-        'postgres_changes',
+      .on<Task>( // Specify the table type for better type safety in payload
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
-          schema: 'public',
-          table: 'tasks',
+          event: "*",
+          schema: "public",
+          table: "tasks",
           filter: `organization_id=eq.${organizationId}`
         },
         onTaskUpdate
@@ -33,19 +43,18 @@ export const realtimeService = {
     };
   },
 
-  // Subscribe to messages for real-time chat
   subscribeToTaskMessages(
     taskId: string,
-    onMessageReceived: (payload: any) => void
+    onMessageReceived: (payload: MessageChangesPayload) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`messages-${taskId}`)
-      .on(
-        'postgres_changes',
+      .on<Message>(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
           filter: `task_id=eq.${taskId}`
         },
         onMessageReceived
@@ -58,19 +67,18 @@ export const realtimeService = {
     };
   },
 
-  // Subscribe to employee status updates
   subscribeToEmployeeUpdates(
     organizationId: string,
-    onEmployeeUpdate: (payload: any) => void
+    onEmployeeUpdate: (payload: ProfileChangesPayload) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`employees-${organizationId}`)
-      .on(
-        'postgres_changes',
+      .on<Profile>(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
+          event: "*",
+          schema: "public",
+          table: "profiles",
           filter: `organization_id=eq.${organizationId}`
         },
         onEmployeeUpdate
@@ -83,19 +91,18 @@ export const realtimeService = {
     };
   },
 
-  // Subscribe to task photos for real-time photo uploads
   subscribeToTaskPhotos(
     taskId: string,
-    onPhotoUploaded: (payload: any) => void
+    onPhotoUploaded: (payload: TaskPhotoChangesPayload) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`photos-${taskId}`)
-      .on(
-        'postgres_changes',
+      .on<TaskPhoto>(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'task_photos',
+          event: "INSERT",
+          schema: "public",
+          table: "task_photos",
           filter: `task_id=eq.${taskId}`
         },
         onPhotoUploaded
@@ -108,19 +115,18 @@ export const realtimeService = {
     };
   },
 
-  // Subscribe to task status history for audit trail
   subscribeToTaskStatusHistory(
     taskId: string,
-    onStatusChange: (payload: any) => void
+    onStatusChange: (payload: TaskStatusHistoryChangesPayload) => void
   ): RealtimeSubscription {
     const channel = supabase
       .channel(`status-${taskId}`)
-      .on(
-        'postgres_changes',
+      .on<TaskStatusHistory>(
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'task_status_history',
+          event: "INSERT",
+          schema: "public",
+          table: "task_status_history",
           filter: `task_id=eq.${taskId}`
         },
         onStatusChange
@@ -133,26 +139,30 @@ export const realtimeService = {
     };
   },
 
-  // Generic subscription for any table
-  subscribeToTable(
+  subscribeToTable<T extends { [key: string]: any }>(
     tableName: string,
-    filter: string,
-    onUpdate: (payload: any) => void,
-    event: 'INSERT' | 'UPDATE' | 'DELETE' | '*' = '*'
+    filterString: string,
+    onUpdate: (payload: GenericChangesPayload<T>) => void,
+    dbEvent: "*" | "INSERT" | "UPDATE" | "DELETE" = "*"
   ): RealtimeSubscription {
+    const channelName = `${tableName.replace(/_/g, "-")}-changes-${Date.now()}`;
     const channel = supabase
-      .channel(`${tableName}-${Date.now()}`)
-      .on(
-        'postgres_changes',
+      .channel(channelName)
+      .on<T>( // Specify the generic type T
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event,
-          schema: 'public',
+          event: dbEvent,
+          schema: "public",
           table: tableName,
-          filter
+          filter: filterString
         },
         onUpdate
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (err) {
+          console.error(`Error subscribing to ${channelName}:`, err);
+        }
+      });
 
     return {
       channel,
