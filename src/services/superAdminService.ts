@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface SuperAdmin {
@@ -284,10 +283,10 @@ export const superAdminService = {
   
   async updateOrganizationStatus(organizationId: string, isActive: boolean): Promise<void> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // Removed eslint-disable-next-line @typescript-eslint/no-explicit-any as it was unused
       const { error } = await supabase
         .from("organizations")
-        .update({ is_active: isActive } as any) 
+        .update({ is_active: isActive }) // Removed 'as any'
         .eq("id", organizationId);
 
       if (error) throw error;
