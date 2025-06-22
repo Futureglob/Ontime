@@ -1,6 +1,6 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import AuthProvider from "@/contexts/AuthContext"; // This was the previous error, ensure AuthContext exports default
+import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { useEffect } from "react";
 import { pwaService } from "@/services/pwaService";
