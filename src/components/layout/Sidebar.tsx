@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,42 +15,43 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
-import { UserRole } from "@/types/database";
+import { Profile, UserRole } from "@/types/database";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["admin", "manager", "employee"] },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare, roles: ["admin", "manager", "employee"] },
-  { name: "Employees", href: "/employees", icon: Users, roles: ["admin", "manager"] },
-  { name: "Field Work", href: "/field", icon: MapPin, roles: ["employee"] },
-  { name: "Chat", href: "/chat", icon: MessageSquare, roles: ["admin", "manager", "employee"] },
-  { name: "Analytics", href: "/analytics", icon: BarChart3, roles: ["admin", "manager"] },
-  { name: "Organization", href: "/organization", icon: Building, roles: ["admin"] },
-  { name: "Profile", href: "/profile", icon: User, roles: ["admin", "manager", "employee"] },
-  { name: "Settings", href: "/settings", icon: Settings, roles: ["admin", "manager", "employee"] }
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] },
+  { name: "Employees", href: "/employees", icon: Users, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+  { name: "Field Work", href: "/field", icon: MapPin, roles: [UserRole.EMPLOYEE] },
+  { name: "Chat", href: "/chat", icon: MessageSquare, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, roles: [UserRole.ADMIN, UserRole.MANAGER] },
+  { name: "Organization", href: "/organization", icon: Building, roles: [UserRole.ADMIN] },
+  { name: "Profile", href: "/profile", icon: User, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] },
+  { name: "Settings", href: "/settings", icon: Settings, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE] }
 ];
 
 export default function Sidebar() {
   const router = useRouter();
   const { user } = useAuth();
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  useEffect(() => {
+  const loadUserProfile = useCallback(async () => {
     if (user) {
-      loadUserProfile();
+      try {
+        const profile = await profileService.getProfile(user.id);
+        setUserProfile(profile);
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+        setUserProfile(null); // Set to null on error to avoid issues with userProfile.role
+      }
     }
   }, [user]);
 
-  const loadUserProfile = async () => {
-    try {
-      const profile = await profileService.getProfile(user!.id);
-      setUserProfile(profile);
-    } catch (error) {
-      console.error("Error loading user profile:", error);
-    }
-  };
+  useEffect(() => {
+    loadUserProfile();
+  }, [loadUserProfile]);
 
   const filteredNavigation = navigation.filter(item => 
-    userProfile?.role && item.roles.includes(userProfile.role)
+    userProfile?.role && item.roles.includes(userProfile.role as UserRole)
   );
 
   const handleNavigation = (href: string) => {

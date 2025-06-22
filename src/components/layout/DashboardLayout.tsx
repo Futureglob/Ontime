@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Bell, User, LogOut } from "lucide-react";
+import { Menu, Bell, LogOut } from "lucide-react"; // Removed unused User import
 import { useAuth } from "@/contexts/AuthContext";
 import { authService } from "@/services/authService";
 import { useRouter } from "next/router";

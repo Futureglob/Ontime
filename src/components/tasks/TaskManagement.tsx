@@ -1,76 +1,93 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card"; // Removed CardHeader, CardTitle
+// Removed Badge import
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, MapPin, Clock, User } from "lucide-react";
+import { Plus, Search, Filter, Clock, User } from "lucide-react"; // Removed MapPin
 import { taskService } from "@/services/taskService";
 import { profileService } from "@/services/profileService";
 import { useAuth } from "@/contexts/AuthContext";
-import { Task, TaskStatus, UserRole } from "@/types/database";
+import { TaskStatus, UserRole, Profile, Task as TaskType } from "@/types/database"; // Renamed Task to TaskType to avoid conflict
 import TaskCard from "./TaskCard";
 import TaskForm from "./TaskForm";
 
+// Define a more specific type for the task that includes profile data
+interface EnrichedTask extends TaskType {
+  assigned_to_profile?: { full_name: string; employee_id?: string | null };
+  assigned_by_profile?: { full_name: string };
+}
+
 export default function TaskManagement() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<EnrichedTask[]>([]);
+  const [employees, setEmployees] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+
+  const loadUserProfile = useCallback(async () => {
+    if (user) {
+      try {
+        const profile = await profileService.getProfile(user.id);
+        setUserProfile(profile);
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+      }
+    }
+  }, [user]);
+
+  const loadTasks = useCallback(async () => {
+    if (user && userProfile) { // Ensure userProfile is loaded before fetching tasks based on role
+      try {
+        setLoading(true);
+        let tasksData;
+        if (userProfile.role === UserRole.EMPLOYEE) {
+          tasksData = await taskService.getTasksByEmployee(user.id);
+        } else if (userProfile.organization_id) {
+          tasksData = await taskService.getTasksByOrganization(userProfile.organization_id);
+        }
+        setTasks((tasksData as EnrichedTask[]) || []);
+      } catch (error) {
+        console.error("Error loading tasks:", error);
+      } finally {
+        setLoading(false);
+      }
+    } else if (user && !userProfile) {
+      // If userProfile is not yet loaded but user exists, it might be the initial load.
+      // loadUserProfile will trigger a re-render, and then loadTasks will run with userProfile.
+      // Alternatively, you could chain them or ensure profile is fetched first.
+      // For now, this handles the case where userProfile might not be immediately available.
+      setLoading(true); // Keep loading true until profile and tasks are fetched
+    }
+  }, [user, userProfile]);
+
+  const loadEmployees = useCallback(async () => {
+    if (user && userProfile && userProfile.organization_id && userProfile.role !== UserRole.EMPLOYEE) {
+      try {
+        const employeesData = await profileService.getOrganizationEmployees(userProfile.organization_id);
+        setEmployees(employeesData || []);
+      } catch (error) {
+        console.error("Error loading employees:", error);
+      }
+    }
+  }, [user, userProfile]);
 
   useEffect(() => {
     if (user) {
       loadUserProfile();
+    }
+  }, [user, loadUserProfile]);
+
+  useEffect(() => {
+    if (userProfile) { // Load tasks and employees once userProfile is available
       loadTasks();
       loadEmployees();
     }
-  }, [user]);
+  }, [userProfile, loadTasks, loadEmployees]);
 
-  const loadUserProfile = async () => {
-    try {
-      const profile = await profileService.getProfile(user!.id);
-      setUserProfile(profile);
-    } catch (error) {
-      console.error("Error loading user profile:", error);
-    }
-  };
-
-  const loadTasks = async () => {
-    try {
-      setLoading(true);
-      const profile = await profileService.getProfile(user!.id);
-      
-      let tasksData;
-      if (profile.role === UserRole.EMPLOYEE) {
-        tasksData = await taskService.getTasksByEmployee(user!.id);
-      } else {
-        tasksData = await taskService.getTasksByOrganization(profile.organization_id!);
-      }
-      
-      setTasks(tasksData || []);
-    } catch (error) {
-      console.error("Error loading tasks:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadEmployees = async () => {
-    try {
-      const profile = await profileService.getProfile(user!.id);
-      if (profile.organization_id && profile.role !== UserRole.EMPLOYEE) {
-        const employeesData = await profileService.getOrganizationEmployees(profile.organization_id);
-        setEmployees(employeesData || []);
-      }
-    } catch (error) {
-      console.error("Error loading employees:", error);
-    }
-  };
 
   const handleTaskCreated = () => {
     setShowTaskForm(false);
@@ -81,22 +98,13 @@ export default function TaskManagement() {
     loadTasks();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case TaskStatus.ASSIGNED: return "bg-blue-100 text-blue-800";
-      case TaskStatus.ACCEPTED: return "bg-green-100 text-green-800";
-      case TaskStatus.IN_PROGRESS: return "bg-yellow-100 text-yellow-800";
-      case TaskStatus.ON_HOLD: return "bg-orange-100 text-orange-800";
-      case TaskStatus.COMPLETED: return "bg-emerald-100 text-emerald-800";
-      case TaskStatus.RETURNED: return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
+  // getStatusColor function is removed as it's not used here (it's in TaskCard)
 
   const filteredTasks = tasks.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.location?.toLowerCase().includes(searchTerm.toLowerCase());
+    const titleMatch = task.title?.toLowerCase().includes(searchTerm.toLowerCase());
+    const descriptionMatch = task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const locationMatch = task.location?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = titleMatch || descriptionMatch || locationMatch;
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

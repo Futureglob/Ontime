@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/types/database";
+import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 export const messageService = {
   async sendMessage(taskId: string, senderId: string, content: string) {
@@ -43,7 +43,7 @@ export const messageService = {
     if (error) throw error;
   },
 
-  subscribeToTaskMessages(taskId: string, callback: (payload: any) => void) {
+  subscribeToTaskMessages(taskId: string, callback: (payload: RealtimePostgresChangesPayload<Message>) => void) {
     return supabase
       .channel(`messages:task_id=eq.${taskId}`)
       .on("postgres_changes", {

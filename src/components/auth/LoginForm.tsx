@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,8 +30,12 @@ export default function LoginForm() {
       setLoading(true);
       await authService.signIn(formData.email, formData.password);
       router.push("/");
-    } catch (error: any) {
-      setError(error.message || "Failed to sign in");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Failed to sign in");
+      } else {
+        setError("An unknown error occurred during sign in.");
+      }
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,42 +15,41 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
 import { taskService } from "@/services/taskService";
-import { UserRole, TaskStatus } from "@/types/database";
+import { UserRole, TaskStatus, Profile, Task } from "@/types/database";
 import { useRouter } from "next/router";
 
 export default function DashboardOverview() {
   const { user } = useAuth();
   const router = useRouter();
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!user) return;
     try {
       setLoading(true);
-      const profile = await profileService.getProfile(user!.id);
+      const profile = await profileService.getProfile(user.id);
       setUserProfile(profile);
 
       let tasksData;
       if (profile.role === UserRole.EMPLOYEE) {
-        tasksData = await taskService.getTasksByEmployee(user!.id);
-      } else {
-        tasksData = await taskService.getTasksByOrganization(profile.organization_id!);
+        tasksData = await taskService.getTasksByEmployee(user.id);
+      } else if (profile.organization_id) {
+        tasksData = await taskService.getTasksByOrganization(profile.organization_id);
       }
       
       setTasks(tasksData || []);
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
+      console.error("Error loading dashboard ", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getTaskStats = () => {
     const total = tasks.length;

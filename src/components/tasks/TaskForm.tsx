@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +11,12 @@ import { format } from "date-fns";
 import { taskService } from "@/services/taskService";
 import { profileService } from "@/services/profileService";
 import { useAuth } from "@/contexts/AuthContext";
-import { CreateTaskRequest } from "@/types/database";
+import { CreateTaskRequest, Profile } from "@/types/database";
 
 interface TaskFormProps {
   onClose: () => void;
   onTaskCreated: () => void;
-  employees: any[];
+  employees: Profile[];
 }
 
 export default function TaskForm({ onClose, onTaskCreated, employees }: TaskFormProps) {
@@ -48,7 +47,7 @@ export default function TaskForm({ onClose, onTaskCreated, employees }: TaskForm
     "Other"
   ];
 
-  const handleInputChange = (field: keyof CreateTaskRequest, value: any) => {
+  const handleInputChange = (field: keyof CreateTaskRequest, value: string | number | undefined) => {
     setFormData(prev => ({
       ...prev,
       [field]: value

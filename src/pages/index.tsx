@@ -1,6 +1,5 @@
-
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
+// import { useRouter } from "next/router"; // Removed unused import
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
@@ -8,7 +7,7 @@ import LoginForm from "@/components/auth/LoginForm";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
-  const router = useRouter();
+  // const router = useRouter(); // Removed unused variable
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

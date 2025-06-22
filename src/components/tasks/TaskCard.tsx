@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,24 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Clock, User, Calendar, MessageSquare, Camera, Navigation } from "lucide-react";
+import { MapPin, User, Calendar, MessageSquare, Camera, Navigation } from "lucide-react"; // Removed Clock
 import { taskService } from "@/services/taskService";
-import { TaskStatus, UserRole } from "@/types/database";
+import { TaskStatus, UserRole, Profile, Task } from "@/types/database";
 
+// Define a more specific type for the task prop
+interface EnrichedTask extends Task {
+  assigned_to_profile?: { full_name: string; employee_id?: string | null };
+  assigned_by_profile?: { full_name: string };
+}
 interface TaskCardProps {
-  task: any;
+  task: EnrichedTask;
   onTaskUpdated: () => void;
-  userRole?: string;
-  employees?: any[];
+  userRole?: UserRole;
+  employees?: Profile[];
 }
 
 export default function TaskCard({ task, onTaskUpdated, userRole, employees }: TaskCardProps) {
   const [updating, setUpdating] = useState(false);
   const [showStatusUpdate, setShowStatusUpdate] = useState(false);
-  const [newStatus, setNewStatus] = useState<TaskStatus>(task.status);
+  const [newStatus, setNewStatus] = useState<TaskStatus>(task.status as TaskStatus); // Ensure task.status is treated as TaskStatus
   const [notes, setNotes] = useState("");
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null | undefined) => { // Allow status to be string | null | undefined
     switch (status) {
       case TaskStatus.ASSIGNED: return "bg-blue-100 text-blue-800";
       case TaskStatus.ACCEPTED: return "bg-green-100 text-green-800";
