@@ -9,8 +9,14 @@ interface AppStateChangeEvent {
   online?: boolean;
 }
 
+// Add SyncManager interface declaration if not globally available
+interface SyncManager {
+  register(tag: string): Promise<void>;
+  getTags(): Promise<string[]>;
+}
+
 interface ServiceWorkerRegistrationWithSync extends ServiceWorkerRegistration {
-  sync: SyncManager; // SyncManager is a built-in type for Background Sync API
+  sync: SyncManager;
 }
 
 export const pwaService = {
