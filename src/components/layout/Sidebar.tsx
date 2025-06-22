@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
-import { Profile, UserRole } from "@/types/database";
+import { Profile } from "@/types/database"; // Removed unused UserRole import
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },

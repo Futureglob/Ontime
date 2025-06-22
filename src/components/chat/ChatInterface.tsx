@@ -13,12 +13,12 @@ import {
   Check
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { messageService, MessageWithSender } from "@/services/messageService";
+import { messageService } from "@/services/messageService"; // Removed MessageWithSender as it's not directly used here
 import { realtimeService } from "@/services/realtimeService";
 import { notificationService } from "@/services/notificationService";
 import { Task } from "@/types/database";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import WhatsAppShare from "./WhatsAppShare";
+// import WhatsAppShare from "./WhatsAppShare"; // Removed unused WhatsAppShare import
 
 interface ChatMessage {
   id: string;

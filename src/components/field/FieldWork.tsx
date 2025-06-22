@@ -9,12 +9,13 @@ import { realtimeService } from "@/services/realtimeService";
 import { notificationService } from "@/services/notificationService";
 import { offlineService } from "@/services/offlineService";
 import { useAuth } from "@/contexts/AuthContext";
-import { TaskStatus, UserRole, Profile, Task as TaskType } from "@/types/database";
+import { TaskStatus, UserRole, Profile, Task as TaskType, UpdateTaskStatusRequest } from "@/types/database";
 import FieldTaskCard from "./FieldTaskCard";
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"; // Import this
-import type { Database } from "@/integrations/supabase/types"; // Import Database type
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+import { useToast } from "@/components/ui/use-toast";
 
-type TaskRow = Database["public"]["Tables"]["tasks"]["Row"]; // Define TaskRow
+type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 
 interface EnrichedTask extends TaskType {
   assigned_by_profile?: { full_name: string };
@@ -30,6 +31,7 @@ export default function FieldWork() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const { toast } = useToast(); // Initialize toast
 
   // Real-time subscription and offline detection
   useEffect(() => {
@@ -120,11 +122,14 @@ export default function FieldWork() {
         console.log("Real-time task update:", payload);
         
         if (payload.eventType === 'INSERT' && payload.new) {
-          notificationService.notifyTaskAssigned(payload.new.title || 'New Task');
+          // Corrected notification call
+          notificationService.showTaskAssignedNotification(payload.new.title || 'New Task', userProfile?.full_name || "System");
         } else if (payload.eventType === 'UPDATE' && payload.new) {
-          notificationService.notifyTaskUpdated(
+          // Corrected notification call
+          notificationService.showTaskStatusNotification(
             payload.new.title || 'Task', 
-            payload.new.status || 'Updated' // status is string | null, so this is fine
+            payload.new.status || 'Updated',
+            userProfile?.full_name || "System"
           );
         }
         
@@ -212,17 +217,19 @@ export default function FieldWork() {
     );
   }
 
-  const handleUpdateTaskStatus = async (taskId: string, status: TaskStatus, notes?: string) => {
-    try {
-      const updatedTask = await taskService.updateTaskStatus(taskId, status, notes);
-      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
-      // Use existing notification methods
-      await notificationService.showTaskStatusNotification(updatedTask.title, status, userProfile?.full_name || "Manager");
-      toast({ title: "Task Status Updated", description: `Task ${updatedTask.title} updated to ${status}.` });
-    } catch (error) {
-      console.error("Error updating task status:", error);
-    }
-  };
+  // Removed unused handleUpdateTaskStatus as FieldTaskCard likely handles its own updates
+  // const handleUpdateTaskStatus = async (taskId: string, status: TaskStatus, notes?: string) => {
+  //   try {
+  //     const updateRequest: UpdateTaskStatusRequest = { status, notes };
+  //     const updatedTask = await taskService.updateTaskStatus(taskId, updateRequest);
+  //     setTasks(tasks.map(t => t.id === taskId ? { ...t, ...updatedTask } : t));
+  //     await notificationService.showTaskStatusNotification(updatedTask.title, status, userProfile?.full_name || "Manager");
+  //     toast({ title: "Task Status Updated", description: `Task ${updatedTask.title} updated to ${status}.` });
+  //   } catch (error) {
+  //     console.error("Error updating task status:", error);
+  //     toast({ title: "Error", description: "Failed to update task status.", variant: "destructive" });
+  //   }
+  // };
 
   return (
     <div className="space-y-4 px-4 pb-20">
