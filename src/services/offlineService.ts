@@ -134,8 +134,8 @@ export const offlineService = {
 
     let syncedActions = 0;
     let syncedPhotos = 0;
-    let failedActions: OfflineTaskAction[] = [];
-    let failedPhotos: CachedPhoto[] = [];
+    const failedActions: OfflineTaskAction[] = []; // Changed to const
+    const failedPhotos: CachedPhoto[] = []; // Changed to const
 
     // Process offline actions
     for (const action of offlineActions) {
@@ -197,7 +197,7 @@ export const offlineService = {
         await taskService.updateTaskStatus(
           updatePayload.taskId,
           { 
-            status: updatePayload.status, 
+            status: updatePayload.status as TaskStatus, // Cast to TaskStatus
             notes: updatePayload.notes 
           },
           updatePayload.assignedTo!
