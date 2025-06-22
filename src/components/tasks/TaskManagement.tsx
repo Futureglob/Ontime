@@ -1,229 +1,259 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-// import { Badge } from "@/components/ui/badge"; // Removed unused import
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-// Removed MapPin, Clock, User, Calendar as they are not used directly here
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, MapPin, Clock, User } from "lucide-react";
+import { taskService } from "@/services/taskService";
+import { profileService } from "@/services/profileService";
 import { useAuth } from "@/contexts/AuthContext";
-import { Task } from "@/types";
-import TaskForm from "./TaskForm";
+import { Task, TaskStatus, UserRole } from "@/types/database";
 import TaskCard from "./TaskCard";
+import TaskForm from "./TaskForm";
 
 export default function TaskManagement() {
   const { user } = useAuth();
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showTaskForm, setShowTaskForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Mock tasks data
-  const mockTasks: Task[] = [
-    {
-      id: "1",
-      title: "Equipment Installation",
-      description: "Install new HVAC system at client location",
-      type: "Installation",
-      location: {
-        address: "123 Business Ave, City, State 12345",
-        latitude: 40.7128,
-        longitude: -74.0060
-      },
-      clientInfo: {
-        name: "ABC Corporation",
-        contact: "+1234567890",
-        email: "contact@abc.com"
-      },
-      deadline: new Date("2024-01-15T10:00:00"),
-      status: "assigned",
-      assignedTo: "emp_1",
-      assignedBy: "mgr_1",
-      organizationId: "org_1",
-      priority: "high",
-      estimatedDuration: 240,
-      photos: [],
-      createdAt: new Date("2024-01-10T09:00:00"),
-      updatedAt: new Date("2024-01-10T09:00:00")
-    },
-    {
-      id: "2",
-      title: "Maintenance Check",
-      description: "Routine maintenance and inspection",
-      type: "Maintenance",
-      location: {
-        address: "456 Industrial Blvd, City, State 12345",
-        latitude: 40.7589,
-        longitude: -73.9851
-      },
-      clientInfo: {
-        name: "XYZ Limited",
-        contact: "+1234567891",
-        email: "service@xyz.com"
-      },
-      deadline: new Date("2024-01-12T14:00:00"),
-      status: "in_progress",
-      assignedTo: "emp_2",
-      assignedBy: "mgr_1",
-      organizationId: "org_1",
-      priority: "medium",
-      estimatedDuration: 120,
-      photos: [],
-      createdAt: new Date("2024-01-08T11:00:00"),
-      updatedAt: new Date("2024-01-11T13:30:00")
-    },
-    {
-      id: "3",
-      title: "Site Inspection",
-      description: "Safety and compliance inspection",
-      type: "Inspection",
-      location: {
-        address: "789 Commercial St, City, State 12345",
-        latitude: 40.7505,
-        longitude: -73.9934
-      },
-      clientInfo: {
-        name: "Tech Solutions Inc",
-        contact: "+1234567892",
-        email: "admin@techsolutions.com"
-      },
-      deadline: new Date("2024-01-20T09:00:00"),
-      status: "completed",
-      assignedTo: "emp_3",
-      assignedBy: "mgr_1",
-      organizationId: "org_1",
-      priority: "low",
-      estimatedDuration: 180,
-      actualDuration: 165,
-      photos: [],
-      createdAt: new Date("2024-01-05T08:00:00"),
-      updatedAt: new Date("2024-01-18T16:45:00")
+  useEffect(() => {
+    if (user) {
+      loadUserProfile();
+      loadTasks();
+      loadEmployees();
     }
-  ];
+  }, [user]);
 
-  const filteredTasks = mockTasks.filter(task => {
+  const loadUserProfile = async () => {
+    try {
+      const profile = await profileService.getProfile(user!.id);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+    }
+  };
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      const profile = await profileService.getProfile(user!.id);
+      
+      let tasksData;
+      if (profile.role === UserRole.EMPLOYEE) {
+        tasksData = await taskService.getTasksByEmployee(user!.id);
+      } else {
+        tasksData = await taskService.getTasksByOrganization(profile.organization_id!);
+      }
+      
+      setTasks(tasksData || []);
+    } catch (error) {
+      console.error("Error loading tasks:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEmployees = async () => {
+    try {
+      const profile = await profileService.getProfile(user!.id);
+      if (profile.organization_id && profile.role !== UserRole.EMPLOYEE) {
+        const employeesData = await profileService.getOrganizationEmployees(profile.organization_id);
+        setEmployees(employeesData || []);
+      }
+    } catch (error) {
+      console.error("Error loading employees:", error);
+    }
+  };
+
+  const handleTaskCreated = () => {
+    setShowTaskForm(false);
+    loadTasks();
+  };
+
+  const handleTaskUpdated = () => {
+    loadTasks();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case TaskStatus.ASSIGNED: return "bg-blue-100 text-blue-800";
+      case TaskStatus.ACCEPTED: return "bg-green-100 text-green-800";
+      case TaskStatus.IN_PROGRESS: return "bg-yellow-100 text-yellow-800";
+      case TaskStatus.ON_HOLD: return "bg-orange-100 text-orange-800";
+      case TaskStatus.COMPLETED: return "bg-emerald-100 text-emerald-800";
+      case TaskStatus.RETURNED: return "bg-red-100 text-red-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.clientInfo.name.toLowerCase().includes(searchTerm.toLowerCase());
+                         task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         task.location?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Removed getStatusColor function as it's not used in this component
-  // Removed getPriorityColor function as it's not used in this component
+  const getTaskStats = () => {
+    const total = tasks.length;
+    const assigned = tasks.filter(t => t.status === TaskStatus.ASSIGNED).length;
+    const inProgress = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
+    const completed = tasks.filter(t => t.status === TaskStatus.COMPLETED).length;
+    
+    return { total, assigned, inProgress, completed };
+  };
 
-  const canCreateTasks = user?.role === "org_admin" || user?.role === "task_manager";
+  const stats = getTaskStats();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading tasks...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Task Management</h2>
-          <p className="text-gray-600 mt-1">Manage and track field service tasks</p>
+          <h1 className="text-3xl font-bold">Task Management</h1>
+          <p className="text-muted-foreground">
+            {userProfile?.role === UserRole.EMPLOYEE 
+              ? "View and manage your assigned tasks" 
+              : "Create, assign, and monitor tasks"}
+          </p>
         </div>
-        {canCreateTasks && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Task</DialogTitle>
-                <DialogDescription>
-                  Fill in the details to create a new field service task
-                </DialogDescription>
-              </DialogHeader>
-              <TaskForm onClose={() => setIsCreateDialogOpen(false)} />
-            </DialogContent>
-          </Dialog>
+        {userProfile?.role !== UserRole.EMPLOYEE && (
+          <Button onClick={() => setShowTaskForm(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Task
+          </Button>
         )}
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search tasks or clients..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="on_hold">On Hold</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="returned">Returned</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Task Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-blue-600">
-              {mockTasks.filter(t => t.status === "assigned").length}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Tasks</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <Clock className="h-4 w-4 text-blue-600" />
+              </div>
             </div>
-            <p className="text-sm text-gray-600">Assigned</p>
           </CardContent>
         </Card>
+
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-purple-600">
-              {mockTasks.filter(t => t.status === "in_progress").length}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Assigned</p>
+                <p className="text-2xl font-bold">{stats.assigned}</p>
+              </div>
+              <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-yellow-600" />
+              </div>
             </div>
-            <p className="text-sm text-gray-600">In Progress</p>
           </CardContent>
         </Card>
+
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">
-              {mockTasks.filter(t => t.status === "completed").length}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+                <p className="text-2xl font-bold">{stats.inProgress}</p>
+              </div>
+              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <Clock className="h-4 w-4 text-orange-600" />
+              </div>
             </div>
-            <p className="text-sm text-gray-600">Completed</p>
           </CardContent>
         </Card>
+
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-red-600">
-              {mockTasks.filter(t => new Date(t.deadline) < new Date() && t.status !== "completed").length}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold">{stats.completed}</p>
+              </div>
+              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                <Clock className="h-4 w-4 text-green-600" />
+              </div>
             </div>
-            <p className="text-sm text-gray-600">Overdue</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tasks List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search tasks..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value={TaskStatus.ASSIGNED}>Assigned</SelectItem>
+            <SelectItem value={TaskStatus.ACCEPTED}>Accepted</SelectItem>
+            <SelectItem value={TaskStatus.IN_PROGRESS}>In Progress</SelectItem>
+            <SelectItem value={TaskStatus.ON_HOLD}>On Hold</SelectItem>
+            <SelectItem value={TaskStatus.COMPLETED}>Completed</SelectItem>
+            <SelectItem value={TaskStatus.RETURNED}>Returned</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard
+            key={task.id}
+            task={task}
+            onTaskUpdated={handleTaskUpdated}
+            userRole={userProfile?.role}
+            employees={employees}
+          />
         ))}
       </div>
 
       {filteredTasks.length === 0 && (
         <Card>
-          <CardContent className="pt-6 text-center">
-            <p className="text-gray-500">No tasks found matching your criteria.</p>
+          <CardContent className="p-12 text-center">
+            <div className="text-muted-foreground">
+              {searchTerm || statusFilter !== "all" 
+                ? "No tasks match your search criteria" 
+                : "No tasks found"}
+            </div>
           </CardContent>
         </Card>
+      )}
+
+      {showTaskForm && (
+        <TaskForm
+          onClose={() => setShowTaskForm(false)}
+          onTaskCreated={handleTaskCreated}
+          employees={employees}
+        />
       )}
     </div>
   );
