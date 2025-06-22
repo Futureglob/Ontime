@@ -50,8 +50,8 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  // const [isTyping, setIsTyping] = useState(false); // Removed unused state
+  // const [onlineUsers, setOnlineUsers] = useState<string[]>([]); // Removed unused state
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,29 +64,17 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
     scrollToBottom();
   }, [messages]);
 
-  // Load messages when task changes
-  useEffect(() => {
-    if (task?.id) {
-      loadMessages();
-      markMessagesAsRead();
+  const markMessagesAsRead = useCallback(async () => {
+    if (!task?.id || !user?.id) return;
+    
+    try {
+      await messageService.markMessagesAsRead(task.id, user.id);
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
     }
-  }, [task?.id]);
+  }, [task?.id, user?.id]);
 
-  // Set up real-time subscriptions
-  useEffect(() => {
-    if (!task?.id) return;
-
-    const subscription = realtimeService.subscribeToTaskMessages(
-      task.id,
-      handleNewMessage
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [task?.id]);
-
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     if (!task?.id) return;
     
     try {
@@ -98,9 +86,17 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [task?.id]);
 
-  const handleNewMessage = (payload: RealtimePostgresChangesPayload<ChatMessage>) => {
+  // Load messages when task changes
+  useEffect(() => {
+    if (task?.id) {
+      loadMessages();
+      markMessagesAsRead();
+    }
+  }, [task?.id, loadMessages, markMessagesAsRead]);
+
+  const handleNewMessage = useCallback((payload: RealtimePostgresChangesPayload<ChatMessage>) => {
     if (payload.eventType === "INSERT" && payload.new) {
       const newMsg = payload.new as ChatMessage;
       
@@ -124,7 +120,21 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
         markMessagesAsRead();
       }
     }
-  };
+  }, [user?.id, task?.id, markMessagesAsRead]);
+
+  // Set up real-time subscriptions
+  useEffect(() => {
+    if (!task?.id) return;
+
+    const subscription = realtimeService.subscribeToTaskMessages(
+      task.id,
+      handleNewMessage
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [task?.id, handleNewMessage]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !task?.id || !user?.id || sending) return;
@@ -138,16 +148,6 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
       alert("Failed to send message. Please try again.");
     } finally {
       setSending(false);
-    }
-  };
-
-  const markMessagesAsRead = async () => {
-    if (!task?.id || !user?.id) return;
-    
-    try {
-      await messageService.markMessagesAsRead(task.id, user.id);
-    } catch (error) {
-      console.error("Error marking messages as read:", error);
     }
   };
 
@@ -335,11 +335,11 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
 
       {/* Message Input */}
       <div className="border-t p-4">
-        {isTyping && (
+        {/* {isTyping && ( // Commented out as isTyping state is removed
           <div className="text-xs text-muted-foreground mb-2">
             {otherParticipant?.full_name} is typing...
           </div>
-        )}
+        )} */}
         
         <div className="flex items-center gap-2">
           <Button

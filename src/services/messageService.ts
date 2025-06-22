@@ -57,15 +57,22 @@ export const messageService = {
     if (error) throw error;
   },
 
+  // Get unread message count for a user
   async getUnreadMessageCount(userId: string): Promise<number> {
-    const { data, error } = await supabase
-      .from("messages")
-      .select("id", { count: "exact" })
-      .neq("sender_id", userId)
-      .eq("is_read", false);
+    try {
+      const { count, error } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false)
+        .not("sender_id", "eq", userId) // Count messages not sent by the user
+        .or(`task_id.in.(SELECT id FROM tasks WHERE assigned_to = '${userId}' OR assigned_by = '${userId}')`); // User is part of the task
 
-    if (error) throw error;
-    return data?.length || 0;
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error("Error fetching unread message count:", error);
+      throw error;
+    }
   },
 
   async getTaskConversations(userId: string) {
@@ -122,22 +129,21 @@ export const messageService = {
       .subscribe();
   },
 
-  // WhatsApp Integration
-  generateWhatsAppLink(phoneNumber: string, message: string): string {
-    const cleanPhone = phoneNumber.replace(/[^\d]/g, "");
-    const encodedMessage = encodeURIComponent(message);
-    return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+  // Generate a generic task update message
+  generateTaskUpdateMessage(task: Task): string {
+    return `Task Update: ${task.title}
+Status: ${task.status}
+Location: ${task.location || "Not specified"}
+Deadline: ${task.deadline ? new Date(task.deadline).toLocaleDateString() : "N/A"}`;
   },
 
-  generateTaskUpdateMessage(task: any): string {
-    return `🔔 Task Update - OnTime App
-
-📋 Task: ${task.title}
-📍 Status: ${task.status?.replace("_", " ").toUpperCase()}
-📍 Location: ${task.location || "Not specified"}
-⏰ Deadline: ${task.deadline ? new Date(task.deadline).toLocaleDateString() : "Not set"}
-
-View full details in the OnTime mobile app.`;
+  // Generate WhatsApp share link
+  generateWhatsAppLink(phoneNumber: string | undefined, message: string): string {
+    const encodedMessage = encodeURIComponent(message);
+    if (phoneNumber) {
+      return `https://wa.me/${phoneNumber.replace(/\D/g, "")}?text=${encodedMessage}`;
+    }
+    return `https://wa.me/?text=${encodedMessage}`;
   }
 };
 

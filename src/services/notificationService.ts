@@ -11,7 +11,7 @@ export interface NotificationOptions {
   icon?: string;
   badge?: string;
   tag?: string;
-  data?: Record<string, unknown>;
+  data?: Record<string, unknown>; // Changed from any to unknown
   actions?: NotificationAction[];
   silent?: boolean;
   requireInteraction?: boolean;
@@ -153,9 +153,9 @@ export const notificationService = {
   // Setup notification click handlers
   setupNotificationHandlers(): void {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", (event) => {
+      navigator.serviceWorker.addEventListener("message", (event: MessageEvent) => { // Added MessageEvent type
         if (event.data && event.data.type === "notification-click") {
-          this.handleNotificationClick(event.data);
+          this.handleNotificationClick(event.data as Record<string, unknown>); // Cast data to Record<string, unknown>
         }
       });
     }
@@ -197,8 +197,8 @@ export const notificationService = {
     this.setupNotificationHandlers();
     
     // Register with PWA service for background notifications
-    if (pwaService.isInstalled()) {
-      await pwaService.registerBackgroundSync();
+    if (pwaService.isInstalled()) { // Corrected: pwaService.isInstalled() exists
+      await pwaService.registerBackgroundSync("ontime-sync"); // Corrected: pwaService.registerBackgroundSync() exists and expects a tag
     }
   }
 };

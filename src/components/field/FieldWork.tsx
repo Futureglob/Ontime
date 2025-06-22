@@ -212,6 +212,18 @@ export default function FieldWork() {
     );
   }
 
+  const handleUpdateTaskStatus = async (taskId: string, status: TaskStatus, notes?: string) => {
+    try {
+      const updatedTask = await taskService.updateTaskStatus(taskId, status, notes);
+      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+      // Use existing notification methods
+      await notificationService.showTaskStatusNotification(updatedTask.title, status, userProfile?.full_name || "Manager");
+      toast({ title: "Task Status Updated", description: `Task ${updatedTask.title} updated to ${status}.` });
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
+  };
+
   return (
     <div className="space-y-4 px-4 pb-20">
       {/* Header */}

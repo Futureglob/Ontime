@@ -1,4 +1,3 @@
-
 import { Database } from "@/integrations/supabase/types";
 
 // Database Types
@@ -55,4 +54,35 @@ export interface CreatePhotoRequest {
   photo_url: string;
   latitude?: number;
   longitude?: number;
+}
+
+export interface Task {
+  id: string;
+  organization_id: string;
+  title: string;
+  description: string;
+  task_type: string; // e.g., "delivery", "maintenance", "installation"
+  location: string;
+  location_lat?: number;
+  location_lng?: number;
+  client_info?: string; // Name, contact, etc.
+  deadline?: string; // ISO string
+  priority: "low" | "medium" | "high";
+  status: TaskStatus;
+  assigned_to?: string; // User ID of the employee
+  assigned_by?: string; // User ID of the task manager
+  photos?: TaskPhoto[]; // Array of photo objects
+  notes?: string;
+  feedback?: string; // Client feedback
+  completion_details?: string; // Details upon completion
+  created_at: string; // ISO string
+  updated_at: string; // ISO string
+  assigned_to_profile?: ProfileReference;
+  assigned_by_profile?: ProfileReference;
+}
+
+export interface ProfileReference {
+  full_name: string;
+  role: string;
+  avatar_url?: string;
 }

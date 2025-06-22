@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,12 +40,43 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
   const [searchTerm, setSearchTerm] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const loadUnreadCount = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const count = await messageService.getUnreadMessageCount(user.id);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error("Error loading unread count:", error);
+    }
+  }, [user?.id]);
+
+  const loadConversations = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const data = await messageService.getTaskConversations(user.id);
+      setConversations(data || []);
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (user?.id) {
       loadConversations();
       loadUnreadCount();
     }
-  }, [user?.id]);
+  }, [user?.id, loadConversations, loadUnreadCount]);
+
+  const handleNewMessage = useCallback(() => {
+    // Reload conversations and unread count when new message arrives
+    loadConversations();
+    loadUnreadCount();
+  }, [loadConversations, loadUnreadCount]);
 
   // Set up real-time subscription for new messages
   useEffect(() => {
@@ -61,38 +92,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
     return () => {
       subscription.unsubscribe();
     };
-  }, [user?.id]);
-
-  const loadConversations = async () => {
-    if (!user?.id) return;
-    
-    try {
-      setLoading(true);
-      const data = await messageService.getTaskConversations(user.id);
-      setConversations(data || []);
-    } catch (error) {
-      console.error("Error loading conversations:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadUnreadCount = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const count = await messageService.getUnreadMessageCount(user.id);
-      setUnreadCount(count);
-    } catch (error) {
-      console.error("Error loading unread count:", error);
-    }
-  };
-
-  const handleNewMessage = () => {
-    // Reload conversations and unread count when new message arrives
-    loadConversations();
-    loadUnreadCount();
-  };
+  }, [user?.id, handleNewMessage]);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
