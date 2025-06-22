@@ -8,7 +8,7 @@ export interface SuperAdmin {
   created_at: string;
   created_by: string;
   user?: {
-    email: string;
+    email?: string; // Made email optional
     full_name: string;
   };
 }
@@ -32,14 +32,13 @@ export interface OrganizationStats {
   created_at: string;
 }
 
-// Interim type for profile data as Supabase types might be incomplete
+// Interim type for profile data from 'profiles' table
 interface ProfileData {
   id: string;
   full_name?: string | null;
-  email?: string | null; // Ensure email is part of the profile data
   role?: string | null;
   created_at?: string | null;
-  // Add other fields from profiles table if needed by this service
+  // email is intentionally omitted as errors suggest it's not on this table
 }
 
 
@@ -47,13 +46,12 @@ export const superAdminService = {
   // Check if current user is super admin
   async isSuperAdmin(userId: string): Promise<boolean> {
     try {
-      // Cast the RPC name to 'any' to bypass strict typing if 'check_super_admin' is not in generated types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase.rpc('check_super_admin' as any, { user_id: userId });
       
       if (error) {
         console.warn("RPC 'check_super_admin' failed or doesn't exist, falling back to profile role check:", error.message);
-        // Ensure the select query is correct and handles potential null profile
-        const {  profileData, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabase // Corrected destructuring here
           .from("profiles")
           .select("role")
           .eq("id", userId)
@@ -78,21 +76,21 @@ export const superAdminService = {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email, role, created_at") // Ensure all needed fields are selected
+        .select("id, full_name, role, created_at") // Removed 'email' from select
         .eq("role", "admin");
 
       if (error) throw error;
       
       return (data || []).map(profile => {
-        const p = profile as ProfileData; // Cast to our interim type
+        const p = profile as ProfileData;
         return {
           id: p.id,
           user_id: p.id,
-          permissions: {}, // Default permissions
+          permissions: {}, 
           created_at: p.created_at || new Date().toISOString(),
           created_by: "system", 
           user: {
-            email: p.email || "N/A",
+            // email: p.email || "N/A", // email is not available from profiles table query
             full_name: p.full_name || "N/A"
           }
         };
@@ -110,12 +108,12 @@ export const superAdminService = {
         .from("profiles")
         .update({ role: "admin" })
         .eq("id", userId)
-        .select("id, full_name, email, role, created_at") // Ensure all needed fields are selected
+        .select("id, full_name, role, created_at") // Removed 'email' from select
         .single();
 
       if (error) throw error;
       
-      const p = data as ProfileData; // Cast to our interim type
+      const p = data as ProfileData;
       return {
         id: p.id,
         user_id: p.id,
@@ -123,7 +121,7 @@ export const superAdminService = {
         created_at: p.created_at || new Date().toISOString(),
         created_by: "system", 
         user: {
-          email: p.email || "N/A",
+          // email: p.email || "N/A", // email is not available from profiles table query
           full_name: p.full_name || "N/A"
         }
       };
@@ -151,7 +149,6 @@ export const superAdminService = {
   async updateSuperAdminPermissions(superAdminId: string, permissions: Record<string, boolean>): Promise<void> {
     try {
       console.log("Permissions update called for (placeholder):", superAdminId, permissions);
-      // This would be implemented when we have a proper super_admins table with a permissions column
     } catch (error) {
       console.error("Error updating super admin permissions:", error);
       throw error;
@@ -188,7 +185,6 @@ export const superAdminService = {
   async updateSystemSetting(key: string, newValue: Record<string, unknown>, newDescription?: string): Promise<void> {
     try {
       console.warn(`'updateSystemSetting' for key '${key}' with value '${JSON.stringify(newValue)}' and description '${newDescription}' is a placeholder.`);
-      // Actual implementation would update a 'system_settings' table
     } catch (error) {
       console.error("Error updating system setting:", error);
       throw error;
@@ -288,9 +284,10 @@ export const superAdminService = {
   
   async updateOrganizationStatus(organizationId: string, isActive: boolean): Promise<void> {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await supabase
         .from("organizations")
-        .update({ is_active: isActive } as any) // Cast to any if 'is_active' not in generated types
+        .update({ is_active: isActive } as any) 
         .eq("id", organizationId);
 
       if (error) throw error;
