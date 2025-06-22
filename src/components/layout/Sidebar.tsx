@@ -1,98 +1,121 @@
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   LayoutDashboard, 
+  CheckSquare, 
   Users, 
-  ClipboardList, 
   MapPin, 
   MessageSquare, 
   BarChart3, 
-  Settings, 
-  LogOut,
-  Building2,
-  UserCheck
+  Building, 
+  Settings,
+  User
 } from "lucide-react";
-import { useRouter } from "next/router";
+import { useAuth } from "@/contexts/AuthContext";
+import { profileService } from "@/services/profileService";
+import { UserRole } from "@/types/database";
 
-interface SidebarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-}
+const navigation = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["admin", "manager", "employee"] },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare, roles: ["admin", "manager", "employee"] },
+  { name: "Employees", href: "/employees", icon: Users, roles: ["admin", "manager"] },
+  { name: "Field Work", href: "/field", icon: MapPin, roles: ["employee"] },
+  { name: "Chat", href: "/chat", icon: MessageSquare, roles: ["admin", "manager", "employee"] },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, roles: ["admin", "manager"] },
+  { name: "Organization", href: "/organization", icon: Building, roles: ["admin"] },
+  { name: "Profile", href: "/profile", icon: User, roles: ["admin", "manager", "employee"] },
+  { name: "Settings", href: "/settings", icon: Settings, roles: ["admin", "manager", "employee"] }
+];
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
-  const { user, logout } = useAuth();
+export default function Sidebar() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState<any>(null);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
+  useEffect(() => {
+    if (user) {
+      loadUserProfile();
+    }
+  }, [user]);
+
+  const loadUserProfile = async () => {
+    try {
+      const profile = await profileService.getProfile(user!.id);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+    }
   };
 
-  const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["org_admin", "task_manager", "employee"] },
-    { id: "tasks", label: "Tasks", icon: ClipboardList, roles: ["org_admin", "task_manager", "employee"] },
-    { id: "employees", label: "Employees", icon: Users, roles: ["org_admin", "task_manager"] },
-    { id: "field-work", label: "Field Work", icon: MapPin, roles: ["employee"] },
-    { id: "chat", label: "Messages", icon: MessageSquare, roles: ["org_admin", "task_manager", "employee"] },
-    { id: "analytics", label: "Analytics", icon: BarChart3, roles: ["org_admin", "task_manager"] },
-    { id: "organization", label: "Organization", icon: Building2, roles: ["org_admin"] },
-    { id: "profile", label: "Profile", icon: UserCheck, roles: ["org_admin", "task_manager", "employee"] },
-    { id: "settings", label: "Settings", icon: Settings, roles: ["org_admin"] }
-  ];
-
-  const filteredMenuItems = menuItems.filter(item => 
-    item.roles.includes(user?.role || "employee")
+  const filteredNavigation = navigation.filter(item => 
+    userProfile?.role && item.roles.includes(userProfile.role)
   );
 
+  const handleNavigation = (href: string) => {
+    if (href === "/") {
+      router.push("/");
+    } else {
+      router.push(href);
+    }
+  };
+
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-blue-600">OnTime</h1>
-        <div className="mt-4">
-          <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="secondary" className="text-xs">
-              {user?.role?.replace("_", " ").toUpperCase()}
-            </Badge>
-            {user?.employeeId && (
-              <span className="text-xs text-gray-500">{user.employeeId}</span>
-            )}
+    <div className="flex h-full flex-col bg-white border-r border-gray-200">
+      <div className="flex h-16 items-center px-6 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <CheckSquare className="h-5 w-5 text-white" />
           </div>
+          <span className="text-xl font-bold text-gray-900">OnTime</span>
         </div>
       </div>
 
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
-          {filteredMenuItems.map((item) => {
-            const Icon = item.icon;
+      <div className="flex-1 overflow-y-auto py-4">
+        <nav className="space-y-1 px-3">
+          {filteredNavigation.map((item) => {
+            const isActive = router.pathname === item.href || 
+                           (item.href !== "/" && router.pathname.startsWith(item.href));
+            
             return (
-              <li key={item.id}>
-                <Button
-                  variant={activeTab === item.id ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab(item.id)}
-                >
-                  <Icon className="mr-3 h-4 w-4" />
-                  {item.label}
-                </Button>
-              </li>
+              <Button
+                key={item.name}
+                variant={isActive ? "secondary" : "ghost"}
+                className="w-full justify-start gap-3 h-10"
+                onClick={() => handleNavigation(item.href)}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.name}
+                {item.name === "Tasks" && (
+                  <Badge variant="secondary" className="ml-auto">
+                    5
+                  </Badge>
+                )}
+              </Button>
             );
           })}
-        </ul>
-      </nav>
-
-      <div className="p-4 border-t border-gray-200">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-          onClick={handleLogout}
-        >
-          <LogOut className="mr-3 h-4 w-4" />
-          Sign Out
-        </Button>
+        </nav>
       </div>
+
+      {userProfile && (
+        <div className="border-t border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">
+              <User className="h-4 w-4 text-gray-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {userProfile.full_name || "User"}
+              </p>
+              <p className="text-xs text-gray-500 capitalize">
+                {userProfile.role || "Employee"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
