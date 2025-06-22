@@ -135,7 +135,7 @@ export const realtimeService = {
     };
   },
 
-  subscribeToTable<T extends Record<string, unknown>>(
+  subscribeToTable<T extends { [key: string]: any }>( // Reverted generic constraint
     tableName: string,
     filterString: string,
     onUpdate: (payload: RealtimePostgresChangesPayload<T>) => void,
