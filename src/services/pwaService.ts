@@ -1,3 +1,17 @@
+// Define these interfaces at the top
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
+
+interface AppStateChangeEvent {
+  type: "visibility" | "online" | "offline";
+  hidden?: boolean;
+  online?: boolean;
+}
+
+interface ServiceWorkerRegistrationWithSync extends ServiceWorkerRegistration {
+  sync: SyncManager; // SyncManager is a built-in type for Background Sync API
+}
 
 export const pwaService = {
   // Register service worker
@@ -64,7 +78,7 @@ export const pwaService = {
   async registerBackgroundSync(tag: string = 'background-sync-ontime') {
     if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
       try {
-        const registration = await navigator.serviceWorker.ready;
+        const registration = await navigator.serviceWorker.ready as ServiceWorkerRegistrationWithSync;
         await registration.sync.register(tag);
         console.log('Background sync registered:', tag);
         return true;
@@ -79,7 +93,7 @@ export const pwaService = {
   // Check if app is installed
   isInstalled() {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isInWebAppiOS = (window.navigator as any).standalone === true;
+    const isInWebAppiOS = (window.navigator as NavigatorWithStandalone).standalone === true;
     return isStandalone || isInWebAppiOS;
   },
 
@@ -91,12 +105,12 @@ export const pwaService = {
       hasServiceWorker: 'serviceWorker' in navigator,
       hasNotifications: 'Notification' in window,
       hasPushManager: 'PushManager' in window,
-      hasBackgroundSync: 'sync' in window.ServiceWorkerRegistration.prototype
+      hasBackgroundSync: 'sync' in (ServiceWorkerRegistration.prototype as ServiceWorkerRegistrationWithSync)
     };
   },
 
   // Listen for app state changes
-  onAppStateChange(callback: (state: any) => void) {
+  onAppStateChange(callback: (state: AppStateChangeEvent) => void) {
     const handleVisibilityChange = () => {
       callback({
         type: 'visibility',

@@ -1,48 +1,39 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import AuthProvider from "@/contexts/AuthContext";
+import AuthProvider from "@/contexts/AuthContext"; // This was the previous error, ensure AuthContext exports default
+import { Toaster } from "@/components/ui/sonner";
 import { useEffect } from "react";
-import { notificationService } from "@/services/notificationService";
-import { offlineService } from "@/services/offlineService";
+import { pwaService } from "@/services/pwaService";
+import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
+import Head from "next/head";
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
-    // Register service worker for PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
+    if (typeof window !== "undefined") {
+      pwaService.registerServiceWorker()
+        .then(() => {
+          console.log("Service Worker registered from _app.tsx");
+          // Attempt to register background sync
+          pwaService.registerBackgroundSync();
         })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
-        });
+        .catch(error => console.error("Service Worker registration failed in _app.tsx:", error));
     }
-
-    // Request notification permission
-    notificationService.requestPermission()
-      .then((permission) => {
-        console.log('Notification permission:', permission);
-      })
-      .catch((error) => {
-        console.error('Error requesting notification permission:', error);
-      });
-
-    // Sync offline data when coming back online
-    const handleOnline = () => {
-      console.log('Back online - syncing data');
-      offlineService.syncOfflineData();
-    };
-
-    window.addEventListener('online', handleOnline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-    };
   }, []);
 
   return (
     <AuthProvider>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="OnTime" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#3B82F6" />
+      </Head>
       <Component {...pageProps} />
+      <Toaster richColors />
+      <PWAInstallPrompt />
     </AuthProvider>
   );
 }

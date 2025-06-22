@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +12,11 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+// Add this interface
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
+
 export default function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
@@ -21,7 +25,8 @@ export default function PWAInstallPrompt() {
   useEffect(() => {
     // Check if app is already installed
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isInWebAppiOS = (window.navigator as any).standalone === true;
+    // Update this line
+    const isInWebAppiOS = (window.navigator as NavigatorWithStandalone).standalone === true;
     
     if (isStandalone || isInWebAppiOS) {
       setIsInstalled(true);

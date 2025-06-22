@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 
 interface PWAInstallPrompt extends Event {
@@ -8,6 +7,11 @@ interface PWAInstallPrompt extends Event {
     platform: string;
   }>;
   prompt(): Promise<void>;
+}
+
+// Add this interface
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
 }
 
 interface PWAState {
@@ -29,7 +33,8 @@ export function usePWA() {
     // Check if app is installed
     const checkInstalled = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      const isInWebAppiOS = (window.navigator as any).standalone === true;
+      // Update this line
+      const isInWebAppiOS = (window.navigator as NavigatorWithStandalone).standalone === true;
       return isStandalone || isInWebAppiOS;
     };
 
