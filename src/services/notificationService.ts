@@ -1,11 +1,17 @@
 import { pwaService } from "./pwaService";
 
+export interface NotificationAction {
+  action: string;
+  title: string;
+  icon?: string;
+}
+
 export interface NotificationOptions {
   body?: string;
   icon?: string;
   badge?: string;
   tag?: string;
-  data?: any;
+  data?: Record<string, unknown>;
   actions?: NotificationAction[];
   silent?: boolean;
   requireInteraction?: boolean;
@@ -156,7 +162,7 @@ export const notificationService = {
   },
 
   // Handle notification clicks
-  handleNotificationClick(data: any): void {
+  handleNotificationClick(data: Record<string, unknown>): void {
     switch (data.notificationType) {
       case "task_assigned":
       case "task_status":
@@ -191,8 +197,8 @@ export const notificationService = {
     this.setupNotificationHandlers();
     
     // Register with PWA service for background notifications
-    if (pwaService.isSupported()) {
-      await pwaService.setupBackgroundSync();
+    if (pwaService.isInstalled()) {
+      await pwaService.registerBackgroundSync();
     }
   }
 };

@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,9 +7,6 @@ import { Input } from "@/components/ui/input";
 import { 
   MessageSquare, 
   Search, 
-  Clock, 
-  CheckCircle2,
-  AlertCircle,
   Users
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";

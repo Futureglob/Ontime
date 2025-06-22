@@ -41,7 +41,7 @@ export default function Sidebar() {
         setUserProfile(profile);
       } catch (error) {
         console.error("Error loading user profile:", error);
-        setUserProfile(null); // Set to null on error to avoid issues with userProfile.role
+        setUserProfile(null);
       }
     }
   }, [user]);
@@ -50,9 +50,8 @@ export default function Sidebar() {
     loadUserProfile();
   }, [loadUserProfile]);
 
-  const filteredNavigation = navigation.filter(item => 
-    userProfile?.role && item.roles.includes(userProfile.role as UserRole)
-  );
+  // Show all navigation items for now - role-based filtering can be added later
+  const filteredNavigation = navigation;
 
   const handleNavigation = (href: string) => {
     if (href === "/") {

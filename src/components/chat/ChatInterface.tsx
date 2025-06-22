@@ -1,32 +1,24 @@
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Send, 
   MessageSquare, 
-  Phone, 
-  Video, 
-  MoreVertical, 
   Paperclip, 
-  Image as ImageIcon,
   ExternalLink,
-  Clock,
   CheckCheck,
   Check
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { messageService } from "@/services/messageService";
+import { messageService, MessageWithSender } from "@/services/messageService";
 import { realtimeService } from "@/services/realtimeService";
 import { notificationService } from "@/services/notificationService";
 import { Task } from "@/types/database";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import WhatsAppShare from "./WhatsAppShare";
 
 interface ChatMessage {
   id: string;
