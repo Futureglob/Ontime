@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+// import { useAuth } from "@/contexts/AuthContext"; // Removed unused import
 import Sidebar from "./Sidebar";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import TaskManagement from "@/components/tasks/TaskManagement";
