@@ -23,7 +23,7 @@ export const notificationService = {
       const notification = new Notification(title, {
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-72x72.png',
-        vibrate: [100, 50, 100],
+        // vibrate: [100, 50, 100], // Removed vibrate
         ...options
       });
 

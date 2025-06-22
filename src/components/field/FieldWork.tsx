@@ -11,6 +11,10 @@ import { offlineService } from "@/services/offlineService";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskStatus, UserRole, Profile, Task as TaskType } from "@/types/database";
 import FieldTaskCard from "./FieldTaskCard";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"; // Import this
+import type { Database } from "@/integrations/supabase/types"; // Import Database type
+
+type TaskRow = Database["public"]["Tables"]["tasks"]["Row"]; // Define TaskRow
 
 interface EnrichedTask extends TaskType {
   assigned_by_profile?: { full_name: string };
@@ -109,19 +113,18 @@ export default function FieldWork() {
   useEffect(() => {
     if (!user || userProfile?.role !== UserRole.EMPLOYEE || !isOnline) return;
 
-    const subscription = realtimeService.subscribeToTable(
+    const subscription = realtimeService.subscribeToTable<TaskRow>( // Specify TaskRow for T
       "tasks",
       `assigned_to=eq.${user.id}`,
-      (payload) => {
+      (payload: RealtimePostgresChangesPayload<TaskRow>) => { // Explicitly type payload
         console.log("Real-time task update:", payload);
         
-        // Show notification for task updates
         if (payload.eventType === 'INSERT' && payload.new) {
           notificationService.notifyTaskAssigned(payload.new.title || 'New Task');
         } else if (payload.eventType === 'UPDATE' && payload.new) {
           notificationService.notifyTaskUpdated(
             payload.new.title || 'Task', 
-            payload.new.status || 'Updated'
+            payload.new.status || 'Updated' // status is string | null, so this is fine
           );
         }
         

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause, Wifi, WifiOff } from "lucide-react";
+import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause, WifiOff } from "lucide-react"; // Removed Wifi
 import { TaskStatus, Task, PhotoType } from "@/types/database";
 import { taskService } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
