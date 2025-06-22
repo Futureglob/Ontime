@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User } from "@/types";
+import { User, UserRole } from "@/types"; // Import UserRole
 
 interface AuthContextType {
   user: User | null;
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       // Mock login - replace with actual authentication
-      let role: UserRole = "employee";
+      let role: UserRole = "employee"; // UserRole is now correctly referenced
       if (email.includes("superadmin@system.com")) {
         role = "super_admin";
       } else if (email.includes("admin")) {

@@ -14,22 +14,22 @@ import {
   Edit,
   Trash2
 } from "lucide-react";
-import { superAdminService, SuperAdmin, Organization, SystemStats } from "@/services/superAdminService";
-import Image from "next/image"; // Import next/image
+import { superAdminService, SuperAdmin, OrganizationForSuperAdminView, SystemStats } from "@/services/superAdminService";
+import Image from "next/image";
 
-interface DashboardStats extends SystemStats {
-  activeSuperAdmins: number; // Add this if not part of SystemStats directly
+// This interface combines SystemStats with any additional stats the dashboard might compute or display
+interface DashboardDisplayStats extends SystemStats {
+  activeSuperAdmins: number;
 }
 
 export default function SuperAdminDashboard() {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationForSuperAdminView[]>([]);
   const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
-  // Use the more specific DashboardStats type
-  const [stats, setStats] = useState<DashboardStats>({
-    totalOrganizations: 0,
-    totalUsers: 0,
-    totalTasks: 0,
-    activeSuperAdmins: 0 // Initialize this field
+  const [stats, setStats] = useState<DashboardDisplayStats>({
+    total_organizations: 0, // Align with SystemStats from service
+    total_users: 0,         // Align with SystemStats from service
+    total_tasks: 0,         // Align with SystemStats from service
+    activeSuperAdmins: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -40,18 +40,16 @@ export default function SuperAdminDashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      // Corrected function calls based on typical service patterns
-      // Assuming superAdminService will have these methods or similar
+      // Use the corrected function names from superAdminService
       const orgsData = await superAdminService.getOrganizations(); 
       const adminsData = await superAdminService.getSuperAdmins();
-      const systemStatsData = await superAdminService.getSystemStats();
+      const systemStatsData = await superAdminService.getSystemStats(); // Corrected call
       
       setOrganizations(orgsData);
       setSuperAdmins(adminsData);
-      // Ensure all fields of DashboardStats are covered
       setStats({
-        ...systemStatsData,
-        activeSuperAdmins: adminsData.length // Example: derive from fetched admins
+        ...systemStatsData, // Spread properties from SystemStats (total_organizations, etc.)
+        activeSuperAdmins: adminsData.length 
       });
     } catch (error) {
       console.error("Error loading dashboard data:", error);
@@ -89,7 +87,7 @@ export default function SuperAdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Organizations</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalOrganizations}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total_organizations}</p>
                 </div>
                 <Building2 className="h-8 w-8 text-blue-600" />
               </div>
@@ -101,7 +99,7 @@ export default function SuperAdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total_users}</p>
                 </div>
                 <Users className="h-8 w-8 text-green-600" />
               </div>
@@ -113,7 +111,7 @@ export default function SuperAdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Tasks</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalTasks}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total_tasks}</p>
                 </div>
                 <BarChart3 className="h-8 w-8 text-orange-600" />
               </div>
@@ -160,8 +158,7 @@ export default function SuperAdminDashboard() {
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative">
                           {org.logo_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={org.logo_url} alt={org.name} className="w-8 h-8 object-contain" />
+                            <Image src={org.logo_url} alt={org.name} width={32} height={32} className="object-contain" />
                           ) : (
                             <Building2 className="h-6 w-6 text-gray-400" />
                           )}
@@ -174,7 +171,7 @@ export default function SuperAdminDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">Active</Badge>
+                        <Badge variant={org.is_active ? "default" : "destructive"}>{org.is_active ? "Active" : "Inactive"}</Badge>
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -213,8 +210,8 @@ export default function SuperAdminDashboard() {
                           <Shield className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">{admin.user_name || "Admin User"}</h3>
-                          <p className="text-sm text-gray-500">{admin.user_email}</p>
+                          <h3 className="font-semibold text-gray-900">{admin.user_name || `Admin (${admin.user_id})`}</h3>
+                          <p className="text-sm text-gray-500">{admin.user_email || "Email not available"}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
