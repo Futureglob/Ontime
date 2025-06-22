@@ -24,16 +24,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { user: currentUser, profile: profileDataFromService } = await authService.getCurrentUser();
         setUser(currentUser);
         if (currentUser && profileDataFromService) {
+          // Explicitly type profileDataFromService to help TypeScript
+          const typedProfile = profileDataFromService as { full_name?: string, role?: string, organization_id?: string, employee_id?: string, designation?: string, mobile_number?: string, is_active?: boolean };
           const combinedProfile: AuthUser = {
             id: currentUser.id,
             email: currentUser.email!,
-            name: (profileDataFromService as { full_name?: string }).full_name || undefined,
-            role: (profileDataFromService as { role?: string }).role || undefined,
-            organizationId: (profileDataFromService as { organization_id?: string }).organization_id || undefined,
-            employeeId: (profileDataFromService as { employee_id?: string }).employee_id || undefined,
-            designation: (profileDataFromService as { designation?: string }).designation || undefined,
-            mobileNumber: (profileDataFromService as { mobile_number?: string }).mobile_number || undefined,
-            isActive: (profileDataFromService as { is_active?: boolean }).is_active !== undefined ? (profileDataFromService as { is_active: boolean }).is_active : true,
+            name: typedProfile.full_name || undefined,
+            role: typedProfile.role || undefined,
+            organizationId: typedProfile.organization_id || undefined,
+            employeeId: typedProfile.employee_id || undefined,
+            designation: typedProfile.designation || undefined,
+            mobileNumber: typedProfile.mobile_number || undefined,
+            isActive: typedProfile.is_active !== undefined ? typedProfile.is_active : true,
           };
           setProfile(combinedProfile);
         } else {
@@ -56,16 +58,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const profileDataFromService = await authService.getUserProfile(session.user.id);
             if (profileDataFromService) {
+              // Explicitly type profileDataFromService
+              const typedProfile = profileDataFromService as { full_name?: string, role?: string, organization_id?: string, employee_id?: string, designation?: string, mobile_number?: string, is_active?: boolean };
               const combinedProfile: AuthUser = {
                 id: session.user.id,
                 email: session.user.email!,
-                name: (profileDataFromService as { full_name?: string }).full_name || undefined,
-                role: (profileDataFromService as { role?: string }).role || undefined,
-                organizationId: (profileDataFromService as { organization_id?: string }).organization_id || undefined,
-                employeeId: (profileDataFromService as { employee_id?: string }).employee_id || undefined,
-                designation: (profileDataFromService as { designation?: string }).designation || undefined,
-                mobileNumber: (profileDataFromService as { mobile_number?: string }).mobile_number || undefined,
-                isActive: (profileDataFromService as { is_active?: boolean }).is_active !== undefined ? (profileDataFromService as { is_active: boolean }).is_active : true,
+                name: typedProfile.full_name || undefined,
+                role: typedProfile.role || undefined,
+                organizationId: typedProfile.organization_id || undefined,
+                employeeId: typedProfile.employee_id || undefined,
+                designation: typedProfile.designation || undefined,
+                mobileNumber: typedProfile.mobile_number || undefined,
+                isActive: typedProfile.is_active !== undefined ? typedProfile.is_active : true,
               };
               setProfile(combinedProfile);
             } else {
@@ -91,16 +95,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { user: authUser, profile: profileDataFromService } = await authService.signIn(email, password);
       setUser(authUser);
       if (authUser && profileDataFromService) {
+        // Explicitly type profileDataFromService
+        const typedProfile = profileDataFromService as { full_name?: string, role?: string, organization_id?: string, employee_id?: string, designation?: string, mobile_number?: string, is_active?: boolean };
         const combinedProfile: AuthUser = {
           id: authUser.id,
           email: authUser.email!,
-          name: (profileDataFromService as { full_name?: string }).full_name || undefined,
-          role: (profileDataFromService as { role?: string }).role || undefined,
-          organizationId: (profileDataFromService as { organization_id?: string }).organization_id || undefined,
-          employeeId: (profileDataFromService as { employee_id?: string }).employee_id || undefined,
-          designation: (profileDataFromService as { designation?: string }).designation || undefined,
-          mobileNumber: (profileDataFromService as { mobile_number?: string }).mobile_number || undefined,
-          isActive: (profileDataFromService as { is_active?: boolean }).is_active !== undefined ? (profileDataFromService as { is_active: boolean }).is_active : true,
+          name: typedProfile.full_name || undefined,
+          role: typedProfile.role || undefined,
+          organizationId: typedProfile.organization_id || undefined,
+          employeeId: typedProfile.employee_id || undefined,
+          designation: typedProfile.designation || undefined,
+          mobileNumber: typedProfile.mobile_number || undefined,
+          isActive: typedProfile.is_active !== undefined ? typedProfile.is_active : true,
         };
         setProfile(combinedProfile);
       } else {
