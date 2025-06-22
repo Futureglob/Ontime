@@ -27,13 +27,47 @@ export const authService = {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select(`
-            *,
-            organization:organizations(*)
+            id,
+            full_name,
+            role,
+            organization_id,
+            employee_id,
+            designation,
+            mobile_number,
+            is_active,
+            organization:organizations(
+              id,
+              name,
+              logo_url,
+              primary_color,
+              secondary_color,
+              is_active
+            )
           `)
           .eq("id", data.user.id)
           .single();
 
-        if (profileError && profileError.code !== "PGRST116") {
+        if (profileError) {
+          console.error("Profile fetch error:", profileError);
+          // If profile doesn't exist, create one for super admin
+          if (email === "superadmin@system.com") {
+            const { data: systemOrg } = await supabase
+              .from("organizations")
+              .select("id")
+              .eq("name", "System Administration")
+              .single();
+
+            if (systemOrg) {
+              const newProfile = await this.createUserProfile(data.user.id, {
+                email: email,
+                name: "System Administrator",
+                role: "super_admin",
+                organizationId: systemOrg.id,
+                isActive: true
+              });
+              return { user: data.user, profile: newProfile };
+            }
+          }
           throw profileError;
         }
 
