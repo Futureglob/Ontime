@@ -34,7 +34,7 @@ interface PhotoUploadPayload {
 interface OfflineTaskAction {
   id: string;
   action: 'update_status' | 'upload_photo' | 'create_task'; // Add other actions as needed
-   TaskUpdatePayload | PhotoUploadPayload | Record<string, unknown>; // Added '' property name
+  payload: TaskUpdatePayload | PhotoUploadPayload | Record<string, unknown>; // Added property name 'payload'
   timestamp: number;
 }
 
@@ -83,15 +83,15 @@ export const offlineService = {
   },
 
   // Cache photos for offline upload
-  cachePhotoForUpload(taskId: string, file: File, meta PhotoUploadMetadata) { // Typed metadata
+  cachePhotoForUpload(taskId: string, file: File, meta: PhotoUploadMetadata) { // Corrected parameter syntax
     const reader = new FileReader();
     reader.onload = () => {
-      const photoData: CachedPhoto = { // Typed photoData
+      const photoData: CachedPhoto = {
         taskId,
         fileData: reader.result,
         fileName: file.name,
         fileType: file.type,
-        meta: metadata, // Changed 'metadata,' to 'meta: metadata,'
+        meta: meta, // Use the corrected 'meta' parameter
         timestamp: Date.now()
       };
       
