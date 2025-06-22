@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { user: currentUser, profile: currentProfile } = await authService.getCurrentUser();
         setUser(currentUser);
-        setProfile(currentProfile);
+        // Ensure currentProfile is compatible with AuthUser | null
+        setProfile(currentProfile as AuthUser | null); 
       } catch (error) {
         console.error("Error getting initial session:", error);
       } finally {
@@ -43,7 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           try {
             const userProfile = await authService.getUserProfile(session.user.id);
-            setProfile(userProfile);
+            // Ensure userProfile is compatible with AuthUser | null
+            setProfile(userProfile as AuthUser | null);
           } catch (error) {
             console.error("Error fetching user profile:", error);
             setProfile(null);
@@ -64,7 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { user: authUser, profile: userProfile } = await authService.signIn(email, password);
       setUser(authUser);
-      setProfile(userProfile);
+      // Ensure userProfile is compatible with AuthUser | null
+      setProfile(userProfile as AuthUser | null);
     } catch (error) {
       console.error("Login error:", error);
       throw error;

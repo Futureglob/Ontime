@@ -47,7 +47,8 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setLoading(true);
+    setError(null);
     
     if (!formData.full_name || !formData.employee_id) {
       setError("Please fill in required fields");
@@ -60,8 +61,14 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
     }
 
     try {
-      setLoading(true);
-      
+      const userToSave: Partial<AuthUser> = {
+        email: formData.email,
+        name: formData.name, // Changed from full_name to name
+        role: formData.role as UserRole,
+        employeeId: formData.employeeId,
+        // Add other properties as needed
+      };
+
       if (employee) {
         await profileService.updateProfile(employee.id, {
           full_name: formData.full_name,
