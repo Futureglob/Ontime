@@ -1,98 +1,63 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, X, Smartphone } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { X, Download } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: string[];
-  readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed';
-    platform: string;
-  }>;
   prompt(): Promise<void>;
-}
-
-// Add this interface
-interface NavigatorWithStandalone extends Navigator {
-  standalone?: boolean;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
 export default function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [isInIframe, setIsInIframe] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    // Update this line
-    const isInWebAppiOS = (window.navigator as NavigatorWithStandalone).standalone === true;
+    // Check if we're in an iframe (workspace preview)
+    setIsInIframe(window !== window.parent);
     
-    if (isStandalone || isInWebAppiOS) {
-      setIsInstalled(true);
+    // Don't show PWA prompt in iframe environments
+    if (window !== window.parent) {
       return;
     }
 
-    // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      
-      // Show install prompt after a delay
-      setTimeout(() => {
-        setShowInstallPrompt(true);
-      }, 3000);
+      setShowPrompt(true);
     };
 
-    // Listen for app installed event
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setShowInstallPrompt(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
 
-  const handleInstallClick = async () => {
+  const handleInstall = async () => {
     if (!deferredPrompt) return;
 
-    try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      
-      if (outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-      } else {
-        console.log('User dismissed the install prompt');
-      }
-      
-      setDeferredPrompt(null);
-      setShowInstallPrompt(false);
-    } catch (error) {
-      console.error('Error during installation:', error);
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === "accepted") {
+      console.log("User accepted the install prompt");
+    } else {
+      console.log("User dismissed the install prompt");
     }
+    
+    setDeferredPrompt(null);
+    setShowPrompt(false);
   };
 
   const handleDismiss = () => {
-    setShowInstallPrompt(false);
-    // Don't show again for this session
-    sessionStorage.setItem('pwa-install-dismissed', 'true');
+    setShowPrompt(false);
+    setDeferredPrompt(null);
   };
 
-  // Don't show if already installed or dismissed
-  if (isInstalled || !showInstallPrompt || !deferredPrompt) {
-    return null;
-  }
-
-  // Check if user already dismissed this session
-  if (sessionStorage.getItem('pwa-install-dismissed')) {
+  // Don't render in iframe environments
+  if (isInIframe || !showPrompt || !deferredPrompt) {
     return null;
   }
 
@@ -125,7 +90,7 @@ export default function PWAInstallPrompt() {
           </p>
           <div className="flex gap-2">
             <Button
-              onClick={handleInstallClick}
+              onClick={handleInstall}
               size="sm"
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >

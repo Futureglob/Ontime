@@ -8,8 +8,12 @@ import Head from "next/head";
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
+    // Check if we're in an iframe (workspace preview)
+    const isInIframe = window !== window.parent;
+    
     // Only run PWA service registration on the client side after mount
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    // Skip PWA registration in iframe environments (like workspace preview)
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && !isInIframe) {
       // Delay PWA registration to avoid build issues
       setTimeout(async () => {
         try {
