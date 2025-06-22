@@ -14,20 +14,37 @@ export interface AuthUser {
 
 export const authService = {
   async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // Get user profile after successful login
-    if (data.user) {
-      const profile = await this.getUserProfile(data.user.id);
-      return { user: data.user, profile };
+      // Get user profile after successful login
+      if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select(`
+            *,
+            organization:organizations(*)
+          `)
+          .eq("id", data.user.id)
+          .single();
+
+        if (profileError && profileError.code !== "PGRST116") {
+          throw profileError;
+        }
+
+        return { user: data.user, profile };
+      }
+
+      return { user: data.user, profile: null };
+    } catch (error) {
+      console.error("Sign in error:", error);
+      throw error;
     }
-
-    return { user: data.user, profile: null };
   },
 
   async signUp(email: string, password: string, userData?: Partial<AuthUser>) {
@@ -67,21 +84,26 @@ export const authService = {
   },
 
   async getUserProfile(userId: string) {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select(`
-        *,
-        organization:organizations(*)
-      `)
-      .eq("id", userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          *,
+          organization:organizations(*)
+        `)
+        .eq("id", userId)
+        .single();
 
-    if (error && error.code !== "PGRST116") {
-      console.error("Error fetching user profile:", error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Error fetching user profile:", error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Get user profile error:", error);
       return null;
     }
-
-    return data;
   },
 
   async createUserProfile(userId: string, userData: Partial<AuthUser> & { email: string }) {
