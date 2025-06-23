@@ -310,7 +310,14 @@ export const superAdminService = {
     return this.getSystemStats(); 
   },
 
-  async createOrganization(orgData: { name: string; logo_url?: string; primary_color?: string; secondary_color?: string }): Promise<OrganizationForSuperAdminView> {
+  async createOrganization(orgData: { 
+    name: string; 
+    logo_url?: string; 
+    primary_color?: string; 
+    secondary_color?: string;
+    contact_person?: string;
+    contact_email?: string;
+  }): Promise<OrganizationForSuperAdminView> {
     try {
       const { data, error } = await supabase
         .from("organizations")
@@ -319,6 +326,8 @@ export const superAdminService = {
           logo_url: orgData.logo_url,
           primary_color: orgData.primary_color || "#3B82F6",
           secondary_color: orgData.secondary_color || "#1E40AF",
+          contact_person: orgData.contact_person,
+          contact_email: orgData.contact_email,
           is_active: true
         }])
         .select()
@@ -332,7 +341,7 @@ export const superAdminService = {
         user_count: 0,
         task_count: 0,
         logo_url: data.logo_url,
-        is_active: true // Default to true since field doesn't exist in current schema
+        is_active: true
       };
     } catch (error) {
       console.error("Error creating organization:", error);

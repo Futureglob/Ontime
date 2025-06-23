@@ -39,7 +39,9 @@ export default function AddOrganizationModal({ isOpen, onClose, onOrganizationAd
         name: formData.name.trim(),
         logo_url: formData.logo_url.trim() || undefined,
         primary_color: formData.primary_color,
-        secondary_color: formData.secondary_color
+        secondary_color: formData.secondary_color,
+        contact_person: formData.contact_person.trim() || undefined,
+        contact_email: formData.contact_email.trim() || undefined
       });
       
       // Reset form
