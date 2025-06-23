@@ -29,12 +29,10 @@ export default function SuperAdminPage() {
     setError(undefined);
     try {
       // Use the actual auth service to login
-      const { data, error } = await authService.signIn(email, password);
-      
-      if (error) throw error;
+      const result = await authService.signIn(email, password);
       
       // Check if the logged in user is a super admin
-      if (data.profile?.role === "super_admin") {
+      if (result.profile?.role === "super_admin") {
         setIsSuperAdminAuthenticated(true);
         // The auth context will handle the login state
       } else {
