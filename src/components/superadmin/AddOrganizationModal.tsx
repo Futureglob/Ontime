@@ -293,6 +293,16 @@ export default function AddOrganizationModal({ isOpen, onClose, onOrganizationAd
             </div>
           </div>
 
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="text-sm font-semibold text-blue-800 mb-2">📧 Email Requirements</h4>
+            <div className="text-xs text-blue-700 space-y-1">
+              <p>• Use a real email domain (Gmail, Outlook, company email)</p>
+              <p>• Avoid temporary email services (YOPmail, 10minutemail, etc.)</p>
+              <p>• Example: admin@gmail.com, admin@company.com</p>
+              <p>• Password must be at least 6 characters</p>
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <Button type="submit" disabled={loading} className="flex-1">
               {loading ? "Creating..." : "Create Organization & Admin"}
