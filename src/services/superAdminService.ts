@@ -363,16 +363,41 @@ export const superAdminService = {
     admin_mobile?: string;
   }): Promise<OrganizationForSuperAdminView> {
     try {
+      // Validate inputs first
+      if (!orgData.name.trim()) {
+        throw new Error("Organization name is required");
+      }
+      
+      if (!orgData.admin_email.trim() || !orgData.admin_password.trim()) {
+        throw new Error("Admin email and password are required");
+      }
+      
+      if (orgData.admin_password.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(orgData.admin_email)) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      console.log("Creating organization with data:", {
+        name: orgData.name,
+        admin_email: orgData.admin_email,
+        password_length: orgData.admin_password.length
+      });
+
       // First, create the organization
       const { data: orgResult, error: orgError } = await supabase
         .from("organizations")
         .insert([{
-          name: orgData.name,
-          logo_url: orgData.logo_url,
+          name: orgData.name.trim(),
+          logo_url: orgData.logo_url?.trim() || null,
           primary_color: orgData.primary_color || "#3B82F6",
           secondary_color: orgData.secondary_color || "#1E40AF",
-          contact_person: orgData.contact_person,
-          contact_email: orgData.contact_email,
+          contact_person: orgData.contact_person?.trim() || null,
+          contact_email: orgData.contact_email?.trim() || null,
           is_active: true
         }])
         .select()
@@ -385,38 +410,67 @@ export const superAdminService = {
 
       console.log("Organization created successfully:", orgResult);
 
-      // Then, create the organization admin user with better error handling
-      const { data: authResult, error: authError } = await supabase.auth.signUp({
-        email: orgData.admin_email,
+      // Create the organization admin user with improved error handling
+      const signUpData = {
+        email: orgData.admin_email.trim(),
         password: orgData.admin_password,
         options: {
+          emailRedirectTo: undefined,
           data: {
-            full_name: orgData.admin_name,
+            full_name: orgData.admin_name.trim(),
             role: 'org_admin',
             organization_id: orgResult.id
           }
         }
+      };
+
+      console.log("Attempting to create auth user with:", {
+        email: signUpData.email,
+        password_length: signUpData.password.length,
+        metadata: signUpData.options.data
       });
+
+      const { data: authResult, error: authError } = await supabase.auth.signUp(signUpData);
 
       if (authError) {
         console.error("Auth signup error:", authError);
         // Clean up the organization if user creation fails
         await supabase.from("organizations").delete().eq("id", orgResult.id);
         
-        // Provide more specific error messages
-        if (authError.message.includes("already registered")) {
+        // Provide more specific error messages based on common Supabase auth errors
+        if (authError.message.includes("already registered") || authError.message.includes("already been registered")) {
           throw new Error(`Email ${orgData.admin_email} is already registered. Please use a different email.`);
-        } else if (authError.message.includes("password")) {
-          throw new Error("Password must be at least 6 characters long.");
+        } else if (authError.message.includes("password") || authError.message.includes("Password")) {
+          throw new Error("Password must be at least 6 characters long and contain valid characters.");
+        } else if (authError.message.includes("email") || authError.message.includes("Email")) {
+          throw new Error("Please enter a valid email address.");
+        } else if (authError.message.includes("rate limit") || authError.message.includes("too many")) {
+          throw new Error("Too many signup attempts. Please wait a moment and try again.");
         } else {
           throw new Error(`Failed to create admin user: ${authError.message}`);
         }
       }
 
-      console.log("Auth user created:", authResult.user?.id);
+      console.log("Auth user created successfully:", authResult.user?.id);
 
       if (authResult.user) {
+        // Wait for the auth user to be fully created
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         // Create the admin profile with retry logic
+        const profileData = {
+          id: authResult.user.id,
+          full_name: orgData.admin_name.trim(),
+          role: "org_admin" as const,
+          organization_id: orgResult.id,
+          employee_id: orgData.admin_employee_id?.trim() || `ADMIN-${Date.now()}`,
+          designation: "Organization Administrator",
+          mobile_number: orgData.admin_mobile?.trim() || null,
+          is_active: true,
+        };
+
+        console.log("Creating profile with data:", profileData);
+
         let profileCreated = false;
         let retryCount = 0;
         const maxRetries = 3;
@@ -425,16 +479,7 @@ export const superAdminService = {
           try {
             const { data: profileResult, error: profileError } = await supabase
               .from("profiles")
-              .insert({
-                id: authResult.user.id,
-                full_name: orgData.admin_name,
-                role: "org_admin",
-                organization_id: orgResult.id,
-                employee_id: orgData.admin_employee_id || `ADMIN-${Date.now()}`,
-                designation: "Organization Administrator",
-                mobile_number: orgData.admin_mobile,
-                is_active: true,
-              })
+              .insert(profileData)
               .select()
               .single();
 
@@ -443,14 +488,12 @@ export const superAdminService = {
               
               if (retryCount === maxRetries - 1) {
                 // Final attempt failed, clean up
-                await supabase.auth.admin.deleteUser(authResult.user.id);
                 await supabase.from("organizations").delete().eq("id", orgResult.id);
-                throw new Error(`Failed to create admin profile: ${profileError.message}`);
+                throw new Error(`Failed to create admin profile after ${maxRetries} attempts: ${profileError.message}`);
               }
               
               retryCount++;
-              // Wait a bit before retrying
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
             } else {
               console.log("Profile created successfully:", profileResult);
               profileCreated = true;
@@ -460,13 +503,11 @@ export const superAdminService = {
             retryCount++;
             
             if (retryCount >= maxRetries) {
-              // Clean up on final failure
-              await supabase.auth.admin.deleteUser(authResult.user.id);
               await supabase.from("organizations").delete().eq("id", orgResult.id);
-              throw error;
+              throw new Error(`Failed to create admin profile after ${maxRetries} attempts: ${error}`);
             }
             
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
           }
         }
       }

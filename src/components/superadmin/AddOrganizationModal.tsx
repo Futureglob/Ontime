@@ -36,13 +36,36 @@ export default function AddOrganizationModal({ isOpen, onClose, onOrganizationAd
     e.preventDefault();
     setError("");
     
+    // Enhanced validation
     if (!formData.name.trim()) {
       setError("Organization name is required");
       return;
     }
 
-    if (!formData.admin_name.trim() || !formData.admin_email.trim() || !formData.admin_password.trim()) {
-      setError("Organization admin details (name, email, password) are required");
+    if (!formData.admin_name.trim()) {
+      setError("Admin name is required");
+      return;
+    }
+
+    if (!formData.admin_email.trim()) {
+      setError("Admin email is required");
+      return;
+    }
+
+    if (!formData.admin_password.trim()) {
+      setError("Admin password is required");
+      return;
+    }
+
+    if (formData.admin_password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.admin_email.trim())) {
+      setError("Please enter a valid email address");
       return;
     }
 
