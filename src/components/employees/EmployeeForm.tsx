@@ -6,10 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { profileService } from "@/services/profileService";
 import { authService } from "@/services/authService"; 
-import { Profile, UserRole } from "@/types/database";
+import { Profile } from "@/types/database";
 
 interface EmployeeFormProps {
-  employee?: Partial<Profile> | null; // Use Partial<Profile> directly
+  employee?: Partial<Profile> | null;
   organizationId: string;
   onClose: () => void;
   onEmployeeCreated: () => void;
@@ -20,7 +20,7 @@ interface EmployeeFormData {
   employee_id: string;
   designation: string;
   mobile_number: string;
-  role: UserRole;
+  role: string; // Use string instead of UserRole enum
   email: string;
   password: string;
 }
@@ -33,43 +33,38 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
     employee_id: employee?.employee_id || "",
     designation: employee?.designation || "",
     mobile_number: employee?.mobile_number || "",
-    role: (employee?.role as UserRole) || UserRole.EMPLOYEE,
-    email: "", // Initialize email as empty string; it's only for new employees and the input is hidden for existing ones
+    role: employee?.role || "employee", // Default to string value
+    email: "",
     password: ""
   });
 
   const handleInputChange = (field: keyof EmployeeFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [field]: field === "role" ? (value as UserRole) : value
+      [field]: value
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+    setError("");
     
     if (!formData.full_name || !formData.employee_id) {
       setError("Please fill in required fields");
+      setLoading(false);
       return;
     }
 
     if (!employee && (!formData.email || !formData.password)) {
       setError("Email and password are required for new employees");
+      setLoading(false);
       return;
     }
 
     try {
-      // const userToSave: Partial<AuthUser> = { // Removed unused variable
-      //   email: formData.email,
-      //   name: formData.full_name, // Corrected: AuthUser expects 'name', EmployeeFormData has 'full_name'
-      //   role: formData.role as UserRole,
-      //   employeeId: formData.employee_id, // Corrected: AuthUser expects 'employeeId', EmployeeFormData has 'employee_id'
-      //   // Add other properties as needed
-      // };
-
-      if (employee) {
+      if (employee && employee.id) {
+        // Update existing employee
         await profileService.updateProfile(employee.id, {
           full_name: formData.full_name,
           employee_id: formData.employee_id,
@@ -78,20 +73,22 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
           role: formData.role
         });
       } else {
+        // Create new employee using auth service
         await authService.signUp(formData.email, formData.password, {
-          name: formData.full_name, // Map full_name to name
-          organizationId: organizationId, // Changed from organization_id to organizationId
-          employeeId: formData.employee_id, // Map employee_id to employeeId
+          name: formData.full_name,
+          organizationId: organizationId,
+          employeeId: formData.employee_id,
           designation: formData.designation,
-          mobileNumber: formData.mobile_number, // Map mobile_number to mobileNumber
+          mobileNumber: formData.mobile_number,
           role: formData.role,
-          email: formData.email, // Ensure email is passed
-          isActive: true // Default to active
+          email: formData.email,
+          isActive: true
         });
       }
       
       onEmployeeCreated();
     } catch (err: unknown) {
+      console.error("Employee form error:", err);
       if (err instanceof Error) {
         setError(err.message || "Failed to save employee");
       } else {
@@ -164,9 +161,9 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={UserRole.EMPLOYEE}>Employee</SelectItem>
-                <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
-                <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
+                <SelectItem value="employee">Employee</SelectItem>
+                <SelectItem value="task_manager">Task Manager</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -190,8 +187,9 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
                   type="password"
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
-                  placeholder="Enter password"
+                  placeholder="Enter password (min 6 characters)"
                   required
+                  minLength={6}
                 />
               </div>
             </>
