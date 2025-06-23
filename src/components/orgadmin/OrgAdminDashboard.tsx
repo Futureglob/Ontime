@@ -363,7 +363,7 @@ export default function OrgAdminDashboard() {
       {/* Employee Form Modal */}
       {showEmployeeForm && (
         <EmployeeForm
-          employee={selectedEmployee as any} // Cast to any to handle type mismatch
+          employee={selectedEmployee} // Removed 'as any'
           organizationId={profile?.organizationId || ""}
           onClose={() => setShowEmployeeForm(false)}
           onEmployeeCreated={() => {

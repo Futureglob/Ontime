@@ -9,7 +9,7 @@ import { authService } from "@/services/authService";
 import { Profile, UserRole } from "@/types/database";
 
 interface EmployeeFormProps {
-  employee?: Profile | null;
+  employee?: Partial<Profile> | null; // Use Partial<Profile> directly
   organizationId: string;
   onClose: () => void;
   onEmployeeCreated: () => void;
@@ -34,7 +34,7 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
     designation: employee?.designation || "",
     mobile_number: employee?.mobile_number || "",
     role: (employee?.role as UserRole) || UserRole.EMPLOYEE,
-    email: "",
+    email: "", // Initialize email as empty string; it's only for new employees and the input is hidden for existing ones
     password: ""
   });
 
