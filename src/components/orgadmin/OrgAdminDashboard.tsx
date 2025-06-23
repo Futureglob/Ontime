@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 import { profileService } from "@/services/profileService";
 import EmployeeForm from "@/components/employees/EmployeeForm";
-import { Profile as EmployeeProfile } from "@/types/database"; // Use Profile type
+import { Profile } from "@/types/database"; // Use Profile directly
 
 interface OrgStats {
   total_employees: number;
@@ -31,7 +31,7 @@ interface OrgStats {
 export default function OrgAdminDashboard() {
   const { logout, profile } = useAuth();
   const router = useRouter();
-  const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
+  const [employees, setEmployees] = useState<Profile[]>([]); // Use Profile type
   const [stats, setStats] = useState<OrgStats>({
     total_employees: 0,
     total_tasks: 0,
@@ -40,7 +40,7 @@ export default function OrgAdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Profile | null>(null); // Use Profile type
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -49,7 +49,7 @@ export default function OrgAdminDashboard() {
         const employeesData = await profileService.getOrganizationProfiles(profile.organizationId);
         setEmployees(employeesData || []); 
         
-        const activeEmployees = (employeesData || []).filter(emp => emp.is_active === true).length;
+        const activeEmployees = (employeesData || []).filter((emp: Profile) => emp.is_active === true).length; // Explicitly type emp
         setStats({
           total_employees: (employeesData || []).length,
           total_tasks: 0, 
@@ -69,7 +69,7 @@ export default function OrgAdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.organizationId]); // Add profile.organizationId as a dependency
+  }, [profile?.organizationId]);
 
   useEffect(() => {
     loadDashboardData();
@@ -89,7 +89,7 @@ export default function OrgAdminDashboard() {
     setShowEmployeeForm(true);
   };
 
-  const handleEditEmployee = (employee: EmployeeProfile) => { // Use EmployeeProfile
+  const handleEditEmployee = (employee: Profile) => { // Use Profile type
     setSelectedEmployee(employee);
     setShowEmployeeForm(true);
   };
@@ -216,7 +216,7 @@ export default function OrgAdminDashboard() {
                       No employees found. Add your first employee to get started.
                     </div>
                   ) : (
-                    employees.map((employee) => (
+                    employees.map((employee: Profile) => ( // Explicitly type employee
                       <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
