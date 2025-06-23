@@ -378,40 +378,96 @@ export const superAdminService = {
         .select()
         .single();
 
-      if (orgError) throw orgError;
+      if (orgError) {
+        console.error("Organization creation error:", orgError);
+        throw new Error(`Failed to create organization: ${orgError.message}`);
+      }
 
-      // Then, create the organization admin user
+      console.log("Organization created successfully:", orgResult);
+
+      // Then, create the organization admin user with better error handling
       const { data: authResult, error: authError } = await supabase.auth.signUp({
         email: orgData.admin_email,
         password: orgData.admin_password,
+        options: {
+          data: {
+            full_name: orgData.admin_name,
+            role: 'org_admin',
+            organization_id: orgResult.id
+          }
+        }
       });
 
       if (authError) {
-        // If user creation fails, clean up the organization
+        console.error("Auth signup error:", authError);
+        // Clean up the organization if user creation fails
         await supabase.from("organizations").delete().eq("id", orgResult.id);
-        throw authError;
+        
+        // Provide more specific error messages
+        if (authError.message.includes("already registered")) {
+          throw new Error(`Email ${orgData.admin_email} is already registered. Please use a different email.`);
+        } else if (authError.message.includes("password")) {
+          throw new Error("Password must be at least 6 characters long.");
+        } else {
+          throw new Error(`Failed to create admin user: ${authError.message}`);
+        }
       }
 
-      if (authResult.user) {
-        // Create the admin profile
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert({
-            id: authResult.user.id,
-            full_name: orgData.admin_name,
-            role: "org_admin",
-            organization_id: orgResult.id,
-            employee_id: orgData.admin_employee_id || `ADMIN-${Date.now()}`,
-            designation: "Organization Administrator",
-            mobile_number: orgData.admin_mobile,
-            is_active: true,
-          });
+      console.log("Auth user created:", authResult.user?.id);
 
-        if (profileError) {
-          // If profile creation fails, clean up both user and organization
-          await supabase.auth.admin.deleteUser(authResult.user.id);
-          await supabase.from("organizations").delete().eq("id", orgResult.id);
-          throw profileError;
+      if (authResult.user) {
+        // Create the admin profile with retry logic
+        let profileCreated = false;
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        while (!profileCreated && retryCount < maxRetries) {
+          try {
+            const { data: profileResult, error: profileError } = await supabase
+              .from("profiles")
+              .insert({
+                id: authResult.user.id,
+                full_name: orgData.admin_name,
+                role: "org_admin",
+                organization_id: orgResult.id,
+                employee_id: orgData.admin_employee_id || `ADMIN-${Date.now()}`,
+                designation: "Organization Administrator",
+                mobile_number: orgData.admin_mobile,
+                is_active: true,
+              })
+              .select()
+              .single();
+
+            if (profileError) {
+              console.error(`Profile creation error (attempt ${retryCount + 1}):`, profileError);
+              
+              if (retryCount === maxRetries - 1) {
+                // Final attempt failed, clean up
+                await supabase.auth.admin.deleteUser(authResult.user.id);
+                await supabase.from("organizations").delete().eq("id", orgResult.id);
+                throw new Error(`Failed to create admin profile: ${profileError.message}`);
+              }
+              
+              retryCount++;
+              // Wait a bit before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+              console.log("Profile created successfully:", profileResult);
+              profileCreated = true;
+            }
+          } catch (error) {
+            console.error(`Profile creation attempt ${retryCount + 1} failed:`, error);
+            retryCount++;
+            
+            if (retryCount >= maxRetries) {
+              // Clean up on final failure
+              await supabase.auth.admin.deleteUser(authResult.user.id);
+              await supabase.from("organizations").delete().eq("id", orgResult.id);
+              throw error;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
       }
 
