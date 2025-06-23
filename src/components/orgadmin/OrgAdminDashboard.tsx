@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +31,7 @@ interface OrgStats {
 export default function OrgAdminDashboard() {
   const { logout, profile } = useAuth();
   const router = useRouter();
-  const [employees, setEmployees] = useState<EmployeeProfile[]>([]); // Use EmployeeProfile
+  const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [stats, setStats] = useState<OrgStats>({
     total_employees: 0,
     total_tasks: 0,
@@ -40,35 +40,40 @@ export default function OrgAdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | null>(null); // Use EmployeeProfile
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | null>(null);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]); // Add loadDashboardData to dependency array
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       if (profile?.organizationId) {
-        // Load employees for this organization
         const employeesData = await profileService.getOrganizationProfiles(profile.organizationId);
-        setEmployees(employeesData as EmployeeProfile[] || []); // Cast to EmployeeProfile[]
+        setEmployees(employeesData || []); 
         
-        // Calculate stats
-        const activeEmployees = (employeesData as EmployeeProfile[])?.filter(emp => emp.is_active).length || 0;
+        const activeEmployees = (employeesData || []).filter(emp => emp.is_active === true).length;
         setStats({
-          total_employees: (employeesData as EmployeeProfile[])?.length || 0,
-          total_tasks: 0, // Will be implemented when task service is ready
+          total_employees: (employeesData || []).length,
+          total_tasks: 0, 
           active_employees: activeEmployees,
-          pending_tasks: 0 // Will be implemented when task service is ready
+          pending_tasks: 0 
         });
       }
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
+      console.error("Error loading dashboard ", error);
+      setEmployees([]); // Ensure employees is an array on error
+      setStats({ // Reset stats on error
+        total_employees: 0,
+        total_tasks: 0,
+        active_employees: 0,
+        pending_tasks: 0
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.organizationId]); // Add profile.organizationId as a dependency
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const handleLogout = async () => {
     try {
@@ -222,15 +227,15 @@ export default function OrgAdminDashboard() {
                             <p className="text-sm text-gray-500">
                               {employee.designation || employee.role} • {employee.employee_id}
                             </p>
-                            <p className="text-xs text-gray-400">{employee.email}</p>
+                            <p className="text-xs text-gray-400">{employee.email || "N/A"}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={employee.is_active ? "default" : "destructive"}>
-                            {employee.is_active ? "Active" : "Inactive"}
+                          <Badge variant={employee.is_active === true ? "default" : "destructive"}>
+                            {employee.is_active === true ? "Active" : "Inactive"}
                           </Badge>
                           <Badge variant="outline">
-                            {(employee.role as string).replace('_', ' ').toUpperCase()}
+                            {(employee.role as string || "N/A").replace('_', ' ').toUpperCase()}
                           </Badge>
                           <Button variant="ghost" size="sm" title="View Details">
                             <Eye className="h-4 w-4" />

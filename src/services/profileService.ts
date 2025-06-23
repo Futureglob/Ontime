@@ -47,7 +47,7 @@ export const profileService = {
     return data as Profile;
   },
 
-  async getOrganizationProfiles(organizationId: string) {
+  async getOrganizationProfiles(organizationId: string): Promise<Profile[] | null> {
     try {
       const { data, error } = await supabase
         .from("profiles")
