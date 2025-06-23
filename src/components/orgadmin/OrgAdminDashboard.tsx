@@ -19,18 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 import { profileService } from "@/services/profileService";
 import EmployeeForm from "@/components/employees/EmployeeForm";
-
-interface Employee {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  employee_id: string;
-  designation?: string;
-  mobile_number?: string;
-  is_active: boolean;
-  created_at: string;
-}
+import { Profile as EmployeeProfile } from "@/types/database"; // Use Profile type
 
 interface OrgStats {
   total_employees: number;
@@ -42,7 +31,7 @@ interface OrgStats {
 export default function OrgAdminDashboard() {
   const { logout, profile } = useAuth();
   const router = useRouter();
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeeProfile[]>([]); // Use EmployeeProfile
   const [stats, setStats] = useState<OrgStats>({
     total_employees: 0,
     total_tasks: 0,
@@ -51,11 +40,11 @@ export default function OrgAdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | null>(null); // Use EmployeeProfile
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [loadDashboardData]); // Add loadDashboardData to dependency array
 
   const loadDashboardData = async () => {
     try {
@@ -63,12 +52,12 @@ export default function OrgAdminDashboard() {
       if (profile?.organizationId) {
         // Load employees for this organization
         const employeesData = await profileService.getOrganizationProfiles(profile.organizationId);
-        setEmployees(employeesData || []);
+        setEmployees(employeesData as EmployeeProfile[] || []); // Cast to EmployeeProfile[]
         
         // Calculate stats
-        const activeEmployees = employeesData?.filter(emp => emp.is_active).length || 0;
+        const activeEmployees = (employeesData as EmployeeProfile[])?.filter(emp => emp.is_active).length || 0;
         setStats({
-          total_employees: employeesData?.length || 0,
+          total_employees: (employeesData as EmployeeProfile[])?.length || 0,
           total_tasks: 0, // Will be implemented when task service is ready
           active_employees: activeEmployees,
           pending_tasks: 0 // Will be implemented when task service is ready
@@ -95,7 +84,7 @@ export default function OrgAdminDashboard() {
     setShowEmployeeForm(true);
   };
 
-  const handleEditEmployee = (employee: Employee) => {
+  const handleEditEmployee = (employee: EmployeeProfile) => { // Use EmployeeProfile
     setSelectedEmployee(employee);
     setShowEmployeeForm(true);
   };
@@ -241,7 +230,7 @@ export default function OrgAdminDashboard() {
                             {employee.is_active ? "Active" : "Inactive"}
                           </Badge>
                           <Badge variant="outline">
-                            {employee.role.replace('_', ' ').toUpperCase()}
+                            {(employee.role as string).replace('_', ' ').toUpperCase()}
                           </Badge>
                           <Button variant="ghost" size="sm" title="View Details">
                             <Eye className="h-4 w-4" />
