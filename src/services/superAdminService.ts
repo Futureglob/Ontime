@@ -231,7 +231,7 @@ export const superAdminService = {
           user_count: userCount || 0,
           task_count: taskCount || 0,
           logo_url: org.logo_url,
-          is_active: org.is_active
+          is_active: true // Default to true since field doesn't exist in current schema
         });
       }
 
