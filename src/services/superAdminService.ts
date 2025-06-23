@@ -349,6 +349,86 @@ export const superAdminService = {
     }
   },
 
+  async createOrganizationWithAdmin(orgData: { 
+    name: string; 
+    logo_url?: string; 
+    primary_color?: string; 
+    secondary_color?: string;
+    contact_person?: string;
+    contact_email?: string;
+    admin_name: string;
+    admin_email: string;
+    admin_password: string;
+    admin_employee_id?: string;
+    admin_mobile?: string;
+  }): Promise<OrganizationForSuperAdminView> {
+    try {
+      // First, create the organization
+      const { data: orgResult, error: orgError } = await supabase
+        .from("organizations")
+        .insert([{
+          name: orgData.name,
+          logo_url: orgData.logo_url,
+          primary_color: orgData.primary_color || "#3B82F6",
+          secondary_color: orgData.secondary_color || "#1E40AF",
+          contact_person: orgData.contact_person,
+          contact_email: orgData.contact_email,
+          is_active: true
+        }])
+        .select()
+        .single();
+
+      if (orgError) throw orgError;
+
+      // Then, create the organization admin user
+      const { data: authResult, error: authError } = await supabase.auth.signUp({
+        email: orgData.admin_email,
+        password: orgData.admin_password,
+      });
+
+      if (authError) {
+        // If user creation fails, clean up the organization
+        await supabase.from("organizations").delete().eq("id", orgResult.id);
+        throw authError;
+      }
+
+      if (authResult.user) {
+        // Create the admin profile
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert({
+            id: authResult.user.id,
+            full_name: orgData.admin_name,
+            role: "org_admin",
+            organization_id: orgResult.id,
+            employee_id: orgData.admin_employee_id || `ADMIN-${Date.now()}`,
+            designation: "Organization Administrator",
+            mobile_number: orgData.admin_mobile,
+            is_active: true,
+          });
+
+        if (profileError) {
+          // If profile creation fails, clean up both user and organization
+          await supabase.auth.admin.deleteUser(authResult.user.id);
+          await supabase.from("organizations").delete().eq("id", orgResult.id);
+          throw profileError;
+        }
+      }
+
+      return {
+        id: orgResult.id,
+        name: orgResult.name,
+        user_count: 1, // The admin we just created
+        task_count: 0,
+        logo_url: orgResult.logo_url,
+        is_active: true
+      };
+    } catch (error) {
+      console.error("Error creating organization with admin:", error);
+      throw error;
+    }
+  },
+
   async updateOrganization(orgId: string, updates: Partial<{ name: string; logo_url: string; is_active: boolean }>): Promise<void> {
     try {
       const { error } = await supabase
