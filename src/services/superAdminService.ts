@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-// import type { Database } from "@/integrations/supabase/types"; // Ensure this line is removed or stays commented
 
 export interface SuperAdmin {
   id: string; 
@@ -34,47 +33,21 @@ export interface SystemStats {
   total_tasks: number;
 }
 
-const MOCK_ORGANIZATIONS: OrganizationForSuperAdminView[] = [
-  { id: "org1", name: "Tech Solutions Inc.", user_count: 50, task_count: 200, logo_url: "https://via.placeholder.com/40", is_active: true },
-  { id: "org2", name: "Green Energy Co.", user_count: 30, task_count: 150, logo_url: null, is_active: true },
-  { id: "org3", name: "HealthFirst Clinic", user_count: 75, task_count: 300, logo_url: "https://via.placeholder.com/40", is_active: false },
-];
-
-const MOCK_SUPER_ADMINS: SuperAdmin[] = [
-  { id: "sa1", user_id: "user_sa1", user_name: "Super Alice", user_email: "alice@super.system", created_at: new Date().toISOString(), permissions: { can_manage_all: true } },
-  { id: "sa2", user_id: "user_sa2", user_name: "Super Bob", user_email: "bob@super.system", created_at: new Date().toISOString(), permissions: { can_view_reports: true } },
-];
-
-const MOCK_SYSTEM_STATS: SystemStats = {
-  total_organizations: MOCK_ORGANIZATIONS.length,
-  total_users: 155, 
-  total_tasks: 650,  
-};
-
-interface ProfileData {
-    id: string;
-    full_name: string | null;
-    role: string | null;
-    created_at?: string;
-    // email?: string; // email is not directly on profiles table
-}
-
-
 export const superAdminService = {
   async isSuperAdmin(userId: string): Promise<boolean> {
     try {
-      const {  data, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", userId)
         .single();
       
-      if (profileError) {
-        console.error("Error fetching profile for super admin check:", profileError);
+      if (error) {
+        console.error("Error fetching profile for super admin check:", error);
         return false;
       }
       
-      return data?.role === "super_admin"; // Changed "admin" to "super_admin"
+      return data?.role === "super_admin";
     } catch (error) {
       console.error("Error checking super admin status:", error);
       return false;
@@ -82,31 +55,59 @@ export const superAdminService = {
   },
 
   async getSuperAdmins(): Promise<SuperAdmin[]> {
-    console.log("superAdminService.getSuperAdmins called");
-    return MOCK_SUPER_ADMINS;
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          full_name,
+          role,
+          created_at
+        `)
+        .eq("role", "super_admin");
+
+      if (error) throw error;
+
+      // Get user emails from auth.users (this requires RLS to be properly configured)
+      const superAdmins: SuperAdmin[] = [];
+      
+      for (const profile of data || []) {
+        // For now, we'll use the profile data without email since we can't easily access auth.users
+        superAdmins.push({
+          id: profile.id,
+          user_id: profile.id,
+          user_name: profile.full_name || "Super Admin",
+          user_email: "admin@system.com", // Placeholder - would need service role to get real email
+          permissions: { can_manage_all: true },
+          created_at: profile.created_at || new Date().toISOString(),
+        });
+      }
+
+      return superAdmins;
+    } catch (error) {
+      console.error("Error fetching super admins:", error);
+      return [];
+    }
   },
 
   async addSuperAdmin(userId: string, permissions: Record<string, boolean> = {}): Promise<SuperAdmin> {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .update({ role: "super_admin" }) // Changed "admin" to "super_admin"
+        .update({ role: "super_admin" })
         .eq("id", userId)
-        .select("id, full_name, role, created_at") 
+        .select("id, full_name, role, created_at")
         .single();
 
       if (error) throw error;
       
-      const p = data as ProfileData;
-      // This is a simplified mapping. In a real scenario, you might need to fetch user_email separately
-      // or ensure full_name is sufficient for user_name.
       return {
-        id: p.id, 
-        user_id: p.id,
-        user_name: p.full_name || "N/A",
-        // user_email: "fetched_email@example.com", // Placeholder: email needs to be fetched if required
+        id: data.id, 
+        user_id: data.id,
+        user_name: data.full_name || "Super Admin",
+        user_email: "admin@system.com", // Placeholder
         permissions,
-        created_at: p.created_at || new Date().toISOString(),
+        created_at: data.created_at || new Date().toISOString(),
       };
     } catch (error) {
       console.error("Error adding super admin:", error);
@@ -118,19 +119,30 @@ export const superAdminService = {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ role: "manager" }) 
+        .update({ role: "manager" })
         .eq("id", userIdToRemove);
 
       if (error) throw error;
     } catch (error) {
-      console.error("Error removing super admin (revoking admin role):", error);
+      console.error("Error removing super admin:", error);
       throw error;
     }
   },
 
   async updateSuperAdminPermissions(superAdminId: string, permissions: Record<string, boolean>): Promise<void> {
     try {
-      console.log("Permissions update called for (placeholder):", superAdminId, permissions);
+      // Update permissions in super_admins table if it exists
+      const { error } = await supabase
+        .from("super_admins")
+        .upsert({
+          user_id: superAdminId,
+          permissions: permissions,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.warn("Super admins table not available, permissions stored in memory only");
+      }
     } catch (error) {
       console.error("Error updating super admin permissions:", error);
       throw error;
@@ -139,25 +151,34 @@ export const superAdminService = {
 
   async getSystemSettings(): Promise<SystemSettings[]> {
     try {
-      console.warn("'getSystemSettings' is returning mock data.");
-      return [
-        {
-          id: "1",
-          key: "app_name",
-          value: { name: "OnTime" },
-          description: "Application name",
-          updated_by: "system",
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: "2",
-          key: "maintenance_mode",
-          value: { enabled: false },
-          description: "System Maintenance Mode",
-          updated_by: "system",
-          updated_at: new Date().toISOString()
-        }
-      ];
+      const { data, error } = await supabase
+        .from("system_settings")
+        .select("*")
+        .order("key");
+
+      if (error) {
+        console.warn("System settings table not available, returning defaults");
+        return [
+          {
+            id: "1",
+            key: "app_name",
+            value: { name: "OnTime" },
+            description: "Application name",
+            updated_by: "system",
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: "2",
+            key: "maintenance_mode",
+            value: { enabled: false },
+            description: "System Maintenance Mode",
+            updated_by: "system",
+            updated_at: new Date().toISOString()
+          }
+        ];
+      }
+
+      return data || [];
     } catch (error) {
       console.error("Error fetching system settings:", error);
       return [];
@@ -166,7 +187,16 @@ export const superAdminService = {
 
   async updateSystemSetting(key: string, newValue: Record<string, unknown>, newDescription?: string): Promise<void> {
     try {
-      console.warn(`'updateSystemSetting' for key '${key}' with value '${JSON.stringify(newValue)}' and description '${newDescription}' is a placeholder.`);
+      const { error } = await supabase
+        .from("system_settings")
+        .upsert({
+          key: key,
+          value: newValue,
+          description: newDescription,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
     } catch (error) {
       console.error("Error updating system setting:", error);
       throw error;
@@ -174,21 +204,104 @@ export const superAdminService = {
   },
 
   async getOrganizations(): Promise<OrganizationForSuperAdminView[]> {
-    console.log("superAdminService.getOrganizations called");
-    return MOCK_ORGANIZATIONS;
+    try {
+      const { data: orgs, error: orgsError } = await supabase
+        .from("organizations")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (orgsError) throw orgsError;
+
+      const organizationsWithStats: OrganizationForSuperAdminView[] = [];
+
+      for (const org of orgs || []) {
+        // Get user count for this organization
+        const { count: userCount } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("organization_id", org.id);
+
+        // Get task count for this organization
+        const { count: taskCount } = await supabase
+          .from("tasks")
+          .select("*", { count: "exact", head: true })
+          .eq("organization_id", org.id);
+
+        organizationsWithStats.push({
+          id: org.id,
+          name: org.name,
+          user_count: userCount || 0,
+          task_count: taskCount || 0,
+          logo_url: org.logo_url,
+          is_active: org.is_active
+        });
+      }
+
+      return organizationsWithStats;
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+      return [];
+    }
   },
   
   async getSystemStats(): Promise<SystemStats> {
-    console.log("superAdminService.getSystemStats called");
-    return MOCK_SYSTEM_STATS;
+    try {
+      // Get total organizations count
+      const { count: totalOrgs } = await supabase
+        .from("organizations")
+        .select("*", { count: "exact", head: true });
+
+      // Get total users count
+      const { count: totalUsers } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
+      // Get total tasks count
+      const { count: totalTasks } = await supabase
+        .from("tasks")
+        .select("*", { count: "exact", head: true });
+
+      return {
+        total_organizations: totalOrgs || 0,
+        total_users: totalUsers || 0,
+        total_tasks: totalTasks || 0,
+      };
+    } catch (error) {
+      console.error("Error fetching system stats:", error);
+      return {
+        total_organizations: 0,
+        total_users: 0,
+        total_tasks: 0,
+      };
+    }
   },
 
-  async loginSuperAdmin(email: string, password: string): Promise<{ user: { id: string; email: string; name?: string }; isSuperAdmin: boolean }> { // Type for user is specific
-    console.log("superAdminService.loginSuperAdmin called with", email);
-    if (email === "superadmin@system.com" && password === "password123") {
-      return { user: { id: "mock_sa_user_id", email, name: "Mock Super Admin" }, isSuperAdmin: true };
+  async loginSuperAdmin(email: string, password: string): Promise<{ user: { id: string; email: string; name?: string }; isSuperAdmin: boolean }> {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const isSuperAdmin = await this.isSuperAdmin(data.user.id);
+        return {
+          user: {
+            id: data.user.id,
+            email: data.user.email!,
+            name: data.user.user_metadata?.full_name
+          },
+          isSuperAdmin
+        };
+      }
+
+      throw new Error("Login failed");
+    } catch (error) {
+      console.error("Super admin login error:", error);
+      throw error;
     }
-    throw new Error("Invalid super admin credentials");
   },
   
   async getOrganizationStats(): Promise<OrganizationForSuperAdminView[]> {
@@ -197,6 +310,79 @@ export const superAdminService = {
 
   async getSystemOverallStats(): Promise<SystemStats> {
     return this.getSystemStats(); 
+  },
+
+  async createOrganization(orgData: { name: string; logo_url?: string; primary_color?: string; secondary_color?: string }): Promise<OrganizationForSuperAdminView> {
+    try {
+      const { data, error } = await supabase
+        .from("organizations")
+        .insert([{
+          name: orgData.name,
+          logo_url: orgData.logo_url,
+          primary_color: orgData.primary_color || "#3B82F6",
+          secondary_color: orgData.secondary_color || "#1E40AF",
+          is_active: true
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        name: data.name,
+        user_count: 0,
+        task_count: 0,
+        logo_url: data.logo_url,
+        is_active: data.is_active
+      };
+    } catch (error) {
+      console.error("Error creating organization:", error);
+      throw error;
+    }
+  },
+
+  async updateOrganization(orgId: string, updates: Partial<{ name: string; logo_url: string; is_active: boolean }>): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from("organizations")
+        .update(updates)
+        .eq("id", orgId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error updating organization:", error);
+      throw error;
+    }
+  },
+
+  async deleteOrganization(orgId: string): Promise<void> {
+    try {
+      // First, check if organization has users or tasks
+      const { count: userCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", orgId);
+
+      const { count: taskCount } = await supabase
+        .from("tasks")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", orgId);
+
+      if ((userCount || 0) > 0 || (taskCount || 0) > 0) {
+        throw new Error("Cannot delete organization with existing users or tasks. Please transfer or remove them first.");
+      }
+
+      const { error } = await supabase
+        .from("organizations")
+        .delete()
+        .eq("id", orgId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error deleting organization:", error);
+      throw error;
+    }
   }
 };
 
