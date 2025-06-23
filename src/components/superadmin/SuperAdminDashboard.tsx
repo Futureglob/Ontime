@@ -12,16 +12,24 @@ import {
   Plus,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  LogOut
 } from "lucide-react";
 import { superAdminService, SuperAdmin, OrganizationForSuperAdminView, SystemStats } from "@/services/superAdminService";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/router";
 import Image from "next/image";
+import AddOrganizationModal from "./AddOrganizationModal";
+import EditOrganizationModal from "./EditOrganizationModal";
+import SystemSettingsModal from "./SystemSettingsModal";
 
 interface DashboardDisplayStats extends SystemStats {
   activeSuperAdmins: number;
 }
 
 export default function SuperAdminDashboard() {
+  const { logout } = useAuth();
+  const router = useRouter();
   const [organizations, setOrganizations] = useState<OrganizationForSuperAdminView[]>([]);
   const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
   const [stats, setStats] = useState<DashboardDisplayStats>({
@@ -31,6 +39,12 @@ export default function SuperAdminDashboard() {
     activeSuperAdmins: 0
   });
   const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [showAddOrgModal, setShowAddOrgModal] = useState(false);
+  const [showEditOrgModal, setShowEditOrgModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [selectedOrganization, setSelectedOrganization] = useState<OrganizationForSuperAdminView | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -56,6 +70,31 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  const handleEditOrganization = (org: OrganizationForSuperAdminView) => {
+    setSelectedOrganization(org);
+    setShowEditOrgModal(true);
+  };
+
+  const handleDeleteOrganization = async (orgId: string, orgName: string) => {
+    if (confirm(`Are you sure you want to delete "${orgName}"? This action cannot be undone.`)) {
+      try {
+        await superAdminService.deleteOrganization(orgId);
+        loadDashboardData(); // Refresh data
+      } catch (error) {
+        alert("Failed to delete organization: " + (error as Error).message);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -68,13 +107,25 @@ export default function SuperAdminDashboard() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Shield className="h-6 w-6 text-purple-600" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Shield className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
+                <p className="text-gray-600">System-wide management and oversight</p>
+              </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
+            <Button 
+              variant="outline" 
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
           </div>
-          <p className="text-gray-600">System-wide management and oversight</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -139,7 +190,10 @@ export default function SuperAdminDashboard() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Organizations Management</CardTitle>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowAddOrgModal(true)}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Organization
                   </Button>
@@ -147,37 +201,56 @@ export default function SuperAdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {organizations.map((org) => (
-                    <div key={org.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative">
-                          {org.logo_url ? (
-                            <Image src={org.logo_url} alt={org.name} width={32} height={32} className="object-contain" />
-                          ) : (
-                            <Building2 className="h-6 w-6 text-gray-400" />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{org.name}</h3>
-                          <p className="text-sm text-gray-500">
-                            {org.user_count || 0} users • {org.task_count || 0} tasks
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={org.is_active ? "default" : "destructive"}>{org.is_active ? "Active" : "Inactive"}</Badge>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                  {organizations.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No organizations found. Create your first organization to get started.
                     </div>
-                  ))}
+                  ) : (
+                    organizations.map((org) => (
+                      <div key={org.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative">
+                            {org.logo_url ? (
+                              <Image src={org.logo_url} alt={org.name} width={32} height={32} className="object-contain" />
+                            ) : (
+                              <Building2 className="h-6 w-6 text-gray-400" />
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{org.name}</h3>
+                            <p className="text-sm text-gray-500">
+                              {org.user_count || 0} users • {org.task_count || 0} tasks
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={org.is_active ? "default" : "destructive"}>
+                            {org.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                          <Button variant="ghost" size="sm" title="View Details">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            title="Edit Organization"
+                            onClick={() => handleEditOrganization(org)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600 hover:text-red-700"
+                            title="Delete Organization"
+                            onClick={() => handleDeleteOrganization(org.id, org.name)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -196,28 +269,34 @@ export default function SuperAdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {superAdmins.map((admin) => (
-                    <div key={admin.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                          <Shield className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{admin.user_name || `Admin (${admin.user_id})`}</h3>
-                          <p className="text-sm text-gray-500">{admin.user_email || "Email not available"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-purple-100 text-purple-800">Super Admin</Badge>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                  {superAdmins.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No super administrators found.
                     </div>
-                  ))}
+                  ) : (
+                    superAdmins.map((admin) => (
+                      <div key={admin.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                            <Shield className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{admin.user_name || `Admin (${admin.user_id})`}</h3>
+                            <p className="text-sm text-gray-500">{admin.user_email || "Email not available"}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-purple-100 text-purple-800">Super Admin</Badge>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -226,7 +305,16 @@ export default function SuperAdminDashboard() {
           <TabsContent value="settings">
             <Card>
               <CardHeader>
-                <CardTitle>System Settings</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>System Settings</CardTitle>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowSettingsModal(true)}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage Settings
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
@@ -273,7 +361,10 @@ export default function SuperAdminDashboard() {
                   </div>
 
                   <div className="flex gap-4">
-                    <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => setShowSettingsModal(true)}
+                    >
                       <Settings className="h-4 w-4 mr-2" />
                       Update Settings
                     </Button>
@@ -287,6 +378,25 @@ export default function SuperAdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modals */}
+      <AddOrganizationModal
+        isOpen={showAddOrgModal}
+        onClose={() => setShowAddOrgModal(false)}
+        onOrganizationAdded={loadDashboardData}
+      />
+
+      <EditOrganizationModal
+        isOpen={showEditOrgModal}
+        onClose={() => setShowEditOrgModal(false)}
+        onOrganizationUpdated={loadDashboardData}
+        organization={selectedOrganization}
+      />
+
+      <SystemSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+      />
     </div>
   );
 }
