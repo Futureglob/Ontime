@@ -332,7 +332,7 @@ export const superAdminService = {
         user_count: 0,
         task_count: 0,
         logo_url: data.logo_url,
-        is_active: data.is_active
+        is_active: true // Default to true since field doesn't exist in current schema
       };
     } catch (error) {
       console.error("Error creating organization:", error);
