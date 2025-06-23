@@ -15,9 +15,14 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    // Redirect super admin to their dedicated dashboard
-    if (mounted && !loading && user && profile?.role === "super_admin") {
-      router.push("/superadmin");
+    // Redirect users based on their role
+    if (mounted && !loading && user && profile) {
+      if (profile.role === "super_admin") {
+        router.push("/superadmin");
+      } else if (profile.role === "org_admin") {
+        router.push("/orgadmin");
+      }
+      // Other roles stay on the main dashboard
     }
   }, [mounted, loading, user, profile, router]);
 
@@ -38,6 +43,15 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Redirecting to Super Admin Dashboard...</div>
+      </div>
+    );
+  }
+
+  // If org admin, show loading while redirecting
+  if (profile?.role === "org_admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Redirecting to Organization Dashboard...</div>
       </div>
     );
   }

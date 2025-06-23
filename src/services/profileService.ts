@@ -45,5 +45,35 @@ export const profileService = {
 
     if (error) throw error;
     return data as Profile;
+  },
+
+  async getOrganizationProfiles(organizationId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error fetching organization profiles:", error);
+      throw error;
+    }
+  },
+
+  async deleteProfile(profileId: string) {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", profileId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error deleting profile:", error);
+      throw error;
+    }
   }
 };
