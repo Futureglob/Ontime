@@ -17,6 +17,8 @@ export default function AddOrganizationModal({ isOpen, onClose, onOrganizationAd
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
+    contact_person: "",
+    contact_email: "",
     logo_url: "",
     primary_color: "#3B82F6",
     secondary_color: "#1E40AF"
@@ -43,6 +45,8 @@ export default function AddOrganizationModal({ isOpen, onClose, onOrganizationAd
       // Reset form
       setFormData({
         name: "",
+        contact_person: "",
+        contact_email: "",
         logo_url: "",
         primary_color: "#3B82F6",
         secondary_color: "#1E40AF"
