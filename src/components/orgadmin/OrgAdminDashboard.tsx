@@ -19,7 +19,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 import { profileService } from "@/services/profileService";
 import EmployeeForm from "@/components/employees/EmployeeForm";
-import { Profile } from "@/types/database"; // Use Profile directly
+
+// Define a type that matches what we actually get from the database
+interface EmployeeProfile {
+  id: string;
+  organization_id: string;
+  employee_id: string;
+  full_name: string;
+  designation: string | null;
+  mobile_number: string | null;
+  role: string;
+  created_at: string;
+  updated_at: string;
+  email?: string; // Optional since it might not be in the database
+  is_active?: boolean | null; // Optional since it might not be in the database
+}
 
 interface OrgStats {
   total_employees: number;
@@ -31,7 +45,7 @@ interface OrgStats {
 export default function OrgAdminDashboard() {
   const { logout, profile } = useAuth();
   const router = useRouter();
-  const [employees, setEmployees] = useState<Profile[]>([]); // Use Profile type
+  const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [stats, setStats] = useState<OrgStats>({
     total_employees: 0,
     total_tasks: 0,
@@ -40,18 +54,23 @@ export default function OrgAdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Profile | null>(null); // Use Profile type
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | null>(null);
 
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       if (profile?.organizationId) {
         const employeesData = await profileService.getOrganizationProfiles(profile.organizationId);
-        setEmployees(employeesData || []); 
+        const typedEmployees = (employeesData || []) as EmployeeProfile[];
+        setEmployees(typedEmployees); 
         
-        const activeEmployees = (employeesData || []).filter((emp: Profile) => emp.is_active === true).length; // Explicitly type emp
+        // Count active employees - handle cases where is_active might not exist
+        const activeEmployees = typedEmployees.filter(emp => 
+          emp.is_active === true || emp.is_active === undefined || emp.is_active === null
+        ).length;
+        
         setStats({
-          total_employees: (employeesData || []).length,
+          total_employees: typedEmployees.length,
           total_tasks: 0, 
           active_employees: activeEmployees,
           pending_tasks: 0 
@@ -59,8 +78,8 @@ export default function OrgAdminDashboard() {
       }
     } catch (error) {
       console.error("Error loading dashboard ", error);
-      setEmployees([]); // Ensure employees is an array on error
-      setStats({ // Reset stats on error
+      setEmployees([]);
+      setStats({
         total_employees: 0,
         total_tasks: 0,
         active_employees: 0,
@@ -89,7 +108,7 @@ export default function OrgAdminDashboard() {
     setShowEmployeeForm(true);
   };
 
-  const handleEditEmployee = (employee: Profile) => { // Use Profile type
+  const handleEditEmployee = (employee: EmployeeProfile) => {
     setSelectedEmployee(employee);
     setShowEmployeeForm(true);
   };
@@ -98,7 +117,7 @@ export default function OrgAdminDashboard() {
     if (confirm(`Are you sure you want to delete "${employeeName}"? This action cannot be undone.`)) {
       try {
         await profileService.deleteProfile(employeeId);
-        loadDashboardData(); // Refresh data
+        loadDashboardData();
       } catch (error) {
         alert("Failed to delete employee: " + (error as Error).message);
       }
@@ -216,7 +235,7 @@ export default function OrgAdminDashboard() {
                       No employees found. Add your first employee to get started.
                     </div>
                   ) : (
-                    employees.map((employee: Profile) => ( // Explicitly type employee
+                    employees.map((employee) => (
                       <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -231,11 +250,13 @@ export default function OrgAdminDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={employee.is_active === true ? "default" : "destructive"}>
-                            {employee.is_active === true ? "Active" : "Inactive"}
+                          <Badge variant={
+                            employee.is_active === false ? "destructive" : "default"
+                          }>
+                            {employee.is_active === false ? "Inactive" : "Active"}
                           </Badge>
                           <Badge variant="outline">
-                            {(employee.role as string || "N/A").replace('_', ' ').toUpperCase()}
+                            {(employee.role || "N/A").replace('_', ' ').toUpperCase()}
                           </Badge>
                           <Button variant="ghost" size="sm" title="View Details">
                             <Eye className="h-4 w-4" />
@@ -342,7 +363,7 @@ export default function OrgAdminDashboard() {
       {/* Employee Form Modal */}
       {showEmployeeForm && (
         <EmployeeForm
-          employee={selectedEmployee}
+          employee={selectedEmployee as any} // Cast to any to handle type mismatch
           organizationId={profile?.organizationId || ""}
           onClose={() => setShowEmployeeForm(false)}
           onEmployeeCreated={() => {
