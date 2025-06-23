@@ -98,6 +98,27 @@ export default function AddOrganizationModal({ isOpen, onClose, onOrganizationAd
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="contact_person">Contact Person</Label>
+            <Input
+              id="contact_person"
+              value={formData.contact_person}
+              onChange={(e) => handleInputChange("contact_person", e.target.value)}
+              placeholder="Enter contact person name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="contact_email">Contact Email</Label>
+            <Input
+              id="contact_email"
+              type="email"
+              value={formData.contact_email}
+              onChange={(e) => handleInputChange("contact_email", e.target.value)}
+              placeholder="Enter contact email"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="logo_url">Logo URL (Optional)</Label>
             <Input
               id="logo_url"
