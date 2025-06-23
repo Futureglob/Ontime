@@ -1,40 +1,44 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
 import SuperAdminDashboard from "@/components/superadmin/SuperAdminDashboard";
-// import { superAdminService } from "@/services/superAdminService"; // Correctly commented out or remove if not used here
-// import { useAuth } from "@/contexts/AuthContext"; // Removed unused import
+import { useAuth } from "@/contexts/AuthContext";
+import { authService } from "@/services/authService";
 
 export default function SuperAdminPage() {
+  const { user, profile, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [isSuperAdminAuthenticated, setIsSuperAdminAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
-  // const { user: generalUser, loading: authLoading } = useAuth(); // generalUser is unused, can be removed or commented if not planned
 
-  // This effect could be used to check if a super admin session already exists
   useEffect(() => {
-    // For now, we rely on manual login.
-    // In a real scenario, you might check a specific super admin token.
-    // Example: const superAdminToken = localStorage.getItem("super_admin_token");
-    // if (superAdminToken) setIsSuperAdminAuthenticated(true);
-  }, []);
+    // Check if user is already logged in and is a super admin
+    if (!authLoading && user && profile) {
+      if (profile.role === "super_admin") {
+        setIsSuperAdminAuthenticated(true);
+      } else {
+        // Redirect non-super-admin users to main dashboard
+        router.push("/");
+      }
+    }
+  }, [authLoading, user, profile, router]);
 
   const handleSuperAdminLogin = async (email: string, password: string) => {
     setLoading(true);
     setError(undefined);
     try {
-      // Mock login for now. Replace "password123" with a more secure check or use superAdminService.loginSuperAdmin
-      if (email === "superadmin@system.com" && password === "password123") { 
-        // Example using the service (once its login is fully implemented):
-        // const { user, isSuperAdmin } = await superAdminService.loginSuperAdmin(email, password);
-        // if (isSuperAdmin) {
-        //   setIsSuperAdminAuthenticated(true);
-        //   // Optionally store a specific super admin session token if needed
-        // } else {
-        //   throw new Error("User is not a super admin.");
-        // }
-        setIsSuperAdminAuthenticated(true); // Current mock behavior
+      // Use the actual auth service to login
+      const { data, error } = await authService.signIn(email, password);
+      
+      if (error) throw error;
+      
+      // Check if the logged in user is a super admin
+      if (data.profile?.role === "super_admin") {
+        setIsSuperAdminAuthenticated(true);
+        // The auth context will handle the login state
       } else {
-         throw new Error("Invalid super admin credentials.");
+        throw new Error("Access denied. You are not a super admin.");
       }
     } catch (err) {
       setError((err as Error).message || "Super admin login failed");
@@ -44,32 +48,25 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Optional: Add a logout function for super admin
-  // const handleSuperAdminLogout = () => {
-  //   localStorage.removeItem("super_admin_token");
-  //   setIsSuperAdminAuthenticated(false);
-  // };
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
 
-  // if (authLoading) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="text-lg">Loading...</div>
-  //     </div>
-  //   );
-  // }
+  // If user is logged in but not a super admin, redirect
+  if (user && profile && profile.role !== "super_admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg text-red-500">Access Denied. You are not a Super Admin.</div>
+      </div>
+    );
+  }
 
-  // Example: Redirect if a general user tries to access /superadmin without being a super_admin
-  // This logic might need refinement based on how super_admin role is stored in generalUser
-  // if (generalUser && generalUser.role !== "super_admin" && !isSuperAdminAuthenticated) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="text-lg text-red-500">Access Denied. You are not a Super Admin.</div>
-  //     </div>
-  //   );
-  // }
-
-
-  if (!isSuperAdminAuthenticated) {
+  // If user is not logged in or not authenticated as super admin, show login
+  if (!user || !isSuperAdminAuthenticated) {
     return (
       <SuperAdminLogin
         onLogin={handleSuperAdminLogin}
