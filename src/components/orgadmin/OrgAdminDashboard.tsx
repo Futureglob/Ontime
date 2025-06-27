@@ -6,6 +6,12 @@
     import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
     import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
     import { 
+      Dialog,
+      DialogContent,
+      DialogHeader,
+      DialogTitle,
+    } from "@/components/ui/dialog";
+    import { 
       Users, 
       Settings, 
       BarChart3, 
@@ -355,15 +361,21 @@
               </Tabs>
             </main>
           </div>
-          {profile.organization_id && (
-            <EmployeeForm
-              isOpen={isEmployeeModalOpen}
-              onClose={() => setIsEmployeeModalOpen(false)}
-              onSave={handleSaveEmployee}
-              organizationId={profile.organization_id}
-              employee={selectedEmployee}
-            />
-          )}
+          <Dialog open={isEmployeeModalOpen} onOpenChange={setIsEmployeeModalOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>{selectedEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
+              </DialogHeader>
+              {profile.organization_id && (
+                <EmployeeForm
+                  onClose={() => setIsEmployeeModalOpen(false)}
+                  onSave={handleSaveEmployee}
+                  organizationId={profile.organization_id}
+                  employee={selectedEmployee}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       );
     }
