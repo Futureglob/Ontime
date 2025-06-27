@@ -17,10 +17,11 @@ export const messageService = {
       .insert([{
         task_id: taskId,
         sender_id: senderId,
+        receiver_id: senderId, // Assuming sender is also a receiver for now, adjust as needed
         content,
         is_read: false,
-        attachment_url: attachmentUrl,
-        attachment_type: attachmentType
+        // attachment_url: attachmentUrl, // These columns do not exist in the table
+        // attachment_type: attachmentType
       }])
       .select(`
         *,
