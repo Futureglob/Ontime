@@ -15,7 +15,6 @@ import analyticsService, {
   TimeSeriesData,
   OrganizationMetrics 
 } from "@/services/analyticsService";
-import { useAuth } from "@/contexts/AuthContext";
 import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import EmployeePerformanceChart from "./EmployeePerformanceChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";

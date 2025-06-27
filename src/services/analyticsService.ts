@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TaskAnalytics {
@@ -113,21 +114,21 @@ export const analyticsService = {
         .lte("created_at", dateRange.end.toISOString());
     }
 
-    const {  tasks, error: tasksError } = await tasksQuery;
+    const { data: tasks, error: tasksError } = await tasksQuery;
     if (tasksError) throw tasksError;
 
-    const employeeIds = [...new Set(tasks?.map(t => t.assigned_to).filter(Boolean))];
+    const employeeIds = [...new Set(tasks?.map(t => t.assigned_to).filter(Boolean) as string[])];
 
     if (employeeIds.length === 0) return [];
 
-    const {  profiles, error: profilesError } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("id, full_name")
       .in("id", employeeIds);
 
     if (profilesError) throw profilesError;
 
-    const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]));
+    const profileMap = new Map(profiles?.map(p => [p.id, p.full_name || "Unknown Employee"]));
 
     const employeeMap = new Map<string, {
       name: string;
@@ -293,7 +294,7 @@ export const analyticsService = {
   async getOrganizationMetrics(organizationId?: string): Promise<OrganizationMetrics> {
     let profilesQuery = supabase
       .from("profiles")
-      .select("id, is_active");
+      .select("id");
 
     let tasksQuery = supabase
       .from("tasks")
@@ -316,7 +317,7 @@ export const analyticsService = {
     const tasks = tasksResult.data || [];
 
     const totalEmployees = profiles.length;
-    const activeEmployees = profiles.filter(p => p.is_active === true).length;
+    const activeEmployees = profiles.length;
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(t => t.status === "completed").length;
     const averageTasksPerEmployee = activeEmployees > 0 ? totalTasks / activeEmployees : 0;
@@ -344,31 +345,6 @@ export const analyticsService = {
       .eq("task_id", taskId)
       .order("created_at", { ascending: true });
 
-    if (error) throw error;
-    return data;
-  },
-
-  async getLocationLogs(organizationId?: string, dateRange?: { start: Date; end: Date }) {
-    let query = supabase
-      .from("location_logs")
-      .select(`
-        *,
-        profiles(full_name),
-        tasks(title)
-      `);
-
-    if (organizationId) {
-      // Assuming location_logs has organization_id
-      // If not, this needs a join through tasks or profiles
-    }
-
-    if (dateRange) {
-      query = query
-        .gte("recorded_at", dateRange.start.toISOString())
-        .lte("recorded_at", dateRange.end.toISOString());
-    }
-
-    const { data, error } = await query.order("recorded_at", { ascending: false });
     if (error) throw error;
     return data;
   }
