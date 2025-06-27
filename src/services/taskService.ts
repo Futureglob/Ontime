@@ -107,11 +107,7 @@ export const taskService = {
       .select("*")
       .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
 
-    if (error) {
-      console.error("Error fetching user tasks:", error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data || [];
   }
 };
