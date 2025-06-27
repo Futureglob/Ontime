@@ -1,6 +1,7 @@
-
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { LocationAnalytics } from "@/services/analyticsService";
+import { TooltipProps } from "recharts";
+import { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
 interface LocationAnalyticsChartProps {
   data: LocationAnalytics[];
@@ -18,7 +19,7 @@ export default function LocationAnalyticsChart({ data }: LocationAnalyticsChartP
     avgDuration: location.averageDuration
   }));
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
     if (active && payload && payload.length) {
       const location = chartData.find(l => l.name === label);
       return (

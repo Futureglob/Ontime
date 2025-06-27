@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CalendarIcon, Download, Filter, TrendingUp, Users, MapPin, Clock } from "lucide-react";
+import { CalendarIcon, Download, TrendingUp, Users, MapPin, Clock } from "lucide-react";
 import { format } from "date-fns";
 import analyticsService, { 
   TaskAnalytics, 
@@ -27,7 +26,6 @@ interface AnalyticsDashboardProps {
 }
 
 export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboardProps) {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
@@ -40,36 +38,36 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([]);
   const [organizationMetrics, setOrganizationMetrics] = useState<OrganizationMetrics | null>(null);
 
-  const loadAnalytics = async () => {
-    try {
-      setLoading(true);
-      const [
-        taskData,
-        employeeData,
-        locationData,
-        timeData,
-        orgMetrics
-      ] = await Promise.all([
-        analyticsService.getTaskAnalytics(organizationId, dateRange),
-        analyticsService.getEmployeePerformance(organizationId, dateRange),
-        analyticsService.getLocationAnalytics(organizationId),
-        analyticsService.getTimeSeriesData(organizationId, 30),
-        analyticsService.getOrganizationMetrics(organizationId)
-      ]);
-
-      setTaskAnalytics(taskData);
-      setEmployeePerformance(employeeData);
-      setLocationAnalytics(locationData);
-      setTimeSeriesData(timeData);
-      setOrganizationMetrics(orgMetrics);
-    } catch (error) {
-      console.error("Error loading analytics:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        setLoading(true);
+        const [
+          taskData,
+          employeeData,
+          locationData,
+          timeData,
+          orgMetrics
+        ] = await Promise.all([
+          analyticsService.getTaskAnalytics(organizationId, dateRange),
+          analyticsService.getEmployeePerformance(organizationId, dateRange),
+          analyticsService.getLocationAnalytics(organizationId),
+          analyticsService.getTimeSeriesData(organizationId, 30),
+          analyticsService.getOrganizationMetrics(organizationId)
+        ]);
+  
+        setTaskAnalytics(taskData);
+        setEmployeePerformance(employeeData);
+        setLocationAnalytics(locationData);
+        setTimeSeriesData(timeData);
+        setOrganizationMetrics(orgMetrics);
+      } catch (error) {
+        console.error("Error loading analytics:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadAnalytics();
   }, [organizationId, dateRange]);
 

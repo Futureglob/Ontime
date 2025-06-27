@@ -1,4 +1,3 @@
-
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { TaskAnalytics } from "@/services/analyticsService";
 
@@ -37,7 +36,8 @@ export default function TaskAnalyticsChart({ data }: TaskAnalyticsChartProps) {
     }
   ].filter(item => item.value > 0);
 
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  const renderCustomizedLabel = (props: { cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number; }) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);

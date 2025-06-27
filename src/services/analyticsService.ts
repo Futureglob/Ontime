@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TaskAnalytics {
@@ -95,28 +94,40 @@ export const analyticsService = {
   },
 
   async getEmployeePerformance(organizationId?: string, dateRange?: { start: Date; end: Date }): Promise<EmployeePerformance[]> {
-    let query = supabase
+    let tasksQuery = supabase
       .from("tasks")
       .select(`
         assigned_to,
-        assigned_to_profile,
         status,
         working_hours,
         created_at
       `);
 
     if (organizationId) {
-      query = query.eq("organization_id", organizationId);
+      tasksQuery = tasksQuery.eq("organization_id", organizationId);
     }
 
     if (dateRange) {
-      query = query
+      tasksQuery = tasksQuery
         .gte("created_at", dateRange.start.toISOString())
         .lte("created_at", dateRange.end.toISOString());
     }
 
-    const { data: tasks, error } = await query;
-    if (error) throw error;
+    const {  tasks, error: tasksError } = await tasksQuery;
+    if (tasksError) throw tasksError;
+
+    const employeeIds = [...new Set(tasks?.map(t => t.assigned_to).filter(Boolean))];
+
+    if (employeeIds.length === 0) return [];
+
+    const {  profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", employeeIds);
+
+    if (profilesError) throw profilesError;
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]));
 
     const employeeMap = new Map<string, {
       name: string;
@@ -129,7 +140,7 @@ export const analyticsService = {
       if (!task.assigned_to) return;
 
       const employeeId = task.assigned_to;
-      const employeeName = task.assigned_to_profile?.full_name || "Unknown Employee";
+      const employeeName = profileMap.get(employeeId) || "Unknown Employee";
 
       if (!employeeMap.has(employeeId)) {
         employeeMap.set(employeeId, {
@@ -305,7 +316,7 @@ export const analyticsService = {
     const tasks = tasksResult.data || [];
 
     const totalEmployees = profiles.length;
-    const activeEmployees = profiles.filter(p => p.is_active).length;
+    const activeEmployees = profiles.filter(p => p.is_active === true).length;
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(t => t.status === "completed").length;
     const averageTasksPerEmployee = activeEmployees > 0 ? totalTasks / activeEmployees : 0;
@@ -328,7 +339,7 @@ export const analyticsService = {
       .from("task_status_history")
       .select(`
         *,
-        profiles!task_status_history_updated_by_fkey(full_name)
+        profiles(full_name)
       `)
       .eq("task_id", taskId)
       .order("created_at", { ascending: true });
@@ -342,9 +353,14 @@ export const analyticsService = {
       .from("location_logs")
       .select(`
         *,
-        profiles!location_logs_user_id_fkey(full_name),
-        tasks!location_logs_task_id_fkey(title)
+        profiles(full_name),
+        tasks(title)
       `);
+
+    if (organizationId) {
+      // Assuming location_logs has organization_id
+      // If not, this needs a join through tasks or profiles
+    }
 
     if (dateRange) {
       query = query

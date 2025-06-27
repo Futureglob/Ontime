@@ -1,6 +1,7 @@
-
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { EmployeePerformance } from "@/services/analyticsService";
+import { TooltipProps } from "recharts";
+import { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
 interface EmployeePerformanceChartProps {
   data: EmployeePerformance[];
@@ -15,7 +16,7 @@ export default function EmployeePerformanceChart({ data }: EmployeePerformanceCh
     hours: employee.totalWorkingHours
   }));
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
     if (active && payload && payload.length) {
       const employee = data.find(e => e.employeeName.split(" ")[0] === label);
       return (
