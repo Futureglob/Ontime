@@ -1,11 +1,10 @@
-
 import React from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TaskOverview } from "@/services/analyticsService";
 import { Payload } from "recharts/types/component/DefaultLegendContent";
 
 interface TaskAnalyticsChartProps {
-   TaskOverview;
+    TaskOverview;
 }
 
 const COLORS = {

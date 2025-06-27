@@ -1,11 +1,10 @@
-
 import React from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { format } from "date-fns";
 import { TaskTrend } from "@/services/analyticsService";
 
 interface TimeSeriesChartProps {
-   TaskTrend[];
+    TaskTrend[];
 }
 
 const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ data }) => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,7 +40,7 @@ const AnalyticsDashboard = () => {
           locationData,
           timeData,
         ] = await Promise.all([
-          analyticsService.getTaskOverview("org_123", dateRange),
+          analyticsService.getTaskOverview("org_123", { from: dateRange.from, to: dateRange.to }),
           analyticsService.getEmployeePerformance("org_123", { start: dateRange.from, end: dateRange.to }),
           analyticsService.getLocationAnalytics("org_123", { start: dateRange.from, end: dateRange.to }),
           analyticsService.getTimeSeriesData("org_123", 30),
