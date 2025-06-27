@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import bcrypt from "bcryptjs";
 
 export interface AuthUser {
   id: string;
@@ -78,6 +80,168 @@ export const authService = {
     } catch (error) {
       console.error("Sign in error:", error);
       throw error;
+    }
+  },
+
+  async signInWithPin(employeeId: string, pin: string) {
+    try {
+      // Find user by employee ID
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          full_name,
+          role,
+          organization_id,
+          employee_id,
+          designation,
+          mobile_number,
+          is_active,
+          pin_hash,
+          pin_expires_at,
+          failed_pin_attempts,
+          pin_locked_until,
+          organization:organizations(
+            id,
+            name,
+            logo_url,
+            primary_color,
+            secondary_color,
+            is_active
+          )
+        `)
+        .eq("employee_id", employeeId.toUpperCase())
+        .eq("is_active", true)
+        .single();
+
+      if (profileError || !profile) {
+        await this.logPinAttempt(null, "failed_attempt", "Invalid employee ID");
+        throw new Error("invalid_pin");
+      }
+
+      // Check if account is locked
+      if (profile.pin_locked_until && new Date(profile.pin_locked_until) > new Date()) {
+        await this.logPinAttempt(profile.id, "locked_attempt", "Account locked");
+        throw new Error("account_locked");
+      }
+
+      // Check if PIN exists
+      if (!profile.pin_hash) {
+        await this.logPinAttempt(profile.id, "no_pin", "No PIN set");
+        throw new Error("invalid_pin");
+      }
+
+      // Check if PIN is expired
+      if (profile.pin_expires_at && new Date(profile.pin_expires_at) < new Date()) {
+        await this.logPinAttempt(profile.id, "expired_pin", "PIN expired");
+        throw new Error("pin_expired");
+      }
+
+      // Verify PIN
+      const pinValid = await bcrypt.compare(pin, profile.pin_hash);
+      
+      if (!pinValid) {
+        // Increment failed attempts
+        const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
+        const shouldLock = newFailedAttempts >= 5;
+        
+        const updateData: any = {
+          failed_pin_attempts: newFailedAttempts
+        };
+
+        if (shouldLock) {
+          // Lock account for 30 minutes
+          updateData.pin_locked_until = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        }
+
+        await supabase
+          .from("profiles")
+          .update(updateData)
+          .eq("id", profile.id);
+
+        await this.logPinAttempt(profile.id, shouldLock ? "locked" : "failed_attempt", 
+          `Failed PIN attempt ${newFailedAttempts}/5`);
+
+        throw new Error(shouldLock ? "account_locked" : "invalid_pin");
+      }
+
+      // Reset failed attempts on successful login
+      await supabase
+        .from("profiles")
+        .update({
+          failed_pin_attempts: 0,
+          pin_locked_until: null
+        })
+        .eq("id", profile.id);
+
+      await this.logPinAttempt(profile.id, "successful_login", "PIN login successful");
+
+      // Create a temporary auth session for PIN users
+      // Since Supabase auth requires email/password, we'll create a custom session
+      return { user: null, profile, isPinLogin: true };
+
+    } catch (error) {
+      console.error("PIN sign in error:", error);
+      throw error;
+    }
+  },
+
+  async generatePin(userId: string, adminId: string): Promise<string> {
+    // Generate a 6-digit PIN
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+    const pinHash = await bcrypt.hash(pin, 10);
+    
+    // Set PIN expiry to 90 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 90);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        pin_hash: pinHash,
+        pin_created_at: new Date().toISOString(),
+        pin_expires_at: expiresAt.toISOString(),
+        failed_pin_attempts: 0,
+        pin_locked_until: null,
+        pin_reset_requested: false,
+        pin_reset_requested_at: null
+      })
+      .eq("id", userId);
+
+    if (error) throw error;
+
+    await this.logPinAttempt(userId, "created", "PIN created by admin", adminId);
+
+    return pin; // Return the plain PIN to show to admin
+  },
+
+  async requestPinReset(employeeId: string) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        pin_reset_requested: true,
+        pin_reset_requested_at: new Date().toISOString()
+      })
+      .eq("employee_id", employeeId.toUpperCase());
+
+    if (error) throw error;
+
+    await this.logPinAttempt(null, "reset_requested", `PIN reset requested for ${employeeId}`);
+  },
+
+  async logPinAttempt(userId: string | null, action: string, details?: string, createdBy?: string) {
+    try {
+      await supabase
+        .from("pin_audit_logs")
+        .insert({
+          user_id: userId,
+          action,
+          ip_address: "unknown", // Could be enhanced to get real IP
+          user_agent: navigator.userAgent,
+          created_by: createdBy || userId
+        });
+    } catch (error) {
+      console.error("Failed to log PIN attempt:", error);
     }
   },
 
@@ -170,24 +334,6 @@ export const authService = {
       .single();
 
     if (error) throw error;
-
-    // If super admin, add to super_admins table
-    // Temporarily comment out super_admins table interaction to resolve type errors
-    // We can revisit this if a separate super_admins table is strictly needed
-    // if (userData.role === "super_admin") {
-    //   await supabase
-    //     .from("super_admins") // This line causes a type error if super_admins is not in generated types
-    //     .insert({
-    //       user_id: userId,
-    //       permissions: {
-    //         can_manage_all: true,
-    //         can_view_reports: true,
-    //         can_manage_organizations: true,
-    //         can_manage_users: true
-    //       },
-    //       created_by: userId
-    //     });
-    // }
 
     return data;
   },
