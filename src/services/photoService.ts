@@ -23,7 +23,7 @@ export const photoService = {
 
     if (uploadError) throw uploadError;
 
-    const {  urlData } = supabase.storage
+    const { data: urlData } = supabase.storage
       .from("task_photos")
       .getPublicUrl(filePath);
 
@@ -73,7 +73,7 @@ export const photoService = {
   },
 
   async deletePhoto(photoId: string): Promise<void> {
-    const {  photo, error: fetchError } = await supabase
+    const { data: photo, error: fetchError } = await supabase
       .from("task_photos")
       .select("photo_url")
       .eq("id", photoId)
@@ -114,14 +114,14 @@ export const photoService = {
         throw new Error("File upload failed, no data returned.");
     }
 
-    const {  urlResponse } = supabase.storage
+    const { data: urlData } = supabase.storage
       .from("task_photos")
       .getPublicUrl(data.path);
     
-    if (!urlResponse.publicUrl) {
+    if (!urlData || !urlData.publicUrl) {
       throw new Error("Could not get public URL for the uploaded file.");
     }
 
-    return urlResponse.publicUrl;
+    return urlData.publicUrl;
   }
 };

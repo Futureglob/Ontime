@@ -7,32 +7,32 @@ interface EmployeePerformanceChartProps {
   data: EmployeePerformance[];
 }
 
-export default function EmployeePerformanceChart({ data }: EmployeePerformanceChartProps) {
+const EmployeePerformanceChart: React.FC<EmployeePerformanceChartProps> = ({ data }) => {
   const chartData = data.map(employee => ({
-    name: employee.employeeName.split(" ")[0], // First name only for better display
-    assigned: employee.tasksAssigned,
-    completed: employee.tasksCompleted,
-    completionRate: employee.completionRate,
-    hours: employee.totalWorkingHours
+    name: employee.name,
+    completed: employee.completed,
+    pending: employee.pending,
+    overdue: employee.overdue,
+    efficiency: employee.efficiency,
   }));
 
   const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
     if (active && payload && payload.length) {
-      const employee = data.find(e => e.employeeName.split(" ")[0] === label);
+      const employee = chartData.find(e => e.name === label);
       return (
         <div className="bg-white p-3 border rounded-lg shadow-lg">
-          <p className="font-medium">{employee?.employeeName}</p>
-          <p className="text-sm text-blue-600">
-            Tasks Assigned: {payload[0]?.value}
-          </p>
+          <p className="font-medium">{employee?.name}</p>
           <p className="text-sm text-green-600">
-            Tasks Completed: {payload[1]?.value}
-          </p>
-          <p className="text-sm text-purple-600">
-            Completion Rate: {employee?.completionRate.toFixed(1)}%
+            Completed: {payload[0]?.value}
           </p>
           <p className="text-sm text-orange-600">
-            Total Hours: {employee?.totalWorkingHours.toFixed(1)}h
+            Pending: {payload[1]?.value}
+          </p>
+          <p className="text-sm text-red-600">
+            Overdue: {payload[2]?.value}
+          </p>
+          <p className="text-sm text-blue-600">
+            Efficiency: {employee?.efficiency.toFixed(1)}%
           </p>
         </div>
       );
@@ -64,15 +64,21 @@ export default function EmployeePerformanceChart({ data }: EmployeePerformanceCh
           <Tooltip content={<CustomTooltip />} />
           <Legend />
           <Bar 
-            dataKey="assigned" 
-            fill="#3b82f6" 
-            name="Tasks Assigned"
+            dataKey="completed" 
+            fill="#22c55e" 
+            name="Completed"
             radius={[2, 2, 0, 0]}
           />
           <Bar 
-            dataKey="completed" 
-            fill="#22c55e" 
-            name="Tasks Completed"
+            dataKey="pending" 
+            fill="#f59e0b" 
+            name="Pending"
+            radius={[2, 2, 0, 0]}
+          />
+          <Bar 
+            dataKey="overdue" 
+            fill="#ef4444" 
+            name="Overdue"
             radius={[2, 2, 0, 0]}
           />
         </BarChart>
@@ -80,3 +86,5 @@ export default function EmployeePerformanceChart({ data }: EmployeePerformanceCh
     </div>
   );
 }
+
+export default EmployeePerformanceChart;

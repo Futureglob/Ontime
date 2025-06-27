@@ -87,7 +87,7 @@ export default function FieldWork() {
     if (user && userProfile && userProfile.role === UserRole.EMPLOYEE) {
       try {
         setLoading(true);
-        const tasksData = await taskService.getTasksByEmployee(user.id);
+        const tasksData = await taskService.getUserTasks(user.id);
         const enrichedTasks = (tasksData as EnrichedTask[]) || [];
         setTasks(enrichedTasks);
         

@@ -16,13 +16,14 @@ import {
   Video
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { messageService, MessageWithSender } from "@/services/messageService";
+import { messageService } from "@/services/messageService";
+import type { MessageWithSender } from "@/services/messageService";
 import { Task } from "@/types/database";
 import { formatDistanceToNow } from "date-fns";
 
 interface Conversation {
   taskId: string;
-  task: Task;
+  task: Partial<Task>;
   lastMessage?: MessageWithSender;
   unreadCount: number;
   participants: string[];
@@ -39,12 +40,12 @@ export default function RealTimeMessaging() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async () => {
-    if (!user) return;
+    if (!user || !profile) return;
     
     try {
       setLoading(true);
       
-      // Mock conversations for now since getUserTasks doesn't exist
+      // Mock conversations for now
       const mockConversations: Conversation[] = [
         {
           taskId: "task-1",
@@ -54,13 +55,10 @@ export default function RealTimeMessaging() {
             description: "Resolve connectivity problems in Building A",
             status: "in_progress",
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            organization_id: profile?.organization_id || "",
+            organization_id: profile.organization_id || "",
             assigned_to: user.id,
             assigned_by: "manager-1",
-            deadline: null,
             location: "Building A",
-            priority: "high",
             task_type: "maintenance"
           },
           lastMessage: {
@@ -71,15 +69,34 @@ export default function RealTimeMessaging() {
             content: "Please update me on the progress",
             is_read: false,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
             sender: {
               full_name: "John Manager",
-              role: "task_manager"
+              designation: "task_manager"
             }
           },
           unreadCount: 1,
           participants: [user.id, "manager-1"]
-        }
+        },
+        {
+          taskId: "task-2",
+          task: {
+            id: "task-2",
+            title: "Urgent: Fix leaky pipe in Unit 4B",
+            status: "in_progress",
+          },
+          unreadCount: 0,
+          participants: [user.id, "manager-2"]
+        },
+        {
+          taskId: "task-3",
+          task: {
+            id: "task-3",
+            title: "Client meeting preparation",
+            status: "in_progress",
+          },
+          unreadCount: 0,
+          participants: [user.id, "manager-3"]
+        },
       ];
       
       setConversations(mockConversations);
@@ -105,7 +122,6 @@ export default function RealTimeMessaging() {
     try {
       await messageService.markMessagesAsRead(taskId, user.id);
       
-      // Update conversation unread count
       setConversations(prev =>
         prev.map(conv =>
           conv.taskId === taskId ? { ...conv, unreadCount: 0 } : conv
@@ -142,7 +158,6 @@ export default function RealTimeMessaging() {
             const newMsg = payload.new as MessageWithSender;
             setMessages(prev => [...prev, newMsg]);
             
-            // Update conversation list
             setConversations(prev => 
               prev.map(conv => 
                 conv.taskId === selectedConversation 
@@ -158,7 +173,7 @@ export default function RealTimeMessaging() {
         subscription.unsubscribe();
       };
     }
-  }, [selectedConversation, user]);
+  }, [selectedConversation, user, profile]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !user) return;
@@ -169,7 +184,6 @@ export default function RealTimeMessaging() {
         user.id,
         newMessage.trim()
       );
-
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -188,7 +202,7 @@ export default function RealTimeMessaging() {
   };
 
   const filteredConversations = conversations.filter(conv =>
-    conv.task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    conv.task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (conv.task.description && conv.task.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -243,7 +257,7 @@ export default function RealTimeMessaging() {
                   <div className="flex items-start gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {conv.task.title.charAt(0).toUpperCase()}
+                        {conv.task.title?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     
@@ -292,7 +306,7 @@ export default function RealTimeMessaging() {
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-blue-100 text-blue-600">
-                      {selectedConv.task.title.charAt(0).toUpperCase()}
+                      {selectedConv.task.title?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>

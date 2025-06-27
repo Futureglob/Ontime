@@ -59,9 +59,9 @@ export default function TaskManagement() {
         setLoading(true);
         let tasksData;
         if (userProfile.role === UserRole.EMPLOYEE) {
-          tasksData = await taskService.getTasksByEmployee(user.id);
+          tasksData = await taskService.getUserTasks(user.id);
         } else if (userProfile.organization_id) {
-          tasksData = await taskService.getTasksByOrganization(userProfile.organization_id);
+          tasksData = await taskService.getTasksForOrganization(userProfile.organization_id);
         }
         setTasks((tasksData as EnrichedTask[]) || []);
       } catch (error) {

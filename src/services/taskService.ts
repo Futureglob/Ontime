@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Task, CreateTaskRequest, TaskStatus, TaskWithAssignee } from "@/types/database";
 
@@ -28,13 +29,16 @@ export const taskService = {
         assignee:profiles!tasks_assigned_to_fkey(
           full_name,
           designation
+        ),
+        assigner:profiles!tasks_assigned_by_fkey(
+          full_name
         )
       `)
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data;
+    return data as TaskWithAssignee[];
   },
 
   async getTaskById(taskId: string): Promise<TaskWithAssignee | null> {
@@ -92,22 +96,6 @@ export const taskService = {
     const { data, error } = await supabase
       .from("tasks")
       .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq("id", taskId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-
-  async updateTaskTiming(taskId: string, updates: {
-    accepted_at?: string;
-    started_at?: string;
-    completed_at?: string;
-  }): Promise<Task> {
-    const { data, error } = await supabase
-      .from("tasks")
-      .update(updates)
       .eq("id", taskId)
       .select()
       .single();
