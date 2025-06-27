@@ -369,6 +369,7 @@
               {profile.organization_id && (
                 <EmployeeForm
                   onClose={handleSaveEmployee}
+                  onEmployeeCreated={handleSaveEmployee}
                   organizationId={profile.organization_id}
                   employee={selectedEmployee}
                 />
