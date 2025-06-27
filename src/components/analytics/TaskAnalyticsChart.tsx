@@ -4,7 +4,7 @@ import { TaskOverview } from "@/services/analyticsService";
 import { Payload } from "recharts/types/component/DefaultLegendContent";
 
 interface TaskAnalyticsChartProps {
-    TaskOverview;
+  data: TaskOverview;
 }
 
 const COLORS = {

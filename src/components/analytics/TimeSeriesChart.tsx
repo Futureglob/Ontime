@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { TaskTrend } from "@/services/analyticsService";
 
 interface TimeSeriesChartProps {
-    TaskTrend[];
+   TaskTrend[];
 }
 
 const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ data }) => {
