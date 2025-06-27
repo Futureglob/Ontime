@@ -23,7 +23,6 @@ export const authService = {
 
       if (error) throw error;
 
-      // Get user profile after successful login
       if (data.user) {
         const {  profile, error: profileError } = await supabase
           .from("profiles")
@@ -50,13 +49,14 @@ export const authService = {
 
         if (profileError) {
           console.error("Profile fetch error:", profileError);
-          // If profile doesn't exist, create one for super admin
           if (email === "superadmin@system.com") {
-            const {  systemOrg } = await supabase
+            const {  systemOrg, error: orgError } = await supabase
               .from("organizations")
               .select("id")
               .eq("name", "System Administration")
               .single();
+
+            if (orgError) throw orgError;
 
             if (systemOrg) {
               const newProfile = await this.createUserProfile(data.user.id, {
@@ -84,7 +84,6 @@ export const authService = {
 
   async signInWithPin(employeeId: string, pin: string) {
     try {
-      // Find user by employee ID
       const {  profile, error: profileError } = await supabase
         .from("profiles")
         .select(`
@@ -118,36 +117,27 @@ export const authService = {
         throw new Error("invalid_pin");
       }
 
-      // Check if account is locked
       if (profile.pin_locked_until && new Date(profile.pin_locked_until) > new Date()) {
         await this.logPinAttempt(profile.id, "locked_attempt", "Account locked");
         throw new Error("account_locked");
       }
 
-      // Check if PIN exists
       if (!profile.pin_hash) {
         await this.logPinAttempt(profile.id, "no_pin", "No PIN set");
         throw new Error("invalid_pin");
       }
 
-      // Check if PIN is expired
       if (profile.pin_expires_at && new Date(profile.pin_expires_at) < new Date()) {
         await this.logPinAttempt(profile.id, "expired_pin", "PIN expired");
         throw new Error("pin_expired");
       }
 
-      // TODO: Implement secure PIN verification using a Supabase Edge Function.
-      // The current implementation is for demonstration purposes only and is not secure.
-      // The 'pin' variable is intentionally not used for a direct comparison on the client-side.
       console.warn("PIN verification is not securely implemented. This check should be moved to a server-side function.");
 
-      // This is a placeholder for what would be a secure check.
-      // For now, we proceed if a pin is provided and the profile has a pin hash.
       if (!pin || !profile.pin_hash) {
          throw new Error("invalid_pin");
       }
 
-      // Reset failed attempts on successful login
       await supabase
         .from("profiles")
         .update({
@@ -158,8 +148,6 @@ export const authService = {
 
       await this.logPinAttempt(profile.id, "successful_login", "PIN login successful");
 
-      // Create a temporary auth session for PIN users
-      // Since Supabase auth requires email/password, we'll create a custom session
       return { user: null, profile, isPinLogin: true };
 
     } catch (error) {
@@ -169,18 +157,15 @@ export const authService = {
   },
 
   async generatePin(userId: string, adminId: string): Promise<string> {
-    // Generate a 6-digit PIN
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Set PIN expiry to 90 days from now
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 90);
 
     const { error } = await supabase
       .from("profiles")
       .update({
-        // pin_hash: pinHash, // This needs to be handled by a server-side function.
-        pin_hash: "placeholder_hash", // Using a placeholder until server-side hashing is implemented.
+        pin_hash: "placeholder_hash",
         pin_created_at: new Date().toISOString(),
         pin_expires_at: expiresAt.toISOString(),
         failed_pin_attempts: 0,
@@ -194,7 +179,7 @@ export const authService = {
 
     await this.logPinAttempt(userId, "created", "PIN created by admin", adminId);
 
-    return pin; // Return the plain PIN to show to admin
+    return pin;
   },
 
   async requestPinReset(employeeId: string) {
@@ -219,7 +204,7 @@ export const authService = {
           user_id: userId,
           action,
           details,
-          ip_address: "unknown", // Could be enhanced to get real IP
+          ip_address: "unknown",
           user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "server",
           created_by: createdBy || userId
         });
@@ -236,7 +221,6 @@ export const authService = {
 
     if (error) throw error;
 
-    // Create profile after successful signup
     if (data.user && userData) {
       await this.createUserProfile(data.user.id, {
         ...userData,
@@ -288,16 +272,16 @@ export const authService = {
   },
 
   async createUserProfile(userId: string, userData: Partial<AuthUser> & { email: string }) {
-    // Get system organization ID for super admin
     let organizationId = userData.organizationId;
     
     if (userData.role === "super_admin") {
-      const {  systemOrg } = await supabase
+      const {  systemOrg, error: orgError } = await supabase
         .from("organizations")
         .select("id")
         .eq("name", "System Administration")
         .single();
       
+      if (orgError) throw orgError;
       organizationId = systemOrg?.id;
     }
 

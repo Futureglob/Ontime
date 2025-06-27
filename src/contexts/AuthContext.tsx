@@ -1,5 +1,5 @@
 
-    import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import authService from "@/services/authService";
@@ -27,14 +27,18 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const result = await authService.signIn(email, password);
-    setUser(result.user);
-    setProfile(result.profile as Profile);
+    if (result && result.user) {
+        setUser(result.user);
+        setProfile(result.profile as Profile);
+    }
   };
 
   const loginWithPin = async (employeeId: string, pin: string) => {
     const result = await authService.signInWithPin(employeeId, pin);
-    setUser(result.user as SupabaseUser);
-    setProfile(result.profile as Profile);
+    if (result && result.profile) {
+        setUser(null); // PIN login doesn't create a Supabase auth session
+        setProfile(result.profile as Profile);
+    }
   };
 
   const logout = async () => {
@@ -71,7 +75,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -89,4 +93,3 @@ export function useAuth() {
   }
   return context;
 }
-  
