@@ -3,7 +3,6 @@ import type { AppProps } from "next/app";
 import AuthProvider from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
-import { usePWA } from "@/hooks/usePWA";
 import Head from "next/head";
 import { useEffect } from "react";
 import { pwaService } from "@/services/pwaService";
