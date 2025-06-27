@@ -8,6 +8,15 @@ export type TaskPhoto = Database["public"]["Tables"]["task_photos"]["Row"];
 export type TaskStatusHistory = Database["public"]["Tables"]["task_status_history"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 
+export type TaskWithAssignee = Task & {
+  assignee: Pick<Profile, "full_name" | "designation" | "mobile_number"> | null;
+  assigner: Pick<Profile, "full_name"> | null;
+};
+
+export type MessageWithSender = Message & {
+  sender: Pick<Profile, "full_name" | "designation">;
+};
+
 // Enums
 export enum UserRole {
   ADMIN = "admin",

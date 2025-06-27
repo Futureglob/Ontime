@@ -1,7 +1,6 @@
-
 // import { supabase } from "@/integrations/supabase/client"; // This is unused for now as the service is mocked
 
-interface TaskOverview {
+export interface TaskOverview {
   totalTasks: number;
   completedTasks: number;
   pendingTasks: number;
@@ -12,26 +11,26 @@ interface TaskOverview {
   avgCompletionTime: number;
 }
 
-interface TaskTrend {
+export interface TaskTrend {
   date: string;
   completed: number;
   created: number;
   pending?: number;
 }
 
-interface TaskByStatus {
+export interface TaskByStatus {
   status: string;
   count: number;
   percentage: number;
 }
 
-interface TimeAnalytic {
+export interface TimeAnalytic {
   hour: number;
   taskCount: number;
   completionRate: number;
 }
 
-interface EmployeePerformance {
+export interface EmployeePerformance {
     name: string;
     completed: number;
     pending: number;
@@ -39,7 +38,7 @@ interface EmployeePerformance {
     efficiency: number;
 }
 
-interface LocationAnalytic {
+export interface LocationAnalytic {
     location: string;
     taskCount: number;
     completionRate: number;

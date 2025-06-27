@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Task, CreateTaskRequest, TaskStatus, TaskWithAssignee } from "@/types/database";
 
