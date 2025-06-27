@@ -1,3 +1,4 @@
+
 // import { supabase } from "@/integrations/supabase/client"; // This is unused for now as the service is mocked
 
 export interface TaskOverview {
@@ -42,10 +43,12 @@ export interface EmployeePerformance {
     efficiency: number;
 }
 
-export interface LocationAnalytic {
+export interface LocationAnalytics {
     location: string;
     taskCount: number;
     completionRate: number;
+    averageDistance: number;
+    averageDuration: number;
 }
 
 export const analyticsService = {
@@ -70,12 +73,12 @@ export const analyticsService = {
     ];
   },
 
-  async getLocationAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }): Promise<LocationAnalytic[]> {
+  async getLocationAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }): Promise<LocationAnalytics[]> {
     console.log("getLocationAnalytics called with", organizationId, dateRange);
     return [
-      { location: "Downtown", taskCount: 45, completionRate: 85 },
-      { location: "Suburbs", taskCount: 35, completionRate: 78 },
-      { location: "Industrial", taskCount: 70, completionRate: 82 },
+      { location: "Downtown", taskCount: 45, completionRate: 85, averageDistance: 5.2, averageDuration: 15 },
+      { location: "Suburbs", taskCount: 35, completionRate: 78, averageDistance: 12.5, averageDuration: 25 },
+      { location: "Industrial", taskCount: 70, completionRate: 82, averageDistance: 8.1, averageDuration: 20 },
     ];
   },
 
@@ -94,7 +97,7 @@ export const analyticsService = {
     return data;
   },
 
-  async getTaskOverview(organizationId: string, dateRange: any): Promise<TaskOverview> {
+  async getTaskOverview(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<TaskOverview> {
     console.log("getTaskOverview called with", organizationId, dateRange);
     // Mock implementation
     return {
@@ -113,7 +116,7 @@ export const analyticsService = {
     };
   },
 
-  async getTaskTrends(organizationId: string, dateRange: any): Promise<TaskTrend[]> {
+  async getTaskTrends(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<TaskTrend[]> {
     console.log("getTaskTrends called with", organizationId, dateRange);
     // Mock implementation
     return [
@@ -133,7 +136,7 @@ export const analyticsService = {
     ];
   },
 
-  async getTimeAnalytics(organizationId: string, dateRange: any): Promise<TimeAnalytic[]> {
+  async getTimeAnalytics(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<TimeAnalytic[]> {
     console.log("getTimeAnalytics called with", organizationId, dateRange);
     // Mock implementation
     return [

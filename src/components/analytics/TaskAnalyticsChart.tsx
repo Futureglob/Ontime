@@ -2,6 +2,7 @@
 import React from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TaskOverview } from "@/services/analyticsService";
+import { Payload } from "recharts/types/component/DefaultLegendContent";
 
 interface TaskAnalyticsChartProps {
    TaskOverview;
@@ -85,7 +86,7 @@ const TaskAnalyticsChart: React.FC<TaskAnalyticsChartProps> = ({ data }) => {
           <Legend
             verticalAlign="bottom"
             height={36}
-            formatter={(value, entry: any) => (
+            formatter={(value: string, entry: Payload) => (
               <span style={{ color: entry.color }}>{value}</span>
             )}
           />

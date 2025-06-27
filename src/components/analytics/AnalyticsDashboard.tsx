@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { CalendarIcon, Download, TrendingUp, Users, MapPin, Clock } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
-import { analyticsService, TaskOverview, EmployeePerformance, LocationAnalytic, TaskTrend } from "@/services/analyticsService";
+import { analyticsService, TaskOverview, EmployeePerformance, LocationAnalytics, TaskTrend } from "@/services/analyticsService";
 import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import EmployeePerformanceChart from "./EmployeePerformanceChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";
@@ -25,11 +25,14 @@ const AnalyticsDashboard = () => {
 
   const [taskAnalytics, setTaskAnalytics] = useState<TaskOverview | null>(null);
   const [employeePerformance, setEmployeePerformance] = useState<EmployeePerformance[]>([]);
-  const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytic[]>([]);
+  const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytics[]>([]);
   const [timeSeriesData, setTimeSeriesData] = useState<TaskTrend[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!dateRange?.from || !dateRange?.to) {
+        return;
+      }
       try {
         setLoading(true);
         const [
@@ -39,15 +42,15 @@ const AnalyticsDashboard = () => {
           timeData,
         ] = await Promise.all([
           analyticsService.getTaskOverview("org_123", dateRange),
-          analyticsService.getEmployeePerformance("org_123", { start: dateRange?.from!, end: dateRange?.to! }),
-          analyticsService.getLocationAnalytics("org_123", { start: dateRange?.from!, end: dateRange?.to! }),
+          analyticsService.getEmployeePerformance("org_123", { start: dateRange.from, end: dateRange.to }),
+          analyticsService.getLocationAnalytics("org_123", { start: dateRange.from, end: dateRange.to }),
           analyticsService.getTimeSeriesData("org_123", 30),
         ]);
   
         setTaskAnalytics(taskData);
         setEmployeePerformance(employeeData);
-        setLocationAnalytics(locationData as any);
-        setTimeSeriesData(timeData as any);
+        setLocationAnalytics(locationData);
+        setTimeSeriesData(timeData);
       } catch (error) {
         console.error("Error loading analytics:", error);
       } finally {
