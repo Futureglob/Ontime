@@ -16,7 +16,6 @@ import {
   AlertTriangle,
   FileText
 } from "lucide-react";
-import { profileService } from "@/services/profileService";
 import authService from "@/services/authService";
 
 interface BulkEmployeeImportProps {
