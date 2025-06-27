@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+
+    import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import authService from "@/services/authService";
@@ -69,7 +70,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
@@ -86,3 +89,4 @@ export function useAuth() {
   }
   return context;
 }
+  

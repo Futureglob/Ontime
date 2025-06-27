@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import bcrypt from "bcryptjs";
+// import bcrypt from "bcryptjs";
 
 export interface AuthUser {
   id: string;
@@ -85,7 +85,7 @@ export const authService = {
   async signInWithPin(employeeId: string, pin: string) {
     try {
       // Find user by employee ID
-      const { data: profile, error: profileError } = await supabase
+      const {  profile, error: profileError } = await supabase
         .from("profiles")
         .select(`
           id,
@@ -137,32 +137,36 @@ export const authService = {
       }
 
       // Verify PIN
-      const pinValid = await bcrypt.compare(pin, profile.pin_hash);
+      // const pinValid = await bcrypt.compare(pin, profile.pin_hash);
+      // The above line is commented out because 'bcryptjs' is a server-side library and cannot run in the browser.
+      // This check MUST be moved to a secure server-side environment (e.g., a Supabase Edge Function).
+      console.warn("PIN verification is not implemented securely and is currently disabled.");
+      throw new Error("PIN login is temporarily disabled pending secure implementation.");
       
-      if (!pinValid) {
-        // Increment failed attempts
-        const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
-        const shouldLock = newFailedAttempts >= 5;
+      // if (!pinValid) {
+      //   // Increment failed attempts
+      //   const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
+      //   const shouldLock = newFailedAttempts >= 5;
         
-        const updateData: { failed_pin_attempts: number; pin_locked_until?: string } = {
-          failed_pin_attempts: newFailedAttempts
-        };
+      //   const updateData: { failed_pin_attempts: number; pin_locked_until?: string } = {
+      //     failed_pin_attempts: newFailedAttempts
+      //   };
 
-        if (shouldLock) {
-          // Lock account for 30 minutes
-          updateData.pin_locked_until = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-        }
+      //   if (shouldLock) {
+      //     // Lock account for 30 minutes
+      //     updateData.pin_locked_until = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      //   }
 
-        await supabase
-          .from("profiles")
-          .update(updateData)
-          .eq("id", profile.id);
+      //   await supabase
+      //     .from("profiles")
+      //     .update(updateData)
+      //     .eq("id", profile.id);
 
-        await this.logPinAttempt(profile.id, shouldLock ? "locked" : "failed_attempt", 
-          `Failed PIN attempt ${newFailedAttempts}/5`);
+      //   await this.logPinAttempt(profile.id, shouldLock ? "locked" : "failed_attempt", 
+      //     `Failed PIN attempt ${newFailedAttempts}/5`);
 
-        throw new Error(shouldLock ? "account_locked" : "invalid_pin");
-      }
+      //   throw new Error(shouldLock ? "account_locked" : "invalid_pin");
+      // }
 
       // Reset failed attempts on successful login
       await supabase
@@ -188,7 +192,8 @@ export const authService = {
   async generatePin(userId: string, adminId: string): Promise<string> {
     // Generate a 6-digit PIN
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    const pinHash = await bcrypt.hash(pin, 10);
+    // const pinHash = await bcrypt.hash(pin, 10);
+    // The above line is commented out because 'bcryptjs' cannot run in the browser.
     
     // Set PIN expiry to 90 days from now
     const expiresAt = new Date();
@@ -197,7 +202,8 @@ export const authService = {
     const { error } = await supabase
       .from("profiles")
       .update({
-        pin_hash: pinHash,
+        // pin_hash: pinHash, // This needs to be handled by a server-side function.
+        pin_hash: null, // Set to null until server-side hashing is implemented.
         pin_created_at: new Date().toISOString(),
         pin_expires_at: expiresAt.toISOString(),
         failed_pin_attempts: 0,
