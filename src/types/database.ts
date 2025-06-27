@@ -68,6 +68,6 @@ export interface CreatePhotoRequest {
 
 export interface ProfileReference {
   full_name: string;
-  role: string;
+  designation: string;
   avatar_url?: string;
 }

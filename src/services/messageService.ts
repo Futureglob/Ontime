@@ -5,7 +5,7 @@ import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 export interface MessageWithSender extends Message {
   sender?: {
     full_name: string;
-    role: string;
+    designation: string;
     avatar_url?: string;
   };
 }
