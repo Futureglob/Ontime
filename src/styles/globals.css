@@ -1,74 +1,57 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --background: 240 100% 98%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 240 100% 97%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 240 100% 97%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 199 30% 92%;
+    --secondary-foreground: 199 30% 15%;
+    --muted: 199 20% 95%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 199 30% 90%;
+    --accent-foreground: 199 30% 15%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
-    --chart-1: 12 76% 61%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 199 20% 88%;
+    --input: 199 20% 88%;
+    --ring: 199 89% 48%;
+    --chart-1: 199 89% 48%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 199 89% 48%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -83,11 +66,39 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(199 30% 96%) 100%);
+    min-height: 100vh;
   }
 }
 
 @layer components {
-  .container {
-    @apply mx-auto px-4 md:px-6 lg:px-8 max-w-7xl w-full;
+  .light-blue-gradient {
+    background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 50%, #81d4fa 100%);
+  }
+  
+  .light-blue-card {
+    @apply bg-card/80 backdrop-blur-sm border-sky-200/50;
+  }
+  
+  .light-blue-button {
+    @apply bg-sky-500 hover:bg-sky-600 text-white;
+  }
+  
+  .light-blue-accent {
+    @apply text-sky-600 border-sky-300;
+  }
+}
+
+.recharts-default-tooltip {
+  @apply bg-white/95 backdrop-blur-sm border border-sky-200 rounded-lg shadow-lg;
+}
+
+.recharts-legend-wrapper {
+  @apply text-sky-700;
+}
+
+@media (max-width: 768px) {
+  body {
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(199 40% 94%) 100%);
   }
 }
