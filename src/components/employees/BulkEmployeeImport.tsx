@@ -169,11 +169,11 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           }
         );
         
-        if (!newProfile.data.user) {
+        if (!newProfile.user) {
           throw new Error("Failed to create user profile.");
         }
 
-        const pin = await authService.generatePin(newProfile.data.user.id, organizationId);
+        const pin = await authService.generatePin(newProfile.user.id, organizationId);
         
         results.push({
           success: true,
