@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +36,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const result = await authService.signInWithPin(employeeId, pin);
     if (result && result.profile) {
         setUser(null); // PIN login doesn't create a Supabase auth session
-        setProfile(result.profile as Profile);
+        setProfile(result.profile as unknown as Profile);
     }
   };
 

@@ -144,7 +144,37 @@ Deadline: ${task.deadline ? new Date(task.deadline).toLocaleDateString() : "N/A"
       return `https://wa.me/${phoneNumber.replace(/\D/g, "")}?text=${encodedMessage}`;
     }
     return `https://wa.me/?text=${encodedMessage}`;
-  }
+  },
+
+  async createMessage(message: {
+    task_id: string;
+    sender_id: string;
+    receiver_id: string;
+    content: string;
+    attachment_url?: string;
+    attachment_type?: string;
+  }) {
+    const { data, error } = await supabase
+      .from("messages")
+      .insert([
+        {
+          task_id: message.task_id,
+          sender_id: message.sender_id,
+          receiver_id: message.receiver_id,
+          content: message.content,
+          is_read: false,
+          // attachment_url: message.attachment_url, // These columns do not exist
+          // attachment_type: message.attachment_type,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+    return data as MessageWithSender;
+  },
 };
 
 export default messageService;
