@@ -1,5 +1,4 @@
 
-    
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AuthUser {
@@ -25,7 +24,7 @@ export const authService = {
       if (error) throw error;
 
       if (data.user) {
-        const {  profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select(`
             id,
@@ -51,7 +50,7 @@ export const authService = {
         if (profileError) {
           console.error("Profile fetch error:", profileError);
           if (email === "superadmin@system.com") {
-            const {  systemOrg, error: orgError } = await supabase
+            const { data: systemOrg, error: orgError } = await supabase
               .from("organizations")
               .select("id")
               .eq("name", "System Administration")
@@ -85,7 +84,7 @@ export const authService = {
 
   async signInWithPin(employeeId: string, pin: string) {
     try {
-      const {  profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select(`
           id,
@@ -238,7 +237,7 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    const {  { user }, error } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     
     if (user) {
@@ -276,7 +275,7 @@ export const authService = {
     let organizationId = userData.organizationId;
     
     if (userData.role === "super_admin") {
-      const {  systemOrg, error: orgError } = await supabase
+      const { data: systemOrg, error: orgError } = await supabase
         .from("organizations")
         .select("id")
         .eq("name", "System Administration")
@@ -324,4 +323,3 @@ export const authService = {
 };
 
 export default authService;
-  
