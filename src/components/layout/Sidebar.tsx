@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
 import { Profile } from "@/types/database"; // Removed unused UserRole import
 import { superAdminService } from "@/services/superAdminService"; // Import superAdminService
+import Image from "next/image";
 
 const baseNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -94,10 +95,12 @@ export default function Sidebar() {
     <div className="flex h-full flex-col bg-white border-r border-gray-200">
       <div className="flex h-16 items-center px-6 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <img 
-            src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
-            alt="OnTime Logo" 
-            className="h-8 w-auto bg-transparent mix-blend-multiply"
+          <Image
+            src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
+            alt="OnTime Logo"
+            width={58}
+            height={32}
+            className="bg-transparent mix-blend-multiply"
           />
         </div>
       </div>

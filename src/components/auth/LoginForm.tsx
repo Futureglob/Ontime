@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Mail, Lock, User, KeyRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
+import Image from "next/image";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -118,11 +119,13 @@ export default function LoginForm() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <img 
-              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
-              alt="OnTime Logo" 
-              className="h-16 w-auto bg-transparent mix-blend-multiply"
-              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+            <Image
+              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
+              alt="OnTime Logo"
+              width={115}
+              height={64}
+              className="bg-transparent mix-blend-multiply"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" }}
             />
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-sky-900">

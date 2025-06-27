@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
 
 interface SuperAdminLoginProps {
   onLogin: (email: string, password: string) => Promise<void>;
@@ -27,10 +28,12 @@ export default function SuperAdminLogin({ onLogin, loading, error }: SuperAdminL
       <Card className="w-full max-w-md shadow-2xl border-purple-200">
         <CardHeader className="text-center pb-6">
           <div className="flex justify-center mb-4">
-            <img 
-              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
-              alt="OnTime Logo" 
-              className="h-12 w-auto bg-transparent mix-blend-multiply"
+            <Image
+              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
+              alt="OnTime Logo"
+              width={87}
+              height={48}
+              className="bg-transparent mix-blend-multiply"
             />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">

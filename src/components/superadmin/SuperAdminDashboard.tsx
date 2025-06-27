@@ -109,10 +109,12 @@ export default function SuperAdminDashboard() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img 
-                src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
-                alt="OnTime Logo" 
-                className="h-10 w-auto bg-transparent mix-blend-multiply"
+              <Image
+                src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
+                alt="OnTime Logo"
+                width={72}
+                height={40}
+                className="bg-transparent mix-blend-multiply"
               />
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
