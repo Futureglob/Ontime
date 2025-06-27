@@ -312,21 +312,5 @@ export default function LoginForm() {
               </div>
             </div>
 
-            {activeTab === "email" && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-600 font-medium mb-2">Demo Accounts:</p>
-                <div className="text-xs text-blue-500 space-y-1">
-                  <div>Super Admin: mail@jsabu.com</div>
-                  <div>Password: password123</div>
-                  <div className="mt-2 text-blue-400">
-                    Create organizations from Super Admin dashboard
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
   );
 }

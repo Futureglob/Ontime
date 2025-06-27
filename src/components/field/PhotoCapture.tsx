@@ -137,9 +137,9 @@ export default function PhotoCapture({
         setUploading(true);
         
         // Create file from blob
-        const file = new File([blob], `${selectedType}_${Date.now()}.jpg`, {
-          type: "image/jpeg"
-        });
+        // const file = new File([blob], `${selectedType}_${Date.now()}.jpg`, {
+        //   type: "image/jpeg"
+        // });
 
         // Mock photo upload - replace with actual service call
         const photoUrl = URL.createObjectURL(blob);
@@ -234,6 +234,7 @@ export default function PhotoCapture({
       const data = await response.json();
       return data.results[0]?.formatted || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
+      console.error("Error fetching address:", error);
       return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
   };

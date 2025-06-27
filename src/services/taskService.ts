@@ -1,31 +1,35 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Task, TaskStatus, CreateTaskRequest, UpdateTaskStatusRequest } from "@/types/database";
+import { Task, CreateTaskRequest, TaskStatus, TaskWithAssignee } from "@/types/database";
 
 export const taskService = {
-  async createTask(taskData: CreateTaskRequest, assignedBy: string, organizationId: string) {
+  async createTask(taskData: CreateTaskRequest, assignedBy: string, organizationId: string): Promise<Task> {
     const { data, error } = await supabase
       .from("tasks")
-      .insert([{
-        ...taskData,
-        assigned_by: assignedBy,
-        organization_id: organizationId,
-        status: TaskStatus.ASSIGNED
-      }])
+      .insert([
+        {
+          ...taskData,
+          assigned_by: assignedBy,
+          organization_id: organizationId,
+          status: "assigned",
+        },
+      ])
       .select()
       .single();
 
     if (error) throw error;
-    return data as Task;
+    return data;
   },
 
-  async getTasksByOrganization(organizationId: string) {
+  async getTasksForOrganization(organizationId: string): Promise<TaskWithAssignee[]> {
     const { data, error } = await supabase
       .from("tasks")
       .select(`
         *,
-        assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, employee_id),
-        assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name)
+        assignee:profiles!tasks_assigned_to_fkey(
+          full_name,
+          designation
+        )
       `)
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false });
@@ -34,70 +38,59 @@ export const taskService = {
     return data;
   },
 
-  async getTasksByEmployee(employeeId: string) {
+  async getTaskById(taskId: string): Promise<TaskWithAssignee | null> {
     const { data, error } = await supabase
       .from("tasks")
       .select(`
         *,
-        assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name)
+        assignee:profiles!tasks_assigned_to_fkey(
+          full_name,
+          designation,
+          mobile_number
+        ),
+        assigner:profiles!tasks_assigned_by_fkey(
+          full_name
+        )
       `)
-      .eq("assigned_to", employeeId)
-      .order("created_at", { ascending: false });
+      .eq("id", taskId)
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "PGRST116") return null;
+      throw error;
+    }
     return data;
   },
 
-  async updateTaskStatus(taskId: string, statusUpdate: UpdateTaskStatusRequest, updatedBy: string) {
-    const { data: task, error: taskError } = await supabase
-      .from("tasks")
-      .update({ status: statusUpdate.status })
-      .eq("id", taskId)
-      .select()
-      .single();
-
-    if (taskError) throw taskError;
-
-    const { error: historyError } = await supabase
-      .from("task_status_history")
-      .insert([{
-        task_id: taskId,
-        status: statusUpdate.status,
-        updated_by: updatedBy,
-        notes: statusUpdate.notes
-      }]);
-
-    if (historyError) throw historyError;
-    return task as Task;
-  },
-
-  async assignTask(taskId: string, assignedTo: string) {
+  async updateTaskStatus(taskId: string, status: TaskStatus): Promise<Task> {
     const { data, error } = await supabase
       .from("tasks")
-      .update({ assigned_to: assignedTo })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq("id", taskId)
       .select()
       .single();
 
     if (error) throw error;
-    return data as Task;
+    return data;
   },
 
-  async getTaskStatusHistory(taskId: string) {
+  async updateTask(taskId: string, updates: Partial<Task>): Promise<Task> {
     const { data, error } = await supabase
-      .from("task_status_history")
-      .select(`
-        *,
-        updated_by_profile:profiles!task_status_history_updated_by_fkey(full_name)
-      `)
-      .eq("task_id", taskId)
-      .order("created_at", { ascending: true });
+      .from("tasks")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", taskId)
+      .select()
+      .single();
 
     if (error) throw error;
     return data;
   },
 
-  async updateTaskTiming(taskId: string, updates: { travel_distance?: number; travel_duration?: number; working_hours?: number }) {
+  async updateTaskTiming(taskId: string, updates: {
+    accepted_at?: string;
+    started_at?: string;
+    completed_at?: string;
+  }): Promise<Task> {
     const { data, error } = await supabase
       .from("tasks")
       .update(updates)
@@ -106,6 +99,20 @@ export const taskService = {
       .single();
 
     if (error) throw error;
-    return data as Task;
+    return data;
+  },
+
+  async getUserTasks(userId: string): Promise<Task[]> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+
+    if (error) {
+      console.error("Error fetching user tasks:", error);
+      throw error;
+    }
+
+    return data || [];
   }
 };
