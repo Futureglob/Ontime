@@ -27,7 +27,7 @@ export const photoService = {
       .from("task_photos")
       .getPublicUrl(filePath);
 
-    if (!urlData) {
+    if (!urlData || !urlData.publicUrl) {
         throw new Error("Could not get public URL for the uploaded file.");
     }
 
@@ -119,6 +119,10 @@ export const photoService = {
     const {  { publicUrl } } = supabase.storage
       .from("task_photos")
       .getPublicUrl(data.path);
+    
+    if (!publicUrl) {
+      throw new Error("Could not get public URL for the uploaded file.");
+    }
 
     return publicUrl;
   }
