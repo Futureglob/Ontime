@@ -1,4 +1,5 @@
 
+    
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AuthUser {
@@ -323,3 +324,4 @@ export const authService = {
 };
 
 export default authService;
+  

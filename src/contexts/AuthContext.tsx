@@ -1,4 +1,5 @@
 
+    
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,3 +94,4 @@ export function useAuth() {
   }
   return context;
 }
+  
