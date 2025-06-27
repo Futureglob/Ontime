@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,7 @@ import {
   Download,
   RefreshCw
 } from "lucide-react";
-import { analyticsService } from "@/services/analyticsService";
+// import { analyticsService } from "@/services/analyticsService";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface AnalyticsData {
@@ -83,7 +82,7 @@ export default function CompleteAnalyticsDashboard() {
   const [dateRange, setDateRange] = useState("30d");
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadAnalyticsData = async () => {
+  const loadAnalyticsData = useCallback(async () => {
     if (!profile?.organization_id) return;
 
     try {
@@ -135,11 +134,11 @@ export default function CompleteAnalyticsDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.organization_id]);
 
   useEffect(() => {
     loadAnalyticsData();
-  }, [dateRange, profile]);
+  }, [dateRange, loadAnalyticsData]);
 
   const refreshData = async () => {
     setRefreshing(true);

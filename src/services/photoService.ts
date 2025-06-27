@@ -2,16 +2,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Photo, PhotoType } from "@/types/database";
 
+interface UploadMetadata {
+  type: PhotoType;
+  location?: { lat: number; lng: number };
+  timestamp: string;
+  notes?: string;
+}
+
 export const photoService = {
   async uploadTaskPhoto(
     taskId: string,
     file: File,
-    meta {
-      type: PhotoType;
-      location?: { lat: number; lng: number };
-      timestamp: string;
-      notes?: string;
-    }
+    meta UploadMetadata
   ): Promise<Photo> {
     const filePath = `tasks/${taskId}/${Date.now()}-${file.name}`;
     
@@ -24,6 +26,10 @@ export const photoService = {
     const {  urlData } = supabase.storage
       .from("task_photos")
       .getPublicUrl(filePath);
+
+    if (!urlData) {
+        throw new Error("Could not get public URL for the uploaded file.");
+    }
 
     const { data, error } = await supabase
       .from("photos")
@@ -53,10 +59,10 @@ export const photoService = {
       .order("timestamp", { ascending: false });
 
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
-  async getPhotosByType(taskId: string, photoType: PhotoType): Promise<Photo[]> {
+  async getPhotosByType(taskId:string, photoType: PhotoType): Promise<Photo[]> {
     const { data, error } = await supabase
       .from("photos")
       .select("*")
@@ -65,10 +71,10 @@ export const photoService = {
       .order("timestamp", { ascending: false });
 
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
-  async deletePhoto(photoId: string) {
+  async deletePhoto(photoId: string): Promise<void> {
     const {  photo, error: fetchError } = await supabase
       .from("photos")
       .select("url")
@@ -78,13 +84,16 @@ export const photoService = {
     if (fetchError) throw fetchError;
     if (!photo) throw new Error("Photo not found");
 
-    const filePath = new URL(photo.url).pathname.split("/task_photos/")[1];
+    const url = new URL(photo.url);
+    const filePath = url.pathname.substring(url.pathname.indexOf("task_photos/") + "task_photos/".length);
     
     const { error: storageError } = await supabase.storage
       .from("task_photos")
       .remove([filePath]);
 
-    if (storageError) console.error("Storage deletion failed:", storageError.message);
+    if (storageError) {
+        console.error("Storage deletion failed:", storageError.message);
+    }
 
     const { error: dbError } = await supabase
       .from("photos")
