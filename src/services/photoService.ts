@@ -41,6 +41,7 @@ export const photoService = {
       .single();
 
     if (error) throw error;
+    if (!data) throw new Error("Photo data not found after insert.");
     return data;
   },
 
@@ -75,6 +76,7 @@ export const photoService = {
       .single();
 
     if (fetchError) throw fetchError;
+    if (!photo) throw new Error("Photo not found");
 
     const filePath = new URL(photo.url).pathname.split("/task_photos/")[1];
     
@@ -100,6 +102,9 @@ export const photoService = {
 
     if (error) {
       throw error;
+    }
+    if (!data) {
+        throw new Error("File upload failed, no data returned.");
     }
 
     const {  { publicUrl } } = supabase.storage

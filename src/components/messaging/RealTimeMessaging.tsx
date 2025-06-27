@@ -1,5 +1,5 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -189,7 +189,7 @@ export default function RealTimeMessaging() {
 
   const filteredConversations = conversations.filter(conv =>
     conv.task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.task.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    (conv.task.description && conv.task.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const selectedConv = conversations.find(c => c.taskId === selectedConversation);

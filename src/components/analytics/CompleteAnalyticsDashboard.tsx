@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -130,7 +131,7 @@ export default function CompleteAnalyticsDashboard() {
 
       setData(mockData);
     } catch (error) {
-      console.error("Error loading analytics data:", error);
+      console.error("Error loading analytics ", error);
     } finally {
       setLoading(false);
     }
@@ -160,8 +161,7 @@ Completion Rate,${data.overview.completionRate}%
 Employee Performance
 ${data.employeePerformance.map(emp => 
   `${emp.name},${emp.completed},${emp.pending},${emp.overdue},${emp.efficiency}%`
-).join('
-')}
+).join("\n")}
     `;
 
     const blob = new Blob([csvContent.trim()], { type: "text/csv" });

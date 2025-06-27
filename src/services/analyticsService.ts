@@ -1,5 +1,49 @@
 
-import { supabase } from "@/integrations/supabase/client";
+// import { supabase } from "@/integrations/supabase/client"; // This is unused for now as the service is mocked
+
+interface TaskOverview {
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  overdueTasks: number;
+  totalEmployees: number;
+  activeEmployees: number;
+  completionRate: number;
+  avgCompletionTime: number;
+}
+
+interface TaskTrend {
+  date: string;
+  completed: number;
+  created: number;
+  pending?: number;
+}
+
+interface TaskByStatus {
+  status: string;
+  count: number;
+  percentage: number;
+}
+
+interface TimeAnalytic {
+  hour: number;
+  taskCount: number;
+  completionRate: number;
+}
+
+interface EmployeePerformance {
+    name: string;
+    completed: number;
+    pending: number;
+    overdue: number;
+    efficiency: number;
+}
+
+interface LocationAnalytic {
+    location: string;
+    taskCount: number;
+    completionRate: number;
+}
 
 export const analyticsService = {
   async getTaskAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }) {
@@ -14,7 +58,7 @@ export const analyticsService = {
     };
   },
 
-  async getEmployeePerformance(organizationId?: string, dateRange?: { start: Date; end: Date; }) {
+  async getEmployeePerformance(organizationId?: string, dateRange?: { start: Date; end: Date; }): Promise<EmployeePerformance[]> {
     console.log("getEmployeePerformance called with", organizationId, dateRange);
     return [
       { name: "John Doe", completed: 25, pending: 3, overdue: 1, efficiency: 89 },
@@ -23,7 +67,7 @@ export const analyticsService = {
     ];
   },
 
-  async getLocationAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }) {
+  async getLocationAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }): Promise<LocationAnalytic[]> {
     console.log("getLocationAnalytics called with", organizationId, dateRange);
     return [
       { location: "Downtown", taskCount: 45, completionRate: 85 },
@@ -47,7 +91,7 @@ export const analyticsService = {
     return data;
   },
 
-  async getTaskOverview(organizationId: string, dateRange: string): Promise<any> {
+  async getTaskOverview(organizationId: string, dateRange: string): Promise<TaskOverview> {
     console.log("getTaskOverview called with", organizationId, dateRange);
     // Mock implementation
     return {
@@ -62,7 +106,7 @@ export const analyticsService = {
     };
   },
 
-  async getTaskTrends(organizationId: string, dateRange: string): Promise<any[]> {
+  async getTaskTrends(organizationId: string, dateRange: string): Promise<TaskTrend[]> {
     console.log("getTaskTrends called with", organizationId, dateRange);
     // Mock implementation
     return [
@@ -72,7 +116,7 @@ export const analyticsService = {
     ];
   },
 
-  async getTasksByStatus(organizationId: string): Promise<any[]> {
+  async getTasksByStatus(organizationId: string): Promise<TaskByStatus[]> {
     console.log("getTasksByStatus called with", organizationId);
     // Mock implementation
     return [
@@ -82,7 +126,7 @@ export const analyticsService = {
     ];
   },
 
-  async getTimeAnalytics(organizationId: string, dateRange: string): Promise<any[]> {
+  async getTimeAnalytics(organizationId: string, dateRange: string): Promise<TimeAnalytic[]> {
     console.log("getTimeAnalytics called with", organizationId, dateRange);
     // Mock implementation
     return [
