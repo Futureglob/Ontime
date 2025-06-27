@@ -1,39 +1,48 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye, EyeOff, Mail, Lock, User, KeyRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 
 export default function LoginForm() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginWithPin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState("");
-  const [formData, setFormData] = useState({
+  const [activeTab, setActiveTab] = useState("email");
+  
+  const [emailFormData, setEmailFormData] = useState({
     email: "",
     password: ""
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [pinFormData, setPinFormData] = useState({
+    employeeId: "",
+    pin: ""
+  });
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     
-    if (!formData.email || !formData.password) {
+    if (!emailFormData.email || !emailFormData.password) {
       setError("Please fill in all fields");
       return;
     }
 
     try {
       setLoading(true);
-      await login(formData.email, formData.password);
+      await login(emailFormData.email, emailFormData.password);
       router.push("/");
     } catch (err: unknown) {
       if (err instanceof Error) {
-        // Handle specific Supabase auth errors
         if (err.message.includes("email_not_confirmed") || err.message.includes("Email not confirmed")) {
           setError("Please check your email and click the confirmation link before signing in. If you didn't receive the email, contact your administrator.");
         } else if (err.message.includes("invalid_credentials") || err.message.includes("Invalid login credentials")) {
@@ -49,100 +58,241 @@ export default function LoginForm() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+  const handlePinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    
+    if (!pinFormData.employeeId || !pinFormData.pin) {
+      setError("Please enter both Employee ID and PIN");
+      return;
+    }
+
+    if (pinFormData.pin.length !== 6) {
+      setError("PIN must be 6 digits");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await loginWithPin(pinFormData.employeeId, pinFormData.pin);
+      router.push("/");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        if (err.message.includes("account_locked")) {
+          setError("Account is temporarily locked due to multiple failed attempts. Please contact your administrator.");
+        } else if (err.message.includes("invalid_pin")) {
+          setError("Invalid Employee ID or PIN. Please check your credentials and try again.");
+        } else if (err.message.includes("pin_expired")) {
+          setError("Your PIN has expired. Please contact your administrator for a new PIN.");
+        } else {
+          setError(err.message || "Failed to sign in with PIN");
+        }
+      } else {
+        setError("An unknown error occurred during PIN sign in.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePinInputChange = (value: string) => {
+    // Only allow numeric input and limit to 6 digits
+    const numericValue = value.replace(/\D/g, "").slice(0, 6);
+    setPinFormData(prev => ({
       ...prev,
-      [field]: value
+      pin: numericValue
     }));
   };
 
+  const handleForgotPin = () => {
+    if (!pinFormData.employeeId) {
+      setError("Please enter your Employee ID first");
+      return;
+    }
+    
+    // This will be handled by the admin
+    alert(`PIN reset request for Employee ID: ${pinFormData.employeeId}\n\nYour request has been sent to the administrator. You will receive your new PIN orally from your supervisor.`);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center light-blue-gradient py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-3xl font-extrabold text-sky-900">
             Sign in to OnTime
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-sky-700">
             Task management made simple
           </p>
         </div>
 
-        <Card>
+        <Card className="light-blue-card">
           <CardHeader>
-            <CardTitle>Welcome back</CardTitle>
+            <CardTitle className="text-sky-800">Welcome back</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Login
+                </TabsTrigger>
+                <TabsTrigger value="pin" className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4" />
+                  Employee PIN
+                </TabsTrigger>
+              </TabsList>
+
               {error && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="mb-4">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
-              <div>
-                <label className="text-sm font-medium">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="Enter your email"
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
+              <TabsContent value="email">
+                <form onSubmit={handleEmailSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-sky-800">Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
+                      <Input
+                        type="email"
+                        value={emailFormData.email}
+                        onChange={(e) => setEmailFormData(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="Enter your email"
+                        className="pl-10 border-sky-200 focus:border-sky-400"
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="text-sm font-medium">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    placeholder="Enter your password"
-                    className="pl-10 pr-10"
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
+                  <div>
+                    <label className="text-sm font-medium text-sky-800">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={emailFormData.password}
+                        onChange={(e) => setEmailFormData(prev => ({ ...prev, password: e.target.value }))}
+                        placeholder="Enter your password"
+                        className="pl-10 pr-10 border-sky-200 focus:border-sky-400"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-sky-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-sky-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Button type="submit" disabled={loading} className="w-full light-blue-button">
+                    {loading ? "Signing in..." : "Sign in with Email"}
                   </Button>
-                </div>
+
+                  <div className="text-center">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-sm text-sky-600 hover:text-sky-800"
+                      onClick={() => {
+                        const email = prompt("Enter your email for password reset:");
+                        if (email) {
+                          alert("Password reset functionality will be implemented with Supabase integration");
+                        }
+                      }}
+                    >
+                      Forgot your password?
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="pin">
+                <form onSubmit={handlePinSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-sky-800">Employee ID</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
+                      <Input
+                        type="text"
+                        value={pinFormData.employeeId}
+                        onChange={(e) => setPinFormData(prev => ({ ...prev, employeeId: e.target.value.toUpperCase() }))}
+                        placeholder="Enter your Employee ID"
+                        className="pl-10 border-sky-200 focus:border-sky-400 uppercase"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-sky-800">PIN</label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
+                      <Input
+                        type={showPin ? "text" : "password"}
+                        value={pinFormData.pin}
+                        onChange={(e) => handlePinInputChange(e.target.value)}
+                        placeholder="Enter your 6-digit PIN"
+                        className="pl-10 pr-10 border-sky-200 focus:border-sky-400 text-center text-lg tracking-widest"
+                        maxLength={6}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPin(!showPin)}
+                      >
+                        {showPin ? (
+                          <EyeOff className="h-4 w-4 text-sky-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-sky-400" />
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-sky-600 mt-1">Enter the 6-digit PIN provided by your administrator</p>
+                  </div>
+
+                  <Button type="submit" disabled={loading} className="w-full light-blue-button">
+                    {loading ? "Signing in..." : "Sign in with PIN"}
+                  </Button>
+
+                  <div className="text-center">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-sm text-sky-600 hover:text-sky-800"
+                      onClick={handleForgotPin}
+                    >
+                      Forgot your PIN?
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+            </Tabs>
+
+            <div className="mt-6 p-3 bg-sky-50 rounded-lg border border-sky-200">
+              <p className="text-xs text-sky-700 font-medium mb-2">💡 Login Options:</p>
+              <div className="text-xs text-sky-600 space-y-1">
+                <p>• <strong>Email Login:</strong> For managers and admin staff</p>
+                <p>• <strong>Employee PIN:</strong> For field workers and blue-collar employees</p>
+                <p>• Contact your supervisor if you need help with login</p>
               </div>
+            </div>
 
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Signing in..." : "Sign in"}
-              </Button>
-
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="link"
-                  className="text-sm"
-                  onClick={() => {
-                    const email = prompt("Enter your email for password reset:");
-                    if (email) {
-                      alert("Password reset functionality will be implemented with Supabase integration");
-                    }
-                  }}
-                >
-                  Forgot your password?
-                </Button>
-              </div>
-
+            {activeTab === "email" && (
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                 <p className="text-xs text-blue-600 font-medium mb-2">Demo Accounts:</p>
                 <div className="text-xs text-blue-500 space-y-1">
@@ -153,16 +303,7 @@ export default function LoginForm() {
                   </div>
                 </div>
               </div>
-
-              <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <p className="text-xs text-amber-800 font-medium mb-2">⚠️ Email Confirmation Required</p>
-                <div className="text-xs text-amber-700 space-y-1">
-                  <p>• New accounts need email confirmation before login</p>
-                  <p>• Check your email for the confirmation link</p>
-                  <p>• Contact your administrator if you need help</p>
-                </div>
-              </div>
-            </form>
+            )}
           </CardContent>
         </Card>
       </div>
