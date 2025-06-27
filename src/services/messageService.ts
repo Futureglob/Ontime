@@ -23,8 +23,8 @@ export const messageService = {
       }])
       .select(`
         *,
-        sender:profiles!messages_sender_id_fkey(full_name, role) 
-      `) // Removed avatar_url from here if it's causing issues
+        sender:profiles!messages_sender_id_fkey(full_name, designation)
+      `)
       .single();
 
     if (error) throw error;
@@ -36,8 +36,8 @@ export const messageService = {
       .from("messages")
       .select(`
         *,
-        sender:profiles!messages_sender_id_fkey(full_name, role)
-      `) // Removed avatar_url from here if it's causing issues
+        sender:profiles!messages_sender_id_fkey(full_name, designation)
+      `)
       .eq("task_id", taskId)
       .order("created_at", { ascending: true });
 
@@ -85,10 +85,10 @@ export const messageService = {
           status,
           assigned_to,
           assigned_by,
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role), 
-          assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role)
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, designation), 
+          assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, designation)
         )
-      `) // Removed avatar_url from profile selects
+      `)
       .or(`sender_id.eq.${userId},tasks.assigned_to.eq.${userId},tasks.assigned_by.eq.${userId}`)
       .order("created_at", { ascending: false });
 
