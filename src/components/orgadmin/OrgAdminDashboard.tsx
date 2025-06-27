@@ -368,8 +368,7 @@
               </DialogHeader>
               {profile.organization_id && (
                 <EmployeeForm
-                  onClose={() => setIsEmployeeModalOpen(false)}
-                  onSave={handleSaveEmployee}
+                  onClose={handleSaveEmployee}
                   organizationId={profile.organization_id}
                   employee={selectedEmployee}
                 />
