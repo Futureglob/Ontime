@@ -97,7 +97,7 @@ export default function Sidebar() {
           <img 
             src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
             alt="OnTime Logo" 
-            className="h-8 w-auto"
+            className="h-8 w-auto bg-transparent mix-blend-multiply"
           />
         </div>
       </div>

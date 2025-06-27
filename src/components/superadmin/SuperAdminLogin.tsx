@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +26,12 @@ export default function SuperAdminLogin({ onLogin, loading, error }: SuperAdminL
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
       <Card className="w-full max-w-md shadow-2xl border-purple-200">
         <CardHeader className="text-center pb-6">
-          <div className="mx-auto mb-4 p-3 bg-purple-100 rounded-full w-fit">
-            <Shield className="h-8 w-8 text-purple-600" />
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
+              alt="OnTime Logo" 
+              className="h-12 w-auto bg-transparent mix-blend-multiply"
+            />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
             Super Admin Access

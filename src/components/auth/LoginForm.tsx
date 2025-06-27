@@ -121,7 +121,8 @@ export default function LoginForm() {
             <img 
               src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
               alt="OnTime Logo" 
-              className="h-16 w-auto"
+              className="h-16 w-auto bg-transparent mix-blend-multiply"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
             />
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-sky-900">
