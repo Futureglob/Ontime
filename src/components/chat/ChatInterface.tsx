@@ -32,15 +32,15 @@ interface ChatMessage {
   attachment_type?: string;
   sender?: {
     full_name: string;
-    role: string;
+    designation: string;
     avatar_url?: string;
   };
 }
 
 interface ChatInterfaceProps {
   task?: Task & {
-    assigned_to_profile?: { full_name: string; role: string; avatar_url?: string };
-    assigned_by_profile?: { full_name: string; role: string; avatar_url?: string };
+    assigned_to_profile?: { full_name: string; designation: string; avatar_url?: string };
+    assigned_by_profile?: { full_name: string; designation: string; avatar_url?: string };
   };
   onClose?: () => void;
 }
@@ -221,7 +221,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
                 {otherParticipant?.full_name || "Unknown User"}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {otherParticipant?.role} • Task: {task.title}
+                {otherParticipant?.designation} • Task: {task.title}
               </p>
             </div>
           </div>
