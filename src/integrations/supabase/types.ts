@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -49,8 +48,16 @@ export type Database = {
           designation: string | null
           mobile_number: string | null
           role: string | null
-          created_at: string | null
-          updated_at: string | null
+          created_at: string
+          updated_at: string
+          is_active: boolean
+          pin_hash: string | null
+          pin_created_at: string | null
+          pin_expires_at: string | null
+          failed_pin_attempts: number | null
+          pin_locked_until: string | null
+          pin_reset_requested: boolean | null
+          pin_reset_requested_at: string | null
         }
         Insert: {
           id: string
@@ -60,8 +67,16 @@ export type Database = {
           designation?: string | null
           mobile_number?: string | null
           role?: string | null
-          created_at?: string | null
-          updated_at?: string | null
+          created_at?: string
+          updated_at?: string
+          is_active?: boolean
+          pin_hash?: string | null
+          pin_created_at?: string | null
+          pin_expires_at?: string | null
+          failed_pin_attempts?: number | null
+          pin_locked_until?: string | null
+          pin_reset_requested?: boolean | null
+          pin_reset_requested_at?: string | null
         }
         Update: {
           id?: string
@@ -71,16 +86,18 @@ export type Database = {
           designation?: string | null
           mobile_number?: string | null
           role?: string | null
-          created_at?: string | null
-          updated_at?: string | null
+          created_at?: string
+          updated_at?: string
+          is_active?: boolean
+          pin_hash?: string | null
+          pin_created_at?: string | null
+          pin_expires_at?: string | null
+          failed_pin_attempts?: number | null
+          pin_locked_until?: string | null
+          pin_reset_requested?: boolean | null
+          pin_reset_requested_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "profiles_organization_id_fkey"
             columns: ["organization_id"]
@@ -254,29 +271,38 @@ export type Database = {
       messages: {
         Row: {
           id: string
+          sender_id: string
+          receiver_id: string
           task_id: string | null
-          sender_id: string | null
           content: string
-          is_read: boolean | null
-          created_at: string | null
+          created_at: string
+          is_read: boolean
         }
         Insert: {
           id?: string
+          sender_id: string
+          receiver_id: string
           task_id?: string | null
-          sender_id?: string | null
           content: string
-          is_read?: boolean | null
-          created_at?: string | null
+          created_at?: string
+          is_read?: boolean
         }
         Update: {
           id?: string
+          sender_id?: string
+          receiver_id?: string
           task_id?: string | null
-          sender_id?: string | null
           content?: string
-          is_read?: boolean | null
-          created_at?: string | null
+          created_at?: string
+          is_read?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]
@@ -287,6 +313,46 @@ export type Database = {
             foreignKeyName: "messages_task_id_fkey"
             columns: ["task_id"]
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      pin_audit_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          action: string
+          details: string | null
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action: string
+          details?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action?: string
+          details?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pin_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           }
         ]

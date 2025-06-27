@@ -1,11 +1,17 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import authService from "@/services/authService";
+import { Database } from "@/integrations/supabase/types";
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
+  organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
+};
 
 interface AuthContextType {
-  user: any;
-  profile: any;
+  user: SupabaseUser | null;
+  profile: Profile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithPin: (employeeId: string, pin: string) => Promise<void>;
@@ -14,21 +20,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+export default function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const login = async (email: string, password: string) => {
     const result = await authService.signIn(email, password);
     setUser(result.user);
-    setProfile(result.profile);
+    setProfile(result.profile as Profile);
   };
 
   const loginWithPin = async (employeeId: string, pin: string) => {
     const result = await authService.signInWithPin(employeeId, pin);
-    setUser(result.user);
-    setProfile(result.profile);
+    setUser(result.user as SupabaseUser);
+    setProfile(result.profile as Profile);
   };
 
   const logout = async () => {
@@ -38,22 +44,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const checkUser = async () => {
+      const {  { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        authService.getUserProfile(session.user.id).then(setProfile);
+        const userProfile = await authService.getUserProfile(session.user.id);
+        setProfile(userProfile as Profile);
       }
       setLoading(false);
-    });
+    };
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    checkUser();
+
+    const {  { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
           setUser(session.user);
-          const profile = await authService.getUserProfile(session.user.id);
-          setProfile(profile);
+          const userProfile = await authService.getUserProfile(session.user.id);
+          setProfile(userProfile as Profile);
         } else {
           setUser(null);
           setProfile(null);

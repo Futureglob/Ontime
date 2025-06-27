@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import bcrypt from "bcryptjs";
 
@@ -145,7 +144,7 @@ export const authService = {
         const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
         const shouldLock = newFailedAttempts >= 5;
         
-        const updateData: any = {
+        const updateData: { failed_pin_attempts: number; pin_locked_until?: string } = {
           failed_pin_attempts: newFailedAttempts
         };
 
@@ -236,8 +235,9 @@ export const authService = {
         .insert({
           user_id: userId,
           action,
+          details,
           ip_address: "unknown", // Could be enhanced to get real IP
-          user_agent: navigator.userAgent,
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "server",
           created_by: createdBy || userId
         });
     } catch (error) {

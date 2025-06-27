@@ -1,10 +1,12 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import { AuthProvider } from "@/contexts/AuthContext";
+import AuthProvider from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
-import { useEffect } from "react";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
+import { usePWA } from "@/hooks/usePWA";
 import Head from "next/head";
+import { useEffect } from "react";
+import { pwaService } from "@/services/pwaService";
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
@@ -17,7 +19,6 @@ export default function App({ Component, pageProps }: AppProps) {
       // Delay PWA registration to avoid build issues
       setTimeout(async () => {
         try {
-          const { pwaService } = await import("@/services/pwaService");
           await pwaService.registerServiceWorker();
           console.log("Service Worker registered successfully");
           
