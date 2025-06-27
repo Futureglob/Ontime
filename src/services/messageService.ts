@@ -11,7 +11,7 @@ export interface MessageWithSender extends Message {
 }
 
 export const messageService = {
-  async sendMessage(taskId: string, senderId: string, content: string, attachmentUrl?: string, attachmentType?: string) {
+  async sendMessage(taskId: string, senderId: string, content: string) {
     const { data, error } = await supabase
       .from("messages")
       .insert([{
@@ -20,8 +20,6 @@ export const messageService = {
         receiver_id: senderId, // Assuming sender is also a receiver for now, adjust as needed
         content,
         is_read: false,
-        // attachment_url: attachmentUrl, // These columns do not exist in the table
-        // attachment_type: attachmentType
       }])
       .select(`
         *,
@@ -152,8 +150,6 @@ Deadline: ${task.deadline ? new Date(task.deadline).toLocaleDateString() : "N/A"
     sender_id: string;
     receiver_id: string;
     content: string;
-    attachment_url?: string;
-    attachment_type?: string;
   }) {
     const { data, error } = await supabase
       .from("messages")
@@ -164,8 +160,6 @@ Deadline: ${task.deadline ? new Date(task.deadline).toLocaleDateString() : "N/A"
           receiver_id: message.receiver_id,
           content: message.content,
           is_read: false,
-          // attachment_url: message.attachment_url, // These columns do not exist
-          // attachment_type: message.attachment_type,
         },
       ])
       .select()
