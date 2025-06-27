@@ -13,7 +13,7 @@ export const photoService = {
   async uploadTaskPhoto(
     taskId: string,
     file: File,
-    meta UploadMetadata
+    metadata: UploadMetadata
   ): Promise<Photo> {
     const filePath = `tasks/${taskId}/${Date.now()}-${file.name}`;
     
@@ -23,7 +23,7 @@ export const photoService = {
 
     if (uploadError) throw uploadError;
 
-    const {  urlData } = supabase.storage
+    const { data: urlData } = supabase.storage
       .from("task_photos")
       .getPublicUrl(filePath);
 
@@ -62,7 +62,7 @@ export const photoService = {
     return data || [];
   },
 
-  async getPhotosByType(taskId:string, photoType: PhotoType): Promise<Photo[]> {
+  async getPhotosByType(taskId: string, photoType: PhotoType): Promise<Photo[]> {
     const { data, error } = await supabase
       .from("photos")
       .select("*")
@@ -75,7 +75,7 @@ export const photoService = {
   },
 
   async deletePhoto(photoId: string): Promise<void> {
-    const {  photo, error: fetchError } = await supabase
+    const { data: photo, error: fetchError } = await supabase
       .from("photos")
       .select("url")
       .eq("id", photoId)
@@ -116,7 +116,7 @@ export const photoService = {
         throw new Error("File upload failed, no data returned.");
     }
 
-    const {  { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = supabase.storage
       .from("task_photos")
       .getPublicUrl(data.path);
     
