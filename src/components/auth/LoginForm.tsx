@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -311,6 +312,9 @@ export default function LoginForm() {
                 <p>• Contact your supervisor if you need help with login</p>
               </div>
             </div>
-
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
