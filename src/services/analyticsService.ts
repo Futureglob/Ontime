@@ -3,12 +3,16 @@
 export interface TaskOverview {
   totalTasks: number;
   completedTasks: number;
+  inProgressTasks: number;
   pendingTasks: number;
   overdueTasks: number;
   totalEmployees: number;
   activeEmployees: number;
   completionRate: number;
   avgCompletionTime: number;
+  totalWorkingHours: number;
+  averageTasksPerEmployee: number;
+  totalTravelDistance: number;
 }
 
 export interface TaskTrend {
@@ -90,22 +94,26 @@ export const analyticsService = {
     return data;
   },
 
-  async getTaskOverview(organizationId: string, dateRange: string): Promise<TaskOverview> {
+  async getTaskOverview(organizationId: string, dateRange: any): Promise<TaskOverview> {
     console.log("getTaskOverview called with", organizationId, dateRange);
     // Mock implementation
     return {
       totalTasks: 150,
       completedTasks: 120,
+      inProgressTasks: 10,
       pendingTasks: 25,
       overdueTasks: 5,
       totalEmployees: 45,
       activeEmployees: 42,
       completionRate: 80,
-      avgCompletionTime: 4.5
+      avgCompletionTime: 4.5,
+      totalWorkingHours: 340.5,
+      averageTasksPerEmployee: 3.5,
+      totalTravelDistance: 150.2,
     };
   },
 
-  async getTaskTrends(organizationId: string, dateRange: string): Promise<TaskTrend[]> {
+  async getTaskTrends(organizationId: string, dateRange: any): Promise<TaskTrend[]> {
     console.log("getTaskTrends called with", organizationId, dateRange);
     // Mock implementation
     return [
@@ -125,7 +133,7 @@ export const analyticsService = {
     ];
   },
 
-  async getTimeAnalytics(organizationId: string, dateRange: string): Promise<TimeAnalytic[]> {
+  async getTimeAnalytics(organizationId: string, dateRange: any): Promise<TimeAnalytic[]> {
     console.log("getTimeAnalytics called with", organizationId, dateRange);
     // Mock implementation
     return [

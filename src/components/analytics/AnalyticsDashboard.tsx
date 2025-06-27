@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -7,21 +8,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CalendarIcon, Download, TrendingUp, Users, MapPin, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
+import { DateRange } from "react-day-picker";
 import { analyticsService, TaskOverview, EmployeePerformance, LocationAnalytic, TaskTrend } from "@/services/analyticsService";
 import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import EmployeePerformanceChart from "./EmployeePerformanceChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";
 import TimeSeriesChart from "./TimeSeriesChart";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface AnalyticsDashboardProps {
-  organizationId?: string;
-}
 
 const AnalyticsDashboard = () => {
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState("last_30_days");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 29),
+    to: new Date(),
+  });
 
   const [taskAnalytics, setTaskAnalytics] = useState<TaskOverview | null>(null);
   const [employeePerformance, setEmployeePerformance] = useState<EmployeePerformance[]>([]);
@@ -39,15 +39,15 @@ const AnalyticsDashboard = () => {
           timeData,
         ] = await Promise.all([
           analyticsService.getTaskOverview("org_123", dateRange),
-          analyticsService.getEmployeePerformance("org_123", { start: new Date(), end: new Date() }),
-          analyticsService.getLocationAnalytics("org_123", { start: new Date(), end: new Date() }),
+          analyticsService.getEmployeePerformance("org_123", { start: dateRange?.from!, end: dateRange?.to! }),
+          analyticsService.getLocationAnalytics("org_123", { start: dateRange?.from!, end: dateRange?.to! }),
           analyticsService.getTimeSeriesData("org_123", 30),
         ]);
   
         setTaskAnalytics(taskData);
         setEmployeePerformance(employeeData);
-        setLocationAnalytics(locationData);
-        setTimeSeriesData(timeData);
+        setLocationAnalytics(locationData as any);
+        setTimeSeriesData(timeData as any);
       } catch (error) {
         console.error("Error loading analytics:", error);
       } finally {
@@ -101,14 +101,14 @@ const AnalyticsDashboard = () => {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange.start ? (
-                  dateRange.end ? (
+                {dateRange?.from ? (
+                  dateRange.to ? (
                     <>
-                      {format(dateRange.start, "LLL dd, y")} -{" "}
-                      {format(dateRange.end, "LLL dd, y")}
+                      {format(dateRange.from, "LLL dd, y")} -{" "}
+                      {format(dateRange.to, "LLL dd, y")}
                     </>
                   ) : (
-                    format(dateRange.start, "LLL dd, y")
+                    format(dateRange.from, "LLL dd, y")
                   )
                 ) : (
                   <span>Pick a date range</span>
@@ -119,13 +119,9 @@ const AnalyticsDashboard = () => {
               <Calendar
                 initialFocus
                 mode="range"
-                defaultMonth={dateRange.start}
-                selected={{ from: dateRange.start, to: dateRange.end }}
-                onSelect={(range) => {
-                  if (range?.from && range?.to) {
-                    setDateRange({ start: range.from, end: range.to });
-                  }
-                }}
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
                 numberOfMonths={2}
               />
             </PopoverContent>
@@ -216,7 +212,7 @@ const AnalyticsDashboard = () => {
                     <Progress value={taskAnalytics.completionRate} className="h-2" />
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>Avg. Completion Time</span>
-                      <span>{taskAnalytics.averageCompletionTime.toFixed(1)} hours</span>
+                      <span>{taskAnalytics.avgCompletionTime.toFixed(1)} hours</span>
                     </div>
                   </div>
                 </CardContent>
@@ -281,32 +277,32 @@ const AnalyticsDashboard = () => {
             <CardContent>
               <div className="space-y-4">
                 {employeePerformance.map((employee) => (
-                  <div key={employee.employeeId} className="border rounded-lg p-4">
+                  <div key={employee.name} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{employee.employeeName}</h4>
-                      <Badge variant={employee.completionRate >= 80 ? "default" : "secondary"}>
-                        {employee.completionRate.toFixed(1)}% completion
+                      <h4 className="font-medium">{employee.name}</h4>
+                      <Badge variant={employee.efficiency >= 80 ? "default" : "secondary"}>
+                        {employee.efficiency.toFixed(1)}% efficiency
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <span className="text-muted-foreground">Tasks Assigned</span>
-                        <p className="font-medium">{employee.tasksAssigned}</p>
-                      </div>
-                      <div>
                         <span className="text-muted-foreground">Tasks Completed</span>
-                        <p className="font-medium">{employee.tasksCompleted}</p>
+                        <p className="font-medium">{employee.completed}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Avg. Time</span>
-                        <p className="font-medium">{employee.averageCompletionTime.toFixed(1)}h</p>
+                        <span className="text-muted-foreground">Tasks Pending</span>
+                        <p className="font-medium">{employee.pending}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Total Hours</span>
-                        <p className="font-medium">{employee.totalWorkingHours.toFixed(1)}h</p>
+                        <span className="text-muted-foreground">Tasks Overdue</span>
+                        <p className="font-medium">{employee.overdue}</p>
+                      </div>
+                       <div>
+                        <span className="text-muted-foreground">Efficiency</span>
+                        <p className="font-medium">{employee.efficiency}%</p>
                       </div>
                     </div>
-                    <Progress value={employee.completionRate} className="mt-2 h-2" />
+                    <Progress value={employee.efficiency} className="mt-2 h-2" />
                   </div>
                 ))}
               </div>

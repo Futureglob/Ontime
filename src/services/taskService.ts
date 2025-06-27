@@ -61,7 +61,9 @@ export const taskService = {
     return data;
   },
 
-  async updateTaskStatus(taskId: string, status: TaskStatus): Promise<Task> {
+  async updateTaskStatus(taskId: string, statusUpdate: { status: TaskStatus; notes?: string }, updatedBy: string): Promise<Task> {
+    const { status, notes } = statusUpdate;
+
     const { data, error } = await supabase
       .from("tasks")
       .update({ status, updated_at: new Date().toISOString() })
@@ -70,6 +72,19 @@ export const taskService = {
       .single();
 
     if (error) throw error;
+
+    if (status) {
+        const { error: historyError } = await supabase.from("task_status_history").insert({
+            task_id: taskId,
+            status: status,
+            notes: notes,
+            updated_by: updatedBy,
+        });
+        if (historyError) {
+            console.error("Error creating status history:", historyError);
+        }
+    }
+
     return data;
   },
 

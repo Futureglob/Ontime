@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { MapPin, User, Calendar, MessageSquare, Camera, Navigation } from "lucide-react"; // Removed Clock
 import { taskService } from "@/services/taskService";
 import { TaskStatus, UserRole, Profile, Task } from "@/types/database";
+import { useToast } from "@/hooks/use-toast";
 
 // Define a more specific type for the task prop
 interface EnrichedTask extends Task {
@@ -26,6 +27,7 @@ export default function TaskCard({ task, onTaskUpdated, userRole, employees }: T
   const [showStatusUpdate, setShowStatusUpdate] = useState(false);
   const [newStatus, setNewStatus] = useState<TaskStatus>(task.status as TaskStatus); // Ensure task.status is treated as TaskStatus
   const [notes, setNotes] = useState("");
+  const { toast } = useToast();
 
   const getStatusColor = (status: string | null | undefined) => { // Allow status to be string | null | undefined
     switch (status) {
@@ -42,7 +44,12 @@ export default function TaskCard({ task, onTaskUpdated, userRole, employees }: T
   const handleStatusUpdate = async () => {
     try {
       setUpdating(true);
-      await taskService.updateTaskStatus(task.id, { status: newStatus, notes }, task.assigned_to || task.assigned_by);
+      const updaterId = task.assigned_to;
+      if (!updaterId) {
+        console.error("Cannot update status: task is not assigned to anyone.");
+        return;
+      }
+      await taskService.updateTaskStatus(task.id, { status: newStatus, notes }, updaterId);
       setShowStatusUpdate(false);
       setNotes("");
       onTaskUpdated();

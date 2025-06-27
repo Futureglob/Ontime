@@ -1,36 +1,42 @@
+
 import React from "react";
-import { TaskByStatus } from "@/services/analyticsService";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { TaskOverview } from "@/services/analyticsService";
 
 interface TaskAnalyticsChartProps {
-   TaskByStatus[];
+   TaskOverview;
 }
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+const COLORS = {
+  completed: "#00C49F",
+  inProgress: "#0088FE",
+  pending: "#FFBB28",
+  overdue: "#FF8042",
+};
 
 const TaskAnalyticsChart: React.FC<TaskAnalyticsChartProps> = ({ data }) => {
   const chartData = [
     {
       name: "Completed",
       value: data.completedTasks,
-      color: COLORS.completed
+      color: COLORS.completed,
     },
     {
       name: "In Progress",
       value: data.inProgressTasks,
-      color: COLORS.inProgress
+      color: COLORS.inProgress,
     },
     {
       name: "Pending",
       value: data.pendingTasks,
-      color: COLORS.pending
+      color: COLORS.pending,
     },
     {
       name: "Overdue",
       value: data.overdueTasks,
-      color: COLORS.overdue
-    }
-  ].filter(item => item.value > 0);
+      color: COLORS.overdue,
+    },
+  ].filter((item) => item.value > 0);
 
   const renderCustomizedLabel = (props: { cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number; }) => {
     const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
@@ -40,11 +46,11 @@ const TaskAnalyticsChart: React.FC<TaskAnalyticsChartProps> = ({ data }) => {
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? "start" : "end"} 
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? "start" : "end"}
         dominantBaseline="central"
         fontSize={12}
         fontWeight="bold"
@@ -72,14 +78,14 @@ const TaskAnalyticsChart: React.FC<TaskAnalyticsChartProps> = ({ data }) => {
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip 
+          <Tooltip
             formatter={(value: number, name: string) => [value, name]}
             labelStyle={{ color: "#000" }}
           />
-          <Legend 
-            verticalAlign="bottom" 
+          <Legend
+            verticalAlign="bottom"
             height={36}
-            formatter={(value, entry) => (
+            formatter={(value, entry: any) => (
               <span style={{ color: entry.color }}>{value}</span>
             )}
           />
@@ -87,6 +93,6 @@ const TaskAnalyticsChart: React.FC<TaskAnalyticsChartProps> = ({ data }) => {
       </ResponsiveContainer>
     </div>
   );
-}
+};
 
 export default TaskAnalyticsChart;

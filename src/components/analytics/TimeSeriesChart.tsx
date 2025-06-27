@@ -1,12 +1,11 @@
+
 import React from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { TimeSeriesData } from "@/services/analyticsService";
 import { format } from "date-fns";
 import { TaskTrend } from "@/services/analyticsService";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 interface TimeSeriesChartProps {
-  data: TimeSeriesData[];
+   TaskTrend[];
 }
 
 const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ data }) => {
@@ -34,7 +33,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ data }) => {
           <Legend />
           <Area 
             type="monotone" 
-            dataKey="tasksCreated" 
+            dataKey="created" 
             stackId="1" 
             stroke="#8884d8" 
             fill="#8884d8" 
@@ -42,19 +41,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ data }) => {
           />
           <Area 
             type="monotone" 
-            dataKey="tasksCompleted" 
+            dataKey="completed" 
             stackId="1" 
             stroke="#82ca9d" 
             fill="#82ca9d" 
             name="Tasks Completed"
-          />
-           <Area 
-            type="monotone" 
-            dataKey="activeEmployees" 
-            stackId="2" 
-            stroke="#ffc658" 
-            fill="#ffc658" 
-            name="Active Employees"
           />
         </AreaChart>
       </ResponsiveContainer>
