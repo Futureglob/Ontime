@@ -510,6 +510,9 @@ export const superAdminService = {
             await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
           }
         }
+
+        // Show success message with email confirmation info
+        console.log("Organization and admin created successfully. Admin needs to confirm email before login.");
       }
 
       return {

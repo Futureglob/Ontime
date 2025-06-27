@@ -33,7 +33,14 @@ export default function LoginForm() {
       router.push("/");
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message || "Failed to sign in");
+        // Handle specific Supabase auth errors
+        if (err.message.includes("email_not_confirmed") || err.message.includes("Email not confirmed")) {
+          setError("Please check your email and click the confirmation link before signing in. If you didn't receive the email, contact your administrator.");
+        } else if (err.message.includes("invalid_credentials") || err.message.includes("Invalid login credentials")) {
+          setError("Invalid email or password. Please check your credentials and try again.");
+        } else {
+          setError(err.message || "Failed to sign in");
+        }
       } else {
         setError("An unknown error occurred during sign in.");
       }
@@ -144,6 +151,15 @@ export default function LoginForm() {
                   <div className="mt-2 text-blue-400">
                     Create organizations from Super Admin dashboard
                   </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-800 font-medium mb-2">⚠️ Email Confirmation Required</p>
+                <div className="text-xs text-amber-700 space-y-1">
+                  <p>• New accounts need email confirmation before login</p>
+                  <p>• Check your email for the confirmation link</p>
+                  <p>• Contact your administrator if you need help</p>
                 </div>
               </div>
             </form>

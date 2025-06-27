@@ -102,6 +102,16 @@ export default function AddOrganizationModal({ isOpen, onClose, onOrganizationAd
         admin_mobile: ""
       });
       
+      // Show success message
+      alert(`Organization created successfully! 
+
+IMPORTANT: The organization admin (${formData.admin_email}) needs to:
+1. Check their email for a confirmation link
+2. Click the confirmation link to verify their email
+3. Then they can log in to the system
+
+The admin cannot log in until their email is confirmed.`);
+      
       onOrganizationAdded();
       onClose();
     } catch (err: unknown) {
@@ -300,6 +310,7 @@ export default function AddOrganizationModal({ isOpen, onClose, onOrganizationAd
               <p>• Avoid temporary email services (YOPmail, 10minutemail, etc.)</p>
               <p>• Example: admin@gmail.com, admin@company.com</p>
               <p>• Password must be at least 6 characters</p>
+              <p>• <strong>Admin will receive email confirmation before login</strong></p>
             </div>
           </div>
 
