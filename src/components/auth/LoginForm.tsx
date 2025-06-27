@@ -128,9 +128,19 @@ export default function LoginForm() {
               style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" }}
             />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-sky-900">
-            Sign in to OnTime
-          </h2>
+          <div className="flex items-center justify-center gap-3 mt-6">
+            <h2 className="text-3xl font-extrabold text-sky-900">
+              Sign in
+            </h2>
+            <Image
+              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
+              alt="OnTime Logo"
+              width={87}
+              height={48}
+              className="bg-transparent mix-blend-multiply"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" }}
+            />
+          </div>
           <p className="mt-2 text-sm text-sky-700">
             Task management made simple
           </p>
@@ -296,8 +306,8 @@ export default function LoginForm() {
             <div className="mt-6 p-3 bg-sky-50 rounded-lg border border-sky-200">
               <p className="text-xs text-sky-700 font-medium mb-2">💡 Login Options:</p>
               <div className="text-xs text-sky-600 space-y-1">
-                <p>• <strong>Email Login:</strong> For managers and admin staff</p>
-                <p>• <strong>Employee PIN:</strong> For field workers and blue-collar employees</p>
+                <p>• <strong>Email Login:</strong> For admin users</p>
+                <p>• <strong>PIN Login:</strong> For all users other than admins</p>
                 <p>• Contact your supervisor if you need help with login</p>
               </div>
             </div>
