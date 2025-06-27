@@ -1,18 +1,14 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { TaskAnalytics } from "@/services/analyticsService";
+import React from "react";
+import { TaskByStatus } from "@/services/analyticsService";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 interface TaskAnalyticsChartProps {
-  data: TaskAnalytics;
+   TaskByStatus[];
 }
 
-const COLORS = {
-  completed: "#22c55e",
-  inProgress: "#3b82f6",
-  pending: "#eab308",
-  overdue: "#ef4444"
-};
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
-export default function TaskAnalyticsChart({ data }: TaskAnalyticsChartProps) {
+const TaskAnalyticsChart: React.FC<TaskAnalyticsChartProps> = ({ data }) => {
   const chartData = [
     {
       name: "Completed",
@@ -92,3 +88,5 @@ export default function TaskAnalyticsChart({ data }: TaskAnalyticsChartProps) {
     </div>
   );
 }
+
+export default TaskAnalyticsChart;

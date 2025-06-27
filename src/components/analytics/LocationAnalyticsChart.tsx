@@ -1,3 +1,4 @@
+import React from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { LocationAnalytics } from "@/services/analyticsService";
 import { TooltipProps } from "recharts";
@@ -7,7 +8,7 @@ interface LocationAnalyticsChartProps {
   data: LocationAnalytics[];
 }
 
-export default function LocationAnalyticsChart({ data }: LocationAnalyticsChartProps) {
+const LocationAnalyticsChart: React.FC<LocationAnalyticsChartProps> = ({ data }) => {
   const chartData = data.map(location => ({
     name: location.location.length > 15 
       ? location.location.substring(0, 15) + "..." 
@@ -77,3 +78,5 @@ export default function LocationAnalyticsChart({ data }: LocationAnalyticsChartP
     </div>
   );
 }
+
+export default LocationAnalyticsChart;

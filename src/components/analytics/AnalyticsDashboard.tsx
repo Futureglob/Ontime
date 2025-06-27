@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -8,37 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CalendarIcon, Download, TrendingUp, Users, MapPin, Clock } from "lucide-react";
 import { format } from "date-fns";
-import analyticsService, { 
-  TaskAnalytics, 
-  EmployeePerformance, 
-  LocationAnalytics, 
-  TimeSeriesData,
-  OrganizationMetrics 
-} from "@/services/analyticsService";
+import { analyticsService, TaskOverview, EmployeePerformance, LocationAnalytic, TaskTrend } from "@/services/analyticsService";
 import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import EmployeePerformanceChart from "./EmployeePerformanceChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";
 import TimeSeriesChart from "./TimeSeriesChart";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AnalyticsDashboardProps {
   organizationId?: string;
 }
 
-export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboardProps) {
+const AnalyticsDashboard = () => {
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
-    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-    end: new Date()
-  });
+  const [dateRange, setDateRange] = useState("last_30_days");
 
-  const [taskAnalytics, setTaskAnalytics] = useState<TaskAnalytics | null>(null);
+  const [taskAnalytics, setTaskAnalytics] = useState<TaskOverview | null>(null);
   const [employeePerformance, setEmployeePerformance] = useState<EmployeePerformance[]>([]);
-  const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytics[]>([]);
-  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([]);
-  const [organizationMetrics, setOrganizationMetrics] = useState<OrganizationMetrics | null>(null);
+  const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytic[]>([]);
+  const [timeSeriesData, setTimeSeriesData] = useState<TaskTrend[]>([]);
 
   useEffect(() => {
-    const loadAnalytics = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         const [
@@ -46,20 +37,17 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
           employeeData,
           locationData,
           timeData,
-          orgMetrics
         ] = await Promise.all([
-          analyticsService.getTaskAnalytics(organizationId, dateRange),
-          analyticsService.getEmployeePerformance(organizationId, dateRange),
-          analyticsService.getLocationAnalytics(organizationId),
-          analyticsService.getTimeSeriesData(organizationId, 30),
-          analyticsService.getOrganizationMetrics(organizationId)
+          analyticsService.getTaskOverview("org_123", dateRange),
+          analyticsService.getEmployeePerformance("org_123", { start: new Date(), end: new Date() }),
+          analyticsService.getLocationAnalytics("org_123", { start: new Date(), end: new Date() }),
+          analyticsService.getTimeSeriesData("org_123", 30),
         ]);
   
         setTaskAnalytics(taskData);
         setEmployeePerformance(employeeData);
         setLocationAnalytics(locationData);
         setTimeSeriesData(timeData);
-        setOrganizationMetrics(orgMetrics);
       } catch (error) {
         console.error("Error loading analytics:", error);
       } finally {
@@ -67,8 +55,8 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
       }
     };
 
-    loadAnalytics();
-  }, [organizationId, dateRange]);
+    fetchData();
+  }, [dateRange]);
 
   const exportData = () => {
     const data = {
@@ -76,7 +64,6 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
       employeePerformance,
       locationAnalytics,
       timeSeriesData,
-      organizationMetrics,
       generatedAt: new Date().toISOString(),
       dateRange
     };
@@ -150,7 +137,7 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
         </div>
       </div>
 
-      {organizationMetrics && (
+      {taskAnalytics && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -158,9 +145,9 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{organizationMetrics.totalEmployees}</div>
+              <div className="text-2xl font-bold">{taskAnalytics.totalEmployees}</div>
               <p className="text-xs text-muted-foreground">
-                {organizationMetrics.activeEmployees} active
+                {taskAnalytics.activeEmployees} active
               </p>
             </CardContent>
           </Card>
@@ -170,9 +157,9 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{organizationMetrics.totalTasks}</div>
+              <div className="text-2xl font-bold">{taskAnalytics.totalTasks}</div>
               <p className="text-xs text-muted-foreground">
-                {organizationMetrics.completedTasks} completed
+                {taskAnalytics.completedTasks} completed
               </p>
             </CardContent>
           </Card>
@@ -182,9 +169,9 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{organizationMetrics.totalWorkingHours.toFixed(1)}</div>
+              <div className="text-2xl font-bold">{taskAnalytics.totalWorkingHours.toFixed(1)}</div>
               <p className="text-xs text-muted-foreground">
-                {organizationMetrics.averageTasksPerEmployee.toFixed(1)} avg tasks/employee
+                {taskAnalytics.averageTasksPerEmployee.toFixed(1)} avg tasks/employee
               </p>
             </CardContent>
           </Card>
@@ -194,7 +181,7 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{organizationMetrics.totalTravelDistance.toFixed(1)} km</div>
+              <div className="text-2xl font-bold">{taskAnalytics.totalTravelDistance.toFixed(1)} km</div>
               <p className="text-xs text-muted-foreground">
                 Total distance covered
               </p>
@@ -354,3 +341,5 @@ export default function AnalyticsDashboard({ organizationId }: AnalyticsDashboar
     </div>
   );
 }
+
+export default AnalyticsDashboard;

@@ -210,6 +210,24 @@ export default function FieldWork() {
 
   const stats = getTaskStats();
 
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (user) {
+        try {
+          setLoading(true);
+          const tasksData = await taskService.getUserTasks(user.id);
+          setTasks(tasksData);
+        } catch (err) {
+          setError("Failed to fetch tasks.");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchTasks();
+  }, [user]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">

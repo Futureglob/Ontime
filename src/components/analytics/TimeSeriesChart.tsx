@@ -1,12 +1,15 @@
+import React from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { TimeSeriesData } from "@/services/analyticsService";
 import { format } from "date-fns";
+import { TaskTrend } from "@/services/analyticsService";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 interface TimeSeriesChartProps {
   data: TimeSeriesData[];
 }
 
-export default function TimeSeriesChart({ data }: TimeSeriesChartProps) {
+const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ data }) => {
   const chartData = data.map(item => ({
     ...item,
     date: format(new Date(item.date), "MMM dd"),
@@ -58,3 +61,5 @@ export default function TimeSeriesChart({ data }: TimeSeriesChartProps) {
     </div>
   );
 }
+
+export default TimeSeriesChart;

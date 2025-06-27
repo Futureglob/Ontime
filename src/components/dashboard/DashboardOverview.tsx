@@ -32,14 +32,22 @@ export default function DashboardOverview() {
       const profile = await profileService.getProfile(user.id);
       setUserProfile(profile);
 
-      let tasksData;
-      if (profile.role === UserRole.EMPLOYEE) {
-        tasksData = await taskService.getTasksByEmployee(user.id);
-      } else if (profile.organization_id) {
-        tasksData = await taskService.getTasksByOrganization(profile.organization_id);
-      }
-      
-      setTasks(tasksData || []);
+      const fetchTasks = async () => {
+        if (!user) return;
+        try {
+          let fetchedTasks;
+          if (profile?.role === "employee") {
+            fetchedTasks = await taskService.getUserTasks(user.id);
+          } else {
+            fetchedTasks = await taskService.getTasksForOrganization(profile.organization_id);
+          }
+          setTasks(fetchedTasks || []);
+        } catch (error) {
+          console.error("Error loading dashboard ", error);
+        }
+      };
+
+      await fetchTasks();
     } catch (error) {
       console.error("Error loading dashboard ", error);
     } finally {

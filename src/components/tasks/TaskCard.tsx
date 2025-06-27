@@ -53,9 +53,10 @@ export default function TaskCard({ task, onTaskUpdated, userRole, employees }: T
     }
   };
 
-  const handleAssignTask = async (employeeId: string) => {
+  const handleAssign = async (userId: string) => {
     try {
-      await taskService.assignTask(task.id, employeeId);
+      await taskService.updateTask(task.id, { assigned_to: userId });
+      toast({ title: "Task assigned successfully" });
       onTaskUpdated();
     } catch (error) {
       console.error("Error assigning task:", error);
@@ -227,7 +228,7 @@ export default function TaskCard({ task, onTaskUpdated, userRole, employees }: T
           )}
 
           {canAssign && employees && (
-            <Select onValueChange={handleAssignTask}>
+            <Select onValueChange={handleAssign}>
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Assign to..." />
               </SelectTrigger>
