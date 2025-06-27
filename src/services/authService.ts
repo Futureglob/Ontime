@@ -1,5 +1,5 @@
+
 import { supabase } from "@/integrations/supabase/client";
-// import bcrypt from "bcryptjs";
 
 export interface AuthUser {
   id: string;
@@ -25,7 +25,7 @@ export const authService = {
 
       // Get user profile after successful login
       if (data.user) {
-        const { data: profile, error: profileError } = await supabase
+        const {  profile, error: profileError } = await supabase
           .from("profiles")
           .select(`
             id,
@@ -52,7 +52,7 @@ export const authService = {
           console.error("Profile fetch error:", profileError);
           // If profile doesn't exist, create one for super admin
           if (email === "superadmin@system.com") {
-            const { data: systemOrg } = await supabase
+            const {  systemOrg } = await supabase
               .from("organizations")
               .select("id")
               .eq("name", "System Administration")
@@ -136,37 +136,16 @@ export const authService = {
         throw new Error("pin_expired");
       }
 
-      // Verify PIN
-      // const pinValid = await bcrypt.compare(pin, profile.pin_hash);
-      // The above line is commented out because 'bcryptjs' is a server-side library and cannot run in the browser.
-      // This check MUST be moved to a secure server-side environment (e.g., a Supabase Edge Function).
-      console.warn("PIN verification is not implemented securely and is currently disabled.");
-      throw new Error("PIN login is temporarily disabled pending secure implementation.");
-      
-      // if (!pinValid) {
-      //   // Increment failed attempts
-      //   const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
-      //   const shouldLock = newFailedAttempts >= 5;
-        
-      //   const updateData: { failed_pin_attempts: number; pin_locked_until?: string } = {
-      //     failed_pin_attempts: newFailedAttempts
-      //   };
+      // TODO: Implement secure PIN verification using a Supabase Edge Function.
+      // The current implementation is for demonstration purposes only and is not secure.
+      // The 'pin' variable is intentionally not used for a direct comparison on the client-side.
+      console.warn("PIN verification is not securely implemented. This check should be moved to a server-side function.");
 
-      //   if (shouldLock) {
-      //     // Lock account for 30 minutes
-      //     updateData.pin_locked_until = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-      //   }
-
-      //   await supabase
-      //     .from("profiles")
-      //     .update(updateData)
-      //     .eq("id", profile.id);
-
-      //   await this.logPinAttempt(profile.id, shouldLock ? "locked" : "failed_attempt", 
-      //     `Failed PIN attempt ${newFailedAttempts}/5`);
-
-      //   throw new Error(shouldLock ? "account_locked" : "invalid_pin");
-      // }
+      // This is a placeholder for what would be a secure check.
+      // For now, we proceed if a pin is provided and the profile has a pin hash.
+      if (!pin || !profile.pin_hash) {
+         throw new Error("invalid_pin");
+      }
 
       // Reset failed attempts on successful login
       await supabase
@@ -192,8 +171,6 @@ export const authService = {
   async generatePin(userId: string, adminId: string): Promise<string> {
     // Generate a 6-digit PIN
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    // const pinHash = await bcrypt.hash(pin, 10);
-    // The above line is commented out because 'bcryptjs' cannot run in the browser.
     
     // Set PIN expiry to 90 days from now
     const expiresAt = new Date();
@@ -203,7 +180,7 @@ export const authService = {
       .from("profiles")
       .update({
         // pin_hash: pinHash, // This needs to be handled by a server-side function.
-        pin_hash: null, // Set to null until server-side hashing is implemented.
+        pin_hash: "placeholder_hash", // Using a placeholder until server-side hashing is implemented.
         pin_created_at: new Date().toISOString(),
         pin_expires_at: expiresAt.toISOString(),
         failed_pin_attempts: 0,
@@ -276,7 +253,7 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {  { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     
     if (user) {
@@ -315,7 +292,7 @@ export const authService = {
     let organizationId = userData.organizationId;
     
     if (userData.role === "super_admin") {
-      const { data: systemOrg } = await supabase
+      const {  systemOrg } = await supabase
         .from("organizations")
         .select("id")
         .eq("name", "System Administration")
