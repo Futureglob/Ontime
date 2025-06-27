@@ -1,4 +1,4 @@
-
+        
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,9 +42,7 @@ interface ImportResult {
 }
 
 export default function BulkEmployeeImport({ organizationId, onImportComplete, onClose }: BulkEmployeeImportProps) {
-  const [file, setFile] = useState<File | null>(null);
   const [employees, setEmployees] = useState<EmployeeImportData[]>([]);
-  const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState<ImportResult[]>([]);
   const [progress, setProgress] = useState(0);
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "results">("upload");
@@ -75,7 +73,6 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
       return;
     }
 
-    setFile(selectedFile);
     parseCSV(selectedFile);
   };
 
@@ -138,7 +135,6 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
   };
 
   const importEmployees = async () => {
-    setImporting(true);
     setStep("importing");
     setProgress(0);
     
@@ -158,19 +154,26 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           continue;
         }
 
-        const profileData = {
-          full_name: employee.full_name,
-          employee_id: employee.employee_id.toUpperCase(),
-          designation: employee.designation,
-          mobile_number: employee.mobile_number,
-          role: employee.role,
-          organization_id: organizationId,
-          is_active: true
-        };
-
-        const newProfile = await profileService.createProfile(profileData);
+        const newProfile = await authService.signUp(
+          // Since email is optional, we create a placeholder email and the user can update it later.
+          `${employee.employee_id.toUpperCase()}@${organizationId}.ontime`, 
+          crypto.randomUUID(), // Generate a random password
+          {
+            name: employee.full_name,
+            employeeId: employee.employee_id.toUpperCase(),
+            designation: employee.designation,
+            mobileNumber: employee.mobile_number,
+            role: employee.role,
+            organizationId: organizationId,
+            isActive: true
+          }
+        );
         
-        const pin = await authService.generatePin(newProfile.id, organizationId);
+        if (!newProfile.data.user) {
+          throw new Error("Failed to create user profile.");
+        }
+
+        const pin = await authService.generatePin(newProfile.data.user.id, organizationId);
         
         results.push({
           success: true,
@@ -190,7 +193,6 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
     }
 
     setImportResults(results);
-    setImporting(false);
     setStep("results");
   };
 
@@ -441,3 +443,4 @@ ${successfulImports.map(result =>
     </div>
   );
 }
+      

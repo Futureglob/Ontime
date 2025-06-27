@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -78,8 +77,8 @@ export default function TaskManagement() {
   const loadEmployees = useCallback(async () => {
     if (user && userProfile && userProfile.organization_id && userProfile.role !== UserRole.EMPLOYEE) {
       try {
-        const employeesData = await profileService.getOrganizationEmployees(userProfile.organization_id);
-        setEmployees(employeesData || []);
+        const employeesData = await profileService.getOrganizationProfiles(userProfile.organization_id);
+        setEmployees(employeesData as Profile[]);
       } catch (error) {
         console.error("Error loading employees:", error);
       }

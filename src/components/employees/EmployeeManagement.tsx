@@ -36,8 +36,8 @@ export default function EmployeeManagement() {
     if (user && userProfile && userProfile.organization_id) {
       try {
         setLoading(true);
-        const employeesData = await profileService.getOrganizationEmployees(userProfile.organization_id);
-        setEmployees(employeesData || []);
+        const employeesData = await profileService.getOrganizationProfiles(userProfile.organization_id);
+        setEmployees(employeesData as Profile[]);
       } catch (error) {
         console.error("Error loading employees:", error);
       } finally {
