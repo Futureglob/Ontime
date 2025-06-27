@@ -23,7 +23,7 @@ export const photoService = {
 
     if (uploadError) throw uploadError;
 
-    const { data: urlData } = supabase.storage
+    const {  urlData } = supabase.storage
       .from("task_photos")
       .getPublicUrl(filePath);
 
