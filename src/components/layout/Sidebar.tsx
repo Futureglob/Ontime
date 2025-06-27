@@ -93,11 +93,12 @@ export default function Sidebar() {
   return (
     <div className="flex h-full flex-col bg-white border-r border-gray-200">
       <div className="flex h-16 items-center px-6 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <CheckSquare className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-bold text-gray-900">OnTime</span>
+        <div className="flex items-center gap-3">
+          <img 
+            src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
+            alt="OnTime Logo" 
+            className="h-8 w-auto"
+          />
         </div>
       </div>
 

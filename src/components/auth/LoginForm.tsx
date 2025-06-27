@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +117,13 @@ export default function LoginForm() {
     <div className="min-h-screen flex items-center justify-center light-blue-gradient py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png" 
+              alt="OnTime Logo" 
+              className="h-16 w-auto"
+            />
+          </div>
           <h2 className="mt-6 text-3xl font-extrabold text-sky-900">
             Sign in to OnTime
           </h2>
