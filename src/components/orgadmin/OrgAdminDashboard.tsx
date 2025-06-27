@@ -1,4 +1,3 @@
-
     import { useState, useEffect } from "react";
     import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
     import { Button } from "@/components/ui/button";
@@ -19,12 +18,14 @@
       Eye,
       Edit,
       Trash2,
-      UserPlus
+      UserPlus,
+      Upload
     } from "lucide-react";
     import { useAuth } from "@/contexts/AuthContext";
     import { useRouter } from "next/router";
     import { profileService } from "@/services/profileService";
     import EmployeeForm from "@/components/employees/EmployeeForm";
+    import BulkEmployeeImport from "@/components/employees/BulkEmployeeImport";
     import Sidebar from "@/components/layout/Sidebar";
     import { Task } from "@/types/database";
 
@@ -62,6 +63,7 @@
       });
       const [loading, setLoading] = useState(true);
       const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+      const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
       const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | null>(null);
 
       const fetchDashboardData = async (organizationId: string) => {
@@ -134,6 +136,10 @@
         setIsEmployeeModalOpen(true);
       };
 
+      const handleBulkImport = () => {
+        setIsBulkImportModalOpen(true);
+      };
+
       const handleEditEmployee = (employee: EmployeeProfile) => {
         setSelectedEmployee(employee);
         setIsEmployeeModalOpen(true);
@@ -152,6 +158,11 @@
 
       const handleSaveEmployee = () => {
         setIsEmployeeModalOpen(false);
+        if(profile.organization_id) fetchDashboardData(profile.organization_id);
+      };
+
+      const handleBulkImportComplete = () => {
+        setIsBulkImportModalOpen(false);
         if(profile.organization_id) fetchDashboardData(profile.organization_id);
       };
 
@@ -197,13 +208,22 @@
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <CardTitle>Employee Management</CardTitle>
-                        <Button 
-                          className="bg-blue-600 hover:bg-blue-700"
-                          onClick={handleAddEmployee}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Employee
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline"
+                            onClick={handleBulkImport}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Bulk Import
+                          </Button>
+                          <Button 
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={handleAddEmployee}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Employee
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -372,6 +392,21 @@
                   onEmployeeCreated={handleSaveEmployee}
                   organizationId={profile.organization_id}
                   employee={selectedEmployee}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={isBulkImportModalOpen} onOpenChange={setIsBulkImportModalOpen}>
+            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Bulk Employee Import</DialogTitle>
+              </DialogHeader>
+              {profile.organization_id && (
+                <BulkEmployeeImport
+                  organizationId={profile.organization_id}
+                  onImportComplete={handleBulkImportComplete}
+                  onClose={() => setIsBulkImportModalOpen(false)}
                 />
               )}
             </DialogContent>
