@@ -83,20 +83,13 @@ export const authService = {
 
   async signInWithPin(employeeId: string, pin: string) {
     try {
-      console.log("PIN Login attempt:", { employeeId: employeeId.toUpperCase(), pin });
-      
-      // Debug: First check what profiles exist
-      const { data: allProfiles, error: debugError } = await supabase
+      console.log("PIN Login attempt:", { employeeId, pin });
+
+      // Use case-insensitive search for employee ID and ensure the user is active.
+      const {  profiles, error: profileError } = await supabase
         .from("profiles")
-        .select("employee_id, full_name, is_active, pin_hash")
-        .limit(10);
-      
-      console.log("Debug - All profiles:", allProfiles);
-      
-      // First try to find the profile without .single() to avoid 406 errors
-      const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select(`
+        .select(
+          `
           id,
           full_name,
           role,
@@ -117,8 +110,9 @@ export const authService = {
             secondary_color,
             is_active
           )
-        `)
-        .eq("employee_id", employeeId.toUpperCase())
+        `
+        )
+        .ilike("employee_id", employeeId)
         .eq("is_active", true);
 
       if (profileError) {
@@ -126,124 +120,131 @@ export const authService = {
         throw new Error("invalid_pin");
       }
 
-      console.log("Found profiles:", profiles);
-
-      // Check if we found exactly one profile
       if (!profiles || profiles.length === 0) {
-        console.warn("No profile found for employee ID:", employeeId);
-        // Try without case sensitivity
-        const { data: profilesNoCase, error: noCaseError } = await supabase
-          .from("profiles")
-          .select("employee_id, full_name, is_active")
-          .ilike("employee_id", employeeId);
-        
-        console.log("Debug - Case insensitive search:", profilesNoCase);
+        console.warn("No active profile found for employee ID:", employeeId);
         throw new Error("invalid_pin");
       }
 
       if (profiles.length > 1) {
-        console.warn("Multiple profiles found for employee ID:", employeeId);
+        console.warn(
+          "Multiple active profiles found for employee ID:",
+          employeeId,
+          "Profiles:",
+          profiles
+        );
+        // This indicates a data integrity issue.
         throw new Error("invalid_pin");
       }
 
       const profile = profiles[0];
-      console.log("Profile found:", { 
-        id: profile.id, 
-        employee_id: profile.employee_id, 
-        pin_hash: profile.pin_hash,
-        role: profile.role 
+      console.log("Profile found:", {
+        id: profile.id,
+        employee_id: profile.employee_id,
+        pin_hash: profile.pin_hash ? "Exists" : "NULL",
+        role: profile.role,
       });
 
-      if (profile.pin_locked_until && new Date(profile.pin_locked_until) > new Date()) {
+      if (
+        profile.pin_locked_until &&
+        new Date(profile.pin_locked_until) > new Date()
+      ) {
+        console.warn("Account locked for employee:", employeeId);
         throw new Error("account_locked");
       }
 
-      if (profile.pin_expires_at && new Date(profile.pin_expires_at) < new Date()) {
+      if (
+        profile.pin_expires_at &&
+        new Date(profile.pin_expires_at) < new Date()
+      ) {
+        console.warn("PIN expired for employee:", employeeId);
         throw new Error("pin_expired");
       }
 
-      // Simple PIN verification - in production, this should be server-side
+      // In a real app, use a secure hashing library like bcrypt.
+      // For this project, we're using a simple string comparison.
       const expectedPinHash = `pin_${pin}`;
-      console.log("PIN verification:", { 
-        provided: pin, 
-        expectedHash: expectedPinHash, 
-        storedHash: profile.pin_hash 
-      });
-      
-      // If no PIN hash exists, set it for the employee on first login
+
+      // If no PIN hash exists, this is the first login. Set the PIN.
       if (!profile.pin_hash) {
-        console.log("No PIN hash found, setting PIN hash for employee:", employeeId);
+        console.log("First-time PIN setup for employee:", employeeId);
         const { error: updateError } = await supabase
           .from("profiles")
           .update({
             pin_hash: expectedPinHash,
             pin_created_at: new Date().toISOString(),
-            pin_expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days
+            pin_expires_at: new Date(
+              Date.now() + 90 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 90 days
             failed_pin_attempts: 0,
-            pin_locked_until: null
+            pin_locked_until: null,
           })
           .eq("id", profile.id);
 
         if (updateError) {
-          console.error("Error setting PIN hash:", updateError);
+          console.error("Error setting PIN hash on first login:", updateError);
           throw new Error("invalid_pin");
         }
 
         console.log("PIN hash set successfully for employee:", employeeId);
-        
-        // Reset failed attempts on successful login
-        await supabase
-          .from("profiles")
-          .update({
-            failed_pin_attempts: 0,
-            pin_locked_until: null
-          })
-          .eq("id", profile.id);
-
-        return { user: null, profile: { ...profile, pin_hash: expectedPinHash }, isPinLogin: true };
+        // Return the profile with the new hash for the session
+        return {
+          user: null,
+          profile: { ...profile, pin_hash: expectedPinHash },
+          isPinLogin: true,
+        };
       }
-      
+
       // Verify existing PIN hash
       if (profile.pin_hash !== expectedPinHash) {
         console.warn("PIN mismatch for employee:", employeeId);
-        
-        // Increment failed attempts
+
         const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
-        const updates: { failed_pin_attempts: number; pin_locked_until?: string } = {
+        const updates: {
+          failed_pin_attempts: number;
+          pin_locked_until?: string | null;
+        } = {
           failed_pin_attempts: newFailedAttempts,
         };
-        
-        // Lock account after 5 failed attempts
+
         if (newFailedAttempts >= 5) {
           const lockUntil = new Date();
-          lockUntil.setMinutes(lockUntil.getMinutes() + 30); // Lock for 30 minutes
+          lockUntil.setMinutes(lockUntil.getMinutes() + 15); // Lock for 15 minutes
           updates.pin_locked_until = lockUntil.toISOString();
+          console.warn(
+            `Account for employee ${employeeId} locked for 15 minutes.`
+          );
         }
 
-        await supabase
-          .from("profiles")
-          .update(updates)
-          .eq("id", profile.id);
+        await supabase.from("profiles").update(updates).eq("id", profile.id);
 
         throw new Error("invalid_pin");
       }
 
+      // On successful login, reset failed attempts
+      if (profile.failed_pin_attempts > 0) {
+        await supabase
+          .from("profiles")
+          .update({
+            failed_pin_attempts: 0,
+            pin_locked_until: null,
+          })
+          .eq("id", profile.id);
+      }
+
       console.log("PIN login successful for employee:", employeeId);
-
-      // Reset failed attempts on successful login
-      await supabase
-        .from("profiles")
-        .update({
-          failed_pin_attempts: 0,
-          pin_locked_until: null
-        })
-        .eq("id", profile.id);
-
       return { user: null, profile, isPinLogin: true };
-
     } catch (error) {
-      console.error("PIN sign in error:", error);
-      throw error;
+      // Catch specific errors to provide better feedback if needed,
+      // otherwise, re-throw the original error.
+      if (
+        error instanceof Error &&
+        ["account_locked", "pin_expired", "invalid_pin"].includes(error.message)
+      ) {
+        console.error(`PIN sign in failed: ${error.message}`, error);
+        throw error;
+      }
+      console.error("An unexpected error occurred during PIN sign in:", error);
+      throw new Error("invalid_pin"); // Generic error for anything else
     }
   },
 
