@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface OrganizationUser {
@@ -56,7 +55,7 @@ export const organizationManagementService = {
     try {
       // The `rpc` call is not strongly typed by default for functions not in generated types.
       // Using a type assertion here is a pragmatic approach to call the custom database function.
-      const { data, error } = await supabase.rpc("get_organization_details", {
+      const { data, error } = await (supabase as any).rpc("get_organization_details", {
         org_id: orgId,
       });
 
