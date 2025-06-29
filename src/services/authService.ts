@@ -131,12 +131,30 @@ export const authService = {
         throw new Error("pin_expired");
       }
 
-      console.warn("PIN verification is not securely implemented. This check should be moved to a server-side function.");
+      // Simple PIN verification - in production, this should be server-side
+      const expectedPinHash = `pin_${pin}`;
+      if (profile.pin_hash !== expectedPinHash) {
+        // Increment failed attempts
+        const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
+        const updates: any = { failed_pin_attempts: newFailedAttempts };
+        
+        // Lock account after 5 failed attempts
+        if (newFailedAttempts >= 5) {
+          const lockUntil = new Date();
+          lockUntil.setMinutes(lockUntil.getMinutes() + 30); // Lock for 30 minutes
+          updates.pin_locked_until = lockUntil.toISOString();
+        }
 
-      if (!pin || !profile.pin_hash) {
-         throw new Error("invalid_pin");
+        await supabase
+          .from("profiles")
+          .update(updates)
+          .eq("id", profile.id);
+
+        await this.logPinAttempt(profile.id, "failed_pin", "Invalid PIN entered");
+        throw new Error("invalid_pin");
       }
 
+      // Reset failed attempts on successful login
       await supabase
         .from("profiles")
         .update({

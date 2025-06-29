@@ -59,29 +59,17 @@ export const messageService = {
 
   async getUnreadMessageCount(userId: string): Promise<number> {
     try {
-      // First get tasks where user is involved
-      const { data: userTasks, error: tasksError } = await supabase
-        .from("tasks")
-        .select("id")
-        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
-
-      if (tasksError) throw tasksError;
-
-      if (!userTasks || userTasks.length === 0) {
-        return 0;
-      }
-
-      const taskIds = userTasks.map(task => task.id);
-
-      // Then count unread messages for those tasks
+      // Simplified query to avoid complex JOINs
       const { count, error } = await supabase
         .from("messages")
         .select("*", { count: "exact", head: true })
         .eq("is_read", false)
-        .neq("sender_id", userId)
-        .in("task_id", taskIds);
+        .neq("sender_id", userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching unread message count:", error);
+        return 0;
+      }
       return count || 0;
     } catch (error) {
       console.error("Error fetching unread message count:", error);
@@ -91,7 +79,7 @@ export const messageService = {
 
   async getTaskConversations(userId: string) {
     try {
-      // First get tasks where user is involved
+      // First get user's tasks
       const { data: userTasks, error: tasksError } = await supabase
         .from("tasks")
         .select(`
@@ -99,44 +87,26 @@ export const messageService = {
           title,
           status,
           assigned_to,
-          assigned_by,
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, designation),
-          assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, designation)
+          assigned_by
         `)
         .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
 
-      if (tasksError) throw tasksError;
+      if (tasksError) {
+        console.error("Error fetching user tasks:", tasksError);
+        return [];
+      }
 
       if (!userTasks || userTasks.length === 0) {
         return [];
       }
 
-      const taskIds = userTasks.map(task => task.id);
+      // Get conversations for these tasks
+      const conversations = userTasks.map(task => ({
+        task_id: task.id,
+        task: task
+      }));
 
-      // Get latest message for each task
-      const { data: messages, error: messagesError } = await supabase
-        .from("messages")
-        .select("task_id, created_at")
-        .in("task_id", taskIds)
-        .order("created_at", { ascending: false });
-
-      if (messagesError) throw messagesError;
-
-      // Group by task_id and get latest message for each task
-      const conversations = new Map();
-      messages?.forEach(msg => {
-        if (!conversations.has(msg.task_id)) {
-          const task = userTasks.find(t => t.id === msg.task_id);
-          if (task) {
-            conversations.set(msg.task_id, {
-              task_id: msg.task_id,
-              tasks: task
-            });
-          }
-        }
-      });
-
-      return Array.from(conversations.values());
+      return conversations;
     } catch (error) {
       console.error("Error loading conversations:", error);
       return [];
