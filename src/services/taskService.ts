@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Task, CreateTaskRequest, TaskStatus, TaskWithAssignee } from "@/types/database";
 
@@ -112,5 +111,10 @@ export const taskService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  // Add the missing method that Sidebar is trying to use
+  async getTasksForUser(userId: string): Promise<Task[]> {
+    return this.getUserTasks(userId);
   }
 };

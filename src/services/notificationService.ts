@@ -200,6 +200,13 @@ export const notificationService = {
     if (pwaService.isInstalled()) { // Corrected: pwaService.isInstalled() exists
       await pwaService.registerBackgroundSync("ontime-sync"); // Corrected: pwaService.registerBackgroundSync() exists and expects a tag
     }
+  },
+
+  // Add missing method for getting unread notifications
+  async getUnreadNotifications(userId: string): Promise<any[]> {
+    // For now, return empty array - this would need to be implemented with a notifications table
+    // TODO: Implement proper notification storage in Supabase
+    return [];
   }
 };
 
