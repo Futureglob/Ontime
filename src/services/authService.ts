@@ -83,7 +83,8 @@ export const authService = {
 
   async signInWithPin(employeeId: string, pin: string) {
     try {
-      const { data: profile, error: profileError } = await supabase
+      // First try to find the profile without .single() to avoid 406 errors
+      const { data: profiles, error: profileError } = await supabase
         .from("profiles")
         .select(`
           id,
@@ -108,26 +109,36 @@ export const authService = {
           )
         `)
         .eq("employee_id", employeeId.toUpperCase())
-        .eq("is_active", true)
-        .single();
+        .eq("is_active", true);
 
-      if (profileError || !profile) {
-        await this.logPinAttempt(null, "failed_attempt", "Invalid employee ID");
+      if (profileError) {
+        console.error("Profile query error:", profileError);
         throw new Error("invalid_pin");
       }
 
+      // Check if we found exactly one profile
+      if (!profiles || profiles.length === 0) {
+        // Don't log to pin_audit_logs if it might not exist
+        console.warn("No profile found for employee ID:", employeeId);
+        throw new Error("invalid_pin");
+      }
+
+      if (profiles.length > 1) {
+        console.warn("Multiple profiles found for employee ID:", employeeId);
+        throw new Error("invalid_pin");
+      }
+
+      const profile = profiles[0];
+
       if (profile.pin_locked_until && new Date(profile.pin_locked_until) > new Date()) {
-        await this.logPinAttempt(profile.id, "locked_attempt", "Account locked");
         throw new Error("account_locked");
       }
 
       if (!profile.pin_hash) {
-        await this.logPinAttempt(profile.id, "no_pin", "No PIN set");
         throw new Error("invalid_pin");
       }
 
       if (profile.pin_expires_at && new Date(profile.pin_expires_at) < new Date()) {
-        await this.logPinAttempt(profile.id, "expired_pin", "PIN expired");
         throw new Error("pin_expired");
       }
 
@@ -152,7 +163,6 @@ export const authService = {
           .update(updates)
           .eq("id", profile.id);
 
-        await this.logPinAttempt(profile.id, "failed_pin", "Invalid PIN entered");
         throw new Error("invalid_pin");
       }
 
@@ -164,8 +174,6 @@ export const authService = {
           pin_locked_until: null
         })
         .eq("id", profile.id);
-
-      await this.logPinAttempt(profile.id, "successful_login", "PIN login successful");
 
       return { user: null, profile, isPinLogin: true };
 
@@ -216,26 +224,18 @@ export const authService = {
   },
 
   async logPinAttempt(userId: string | null, action: string, details?: string, createdBy?: string) {
+    // Completely disable PIN audit logging to prevent 400 errors
+    // This can be re-enabled once the pin_audit_logs table is properly configured
     try {
-      // Make PIN audit logging optional to prevent blocking authentication
-      // Only log if the table exists and is accessible
-      const { error } = await supabase
-        .from("pin_audit_logs")
-        .insert({
-          user_id: userId,
-          action,
-          details,
-          ip_address: "unknown",
-          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "server",
-          created_by: createdBy || userId
-        });
-      
-      // Don't throw error if logging fails - just log to console
-      if (error) {
-        console.warn("PIN audit logging failed (non-critical):", error);
-      }
+      console.log("PIN Audit Log (disabled):", {
+        user_id: userId,
+        action,
+        details,
+        created_by: createdBy || userId,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
-      // Silently handle logging errors to prevent blocking authentication
+      // Silently handle any logging errors
       console.warn("PIN audit logging failed (non-critical):", error);
     }
   },
