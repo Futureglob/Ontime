@@ -153,12 +153,11 @@ export default function TaskForm({ onClose, onTaskCreated, employees }: TaskForm
 
             <div>
               <label className="text-sm font-medium">Assign to Employee</label>
-              <Select value={formData.assigned_to || ""} onValueChange={(value) => handleInputChange("assigned_to", value || undefined)}>
+              <Select value={formData.assigned_to || ""} onValueChange={(value) => handleInputChange("assigned_to", value === "unassigned" ? undefined : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select employee (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.full_name} ({employee.employee_id})

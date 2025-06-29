@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Bell, LogOut } from "lucide-react"; // Removed unused User import
+import { Menu, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { authService } from "@/services/authService";
 import { useRouter } from "next/router";
 import Sidebar from "./Sidebar";
+import { messageService } from "@/services/messageService";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadUnreadCount();
+    }
+  }, [user?.id]);
+
+  const loadUnreadCount = async () => {
+    try {
+      const count = await messageService.getUnreadMessageCount(user?.id || "");
+      setUnreadCount(count);
+    } catch (error) {
+      console.error("Error loading unread count:", error);
+      setUnreadCount(0);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -53,11 +71,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
 
               <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" className="relative">
+                <Button variant="ghost" size="sm" className="relative" onClick={() => router.push("/chat")}>
                   <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-                    3
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </Button>
 
                 <div className="flex items-center gap-2">

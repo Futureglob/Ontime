@@ -11,6 +11,7 @@ import { profileService } from "@/services/profileService";
 // Removed authService
 import { Profile, UserRole } from "@/types/database";
 import EmployeeForm from "./EmployeeForm";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function EmployeeManagement() {
   const { user } = useAuth();
@@ -67,6 +68,27 @@ export default function EmployeeManagement() {
   const handleEditEmployee = (employee: Profile) => {
     setEditingEmployee(employee);
     setShowEmployeeForm(true);
+  };
+
+  const handleDeleteEmployee = async (employee: Profile) => {
+    try {
+      await profileService.deleteProfile(employee.id);
+      loadEmployees();
+    } catch (error) {
+      console.error("Error deleting employee:", error);
+    }
+  };
+
+  const canDeleteEmployee = (employee: Profile) => {
+    // Org admin cannot delete other org admins or themselves
+    if (userProfile?.role === UserRole.ORG_ADMIN) {
+      return employee.role !== UserRole.ORG_ADMIN && employee.id !== userProfile.id;
+    }
+    // Task managers can only delete regular employees
+    if (userProfile?.role === UserRole.MANAGER) {
+      return employee.role === UserRole.EMPLOYEE;
+    }
+    return false;
   };
 
   const filteredEmployees = employees.filter(employee => {
@@ -222,9 +244,29 @@ export default function EmployeeManagement() {
                   <Edit className="h-3 w-3 mr-1" />
                   Edit
                 </Button>
-                <Button variant="ghost" size="sm" className="px-3">
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                {canDeleteEmployee(employee) && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="px-3">
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete {employee.full_name}? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteEmployee(employee)}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             </CardContent>
           </Card>
