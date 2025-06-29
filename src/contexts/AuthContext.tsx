@@ -1,4 +1,3 @@
-
     import {
       createContext,
       useContext,
@@ -98,7 +97,7 @@
 
         checkUser();
 
-        const {  { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
           if (!mounted) return;
           setLoading(true);
           if (session?.user) {

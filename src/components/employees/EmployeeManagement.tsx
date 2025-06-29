@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function EmployeeManagement() {
-  const { profile: userProfile, loading: authLoading } from useAuth();
+  const { profile: userProfile, loading: authLoading } = useAuth();
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -418,4 +418,3 @@ export default function EmployeeManagement() {
     </div>
   );
 }
-  
