@@ -14,17 +14,27 @@ import { toast } from "@/hooks/use-toast";
 
 interface Profile {
   id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  designation: string;
-  role: string;
   organization_id: string;
-  avatar_url?: string;
-  bio?: string;
-  location?: string;
+  employee_id: string;
+  full_name: string;
+  designation: string;
+  mobile_number: string;
+  role: string;
   created_at: string;
   updated_at: string;
+  is_active: boolean;
+  pin_hash: string;
+  pin_attempts: number;
+  pin_locked_until: string;
+  last_login: string;
+  last_location_lat: number;
+  last_location_lng: number;
+  pin_reset_requested_at: string;
+  email?: string;
+  phone?: string;
+  bio?: string;
+  location?: string;
+  avatar_url?: string;
 }
 
 export default function ProfileSettings() {
@@ -45,16 +55,25 @@ export default function ProfileSettings() {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user?.id)
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
-      setProfile(data);
+      
+      // Set profile with default values for missing fields
+      setProfile({
+        ...data,
+        email: data.email || user.email || "",
+        phone: data.phone || data.mobile_number || "",
+        bio: data.bio || "",
+        location: data.location || "",
+        avatar_url: data.avatar_url || ""
+      });
     } catch (error) {
       console.error("Error loading profile:", error);
       toast({
         title: "Error",
-        description: "Failed to load profile",
+        description: "Failed to load profile data",
         variant: "destructive"
       });
     } finally {
@@ -75,9 +94,8 @@ export default function ProfileSettings() {
         .from("profiles")
         .update({
           full_name: profile.full_name,
-          phone: profile.phone,
-          bio: profile.bio,
-          location: profile.location,
+          designation: profile.designation,
+          mobile_number: profile.mobile_number,
           updated_at: new Date().toISOString()
         })
         .eq("id", user.id);

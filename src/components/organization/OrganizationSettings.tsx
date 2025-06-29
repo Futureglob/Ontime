@@ -15,18 +15,22 @@ import { toast } from "@/hooks/use-toast";
 interface Organization {
   id: string;
   name: string;
+  logo_url: string;
+  primary_color: string;
+  secondary_color: string;
+  created_at: string;
+  updated_at: string;
   description?: string;
-  logo_url?: string;
   website?: string;
   phone?: string;
   email?: string;
   address?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  is_active?: boolean;
 }
 
 interface OrganizationSettings {
+  id?: string;
+  organization_id: string;
   allow_employee_self_registration: boolean;
   require_admin_approval: boolean;
   enable_location_tracking: boolean;
@@ -34,6 +38,8 @@ interface OrganizationSettings {
   max_employees: number;
   working_hours_start: string;
   working_hours_end: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface UserProfile {
@@ -60,46 +66,60 @@ export default function OrganizationSettings() {
 
   const loadOrganizationData = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+
     try {
-      // First get user profile to find organization
-      const { data: profile, error: profileError } = await supabase
+      // Get user profile first
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("*, organization_id")
-        .eq("id", user?.id)
+        .select("*")
+        .eq("id", user.id)
         .single();
 
       if (profileError) throw profileError;
-      setUserProfile(profile as UserProfile);
+      setUserProfile(profileData);
 
-      if (!profile.organization_id) {
-        setLoading(false);
-        return;
-      }
+      if (profileData?.organization_id) {
+        // Get organization data
+        const { data: orgData, error: orgError } = await supabase
+          .from("organizations")
+          .select("*")
+          .eq("id", profileData.organization_id)
+          .single();
 
-      // Get organization details
-      const { data: orgData, error: orgError } = await supabase
-        .from("organizations")
-        .select("*")
-        .eq("id", profile.organization_id)
-        .single();
+        if (orgError) throw orgError;
+        
+        // Set organization with default values for missing fields
+        setOrganization({
+          ...orgData,
+          description: orgData.description || "",
+          website: orgData.website || "",
+          phone: orgData.phone || "",
+          email: orgData.email || "",
+          address: orgData.address || "",
+          is_active: orgData.is_active ?? true
+        });
 
-      if (orgError) throw orgError;
-      setOrganization(orgData);
+        // Try to get organization settings (may not exist)
+        const { data: settingsData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("organization_id", profileData.organization_id)
+          .eq("role", "organization_admin")
+          .single();
 
-      // Get organization settings
-      const { data: settingsData, error: settingsError } = await supabase
-        .from("organization_settings")
-        .select("*")
-        .eq("organization_id", profile.organization_id)
-        .single();
-
-      if (settingsError && settingsError.code !== "PGRST116") {
-        throw settingsError;
-      }
-
-      if (settingsData) {
-        setOrgSettings(settingsData);
+        if (settingsData) {
+          // Use default settings if no specific settings table exists
+          setSettings({
+            organization_id: profileData.organization_id,
+            allow_employee_self_registration: false,
+            require_admin_approval: true,
+            enable_location_tracking: true,
+            enable_photo_verification: true,
+            max_employees: 100,
+            working_hours_start: "09:00",
+            working_hours_end: "17:00"
+          });
+        }
       }
     } catch (error) {
       console.error("Error loading organization data:", error);
@@ -126,6 +146,9 @@ export default function OrganizationSettings() {
         .from("organizations")
         .update({
           name: organization.name,
+          logo_url: organization.logo_url,
+          primary_color: organization.primary_color,
+          secondary_color: organization.secondary_color,
           description: organization.description,
           website: organization.website,
           phone: organization.phone,
@@ -139,7 +162,7 @@ export default function OrganizationSettings() {
 
       toast({
         title: "Success",
-        description: "Organization details updated successfully"
+        description: "Organization updated successfully"
       });
     } catch (error) {
       console.error("Error updating organization:", error);
