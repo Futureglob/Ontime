@@ -68,7 +68,7 @@ export default function Sidebar() {
         setTaskCount(tasks.length);
         
         // Load notification count
-        const notifications = await notificationService.getUnreadNotifications(currentUserId);
+        const notifications = await notificationService.getUnreadNotifications();
         setNotificationCount(notifications.length);
       } catch (error) {
         console.error("Error loading user data:", error);
