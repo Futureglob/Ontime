@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Message, Task } from "@/types/database";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
@@ -21,28 +22,50 @@ export const messageService = {
         content,
         is_read: false,
       }])
-      .select(`
-        *,
-        sender:profiles!messages_sender_id_fkey(full_name, designation)
-      `)
+      .select()
       .single();
 
     if (error) throw error;
-    return data as MessageWithSender;
+
+    // Get sender info separately to avoid complex joins
+    const { data: senderData } = await supabase
+      .from("profiles")
+      .select("full_name, designation")
+      .eq("id", senderId)
+      .single();
+
+    return {
+      ...data,
+      sender: senderData
+    } as MessageWithSender;
   },
 
   async getTaskMessages(taskId: string): Promise<MessageWithSender[]> {
-    const { data, error } = await supabase
+    const { data: messages, error } = await supabase
       .from("messages")
-      .select(`
-        *,
-        sender:profiles!messages_sender_id_fkey(full_name, designation)
-      `)
+      .select("*")
       .eq("task_id", taskId)
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return data as MessageWithSender[];
+
+    if (!messages || messages.length === 0) return [];
+
+    // Get all unique sender IDs
+    const senderIds = [...new Set(messages.map(m => m.sender_id))];
+    
+    // Get sender profiles separately
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, designation")
+      .in("id", senderIds);
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+    return messages.map(message => ({
+      ...message,
+      sender: profileMap.get(message.sender_id)
+    })) as MessageWithSender[];
   },
 
   async markMessagesAsRead(taskId: string, userId: string) {
@@ -58,18 +81,24 @@ export const messageService = {
 
   async getUnreadMessageCount(userId: string): Promise<number> {
     try {
-      // Simplified query to get unread messages for user's tasks
-      const { data: userTasks, error: tasksError } = await supabase
+      // First get user's tasks with simple queries
+      const { data: assignedTasks } = await supabase
         .from("tasks")
         .select("id")
-        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+        .eq("assigned_to", userId);
 
-      if (tasksError || !userTasks || userTasks.length === 0) {
-        return 0;
-      }
+      const { data: createdTasks } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("assigned_by", userId);
 
-      const taskIds = userTasks.map(task => task.id);
-      
+      const taskIds = [
+        ...(assignedTasks?.map(t => t.id) || []),
+        ...(createdTasks?.map(t => t.id) || [])
+      ];
+
+      if (taskIds.length === 0) return 0;
+
       const { count, error } = await supabase
         .from("messages")
         .select("*", { count: "exact", head: true })
@@ -90,23 +119,29 @@ export const messageService = {
 
   async getTaskConversations(userId: string) {
     try {
-      // Simplified approach - get tasks first, then messages separately
-      const { data: tasks, error: tasksError } = await supabase
+      // Get tasks assigned to user
+      const { data: assignedTasks } = await supabase
         .from("tasks")
-        .select(`*`)
-        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+        .select("*")
+        .eq("assigned_to", userId);
 
-      if (tasksError) {
-        console.error("Error fetching tasks:", tasksError);
-        return [];
-      }
-      
-      if (!tasks || tasks.length === 0) return [];
+      // Get tasks created by user
+      const { data: createdTasks } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("assigned_by", userId);
 
-      // Get profiles separately to avoid complex JOINs
+      const allTasks = [
+        ...(assignedTasks || []),
+        ...(createdTasks || [])
+      ];
+
+      if (allTasks.length === 0) return [];
+
+      // Get all unique user IDs for profiles
       const userIds = [...new Set([
-        ...tasks.map(t => t.assigned_to),
-        ...tasks.map(t => t.assigned_by)
+        ...allTasks.map(t => t.assigned_to),
+        ...allTasks.map(t => t.assigned_by)
       ].filter(Boolean))];
 
       const { data: profiles } = await supabase
@@ -117,7 +152,8 @@ export const messageService = {
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       const conversations = await Promise.all(
-        tasks.map(async (task) => {
+        allTasks.map(async (task) => {
+          // Get last message for this task
           const { data: lastMessage } = await supabase
             .from("messages")
             .select("content, created_at, sender_id")
@@ -126,6 +162,7 @@ export const messageService = {
             .limit(1)
             .maybeSingle();
 
+          // Get unread count for this task
           const { count: unreadCount } = await supabase
             .from("messages")
             .select("*", { count: "exact", head: true })
