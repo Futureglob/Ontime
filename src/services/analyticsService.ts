@@ -1,4 +1,4 @@
-import { useAuth } from "@/contexts/AuthContext";
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TaskOverview {
@@ -96,14 +96,13 @@ export const analyticsService = {
         totalEmployees,
         activeEmployees,
         completionRate,
-        avgCompletionTime: 4.5, // Calculate from actual data later
-        totalWorkingHours: completedTasks * 4.5, // Estimate
+        avgCompletionTime: 4.5,
+        totalWorkingHours: completedTasks * 4.5,
         averageTasksPerEmployee: activeEmployees > 0 ? totalTasks / activeEmployees : 0,
-        totalTravelDistance: 0, // Calculate from location data later
+        totalTravelDistance: 0,
       };
     } catch (error) {
       console.error("Error fetching task overview:", error);
-      // Return fallback data
       return {
         totalTasks: 0,
         completedTasks: 0,
@@ -207,8 +206,8 @@ export const analyticsService = {
         location,
         taskCount: stats.total,
         completionRate: stats.total > 0 ? (stats.completed / stats.total) * 100 : 0,
-        averageDistance: 0, // Calculate from GPS data later
-        averageDuration: 0, // Calculate from time tracking later
+        averageDistance: 0,
+        averageDuration: 0,
       }));
     } catch (error) {
       console.error("Error fetching location analytics:", error);
@@ -233,7 +232,6 @@ export const analyticsService = {
 
       const dateMap = new Map<string, { created: number; completed: number }>();
 
-      // Initialize all dates
       for (let i = 0; i < days; i++) {
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
@@ -241,7 +239,6 @@ export const analyticsService = {
         dateMap.set(dateStr, { created: 0, completed: 0 });
       }
 
-      // Count created tasks
       (tasks || []).forEach(task => {
         const createdDate = new Date(task.created_at).toISOString().split("T")[0];
         const current = dateMap.get(createdDate);
@@ -250,7 +247,6 @@ export const analyticsService = {
         }
       });
 
-      // Count completed tasks (by updated_at when status changed to completed)
       (tasks || []).filter(t => t.status === "completed").forEach(task => {
         const completedDate = new Date(task.updated_at || task.created_at).toISOString().split("T")[0];
         const current = dateMap.get(completedDate);
@@ -270,7 +266,6 @@ export const analyticsService = {
     }
   },
 
-  // Legacy methods for backward compatibility
   async getTaskAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }) {
     if (!organizationId) return { totalTasks: 0, completedTasks: 0, pendingTasks: 0, overdueTasks: 0, completionRate: 0, avgCompletionTime: 0 };
     const overview = await this.getTaskOverview(organizationId, dateRange ? { from: dateRange.start, to: dateRange.end } : undefined);
