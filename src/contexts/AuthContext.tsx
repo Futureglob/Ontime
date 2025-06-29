@@ -1,4 +1,3 @@
-
     import {
       createContext,
       useContext,
@@ -79,9 +78,7 @@
 
         const checkUser = async () => {
           try {
-            const {
-               { session },
-            } = await supabase.auth.getSession();
+            const { data: { session } } = await supabase.auth.getSession();
             if (session?.user && mounted) {
               setUser(session.user);
               const userProfile = await authService.getUserProfile(session.user.id);
@@ -100,9 +97,7 @@
 
         checkUser();
 
-        const {
-           { subscription },
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
           if (!mounted) return;
           setLoading(true);
           if (session?.user) {
