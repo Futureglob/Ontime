@@ -1,7 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
-import { User } from "@supabase/supabase-js";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   organization: Database["public"]["Tables"]["organizations"]["Row"] | null;

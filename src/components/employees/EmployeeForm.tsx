@@ -75,14 +75,13 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
       } else {
         // Create new employee using auth service
         await authService.signUp(formData.email, formData.password, {
-          name: formData.full_name,
-          organizationId: organizationId,
-          employeeId: formData.employee_id,
+          full_name: formData.full_name,
+          organization_id: organizationId,
+          employee_id: formData.employee_id,
           designation: formData.designation,
-          mobileNumber: formData.mobile_number,
+          mobile_number: formData.mobile_number,
           role: formData.role,
-          email: formData.email,
-          isActive: true
+          is_active: true
         });
       }
       

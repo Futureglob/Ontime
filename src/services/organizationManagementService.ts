@@ -186,7 +186,7 @@
 
       async generateUserPin(userId: string, adminId: string): Promise<string> {
         try {
-          const pin = await authService.generatePinForUser(userId, adminId);
+          const { pin } = await authService.generatePinForUser(userId);
           return pin;
         } catch (error) {
           console.error("Error generating PIN:", error);
@@ -196,7 +196,7 @@
 
       async resetUserPin(userId: string, adminId: string): Promise<string> {
         try {
-          const pin = await authService.resetUserPin(userId, adminId);
+          const { pin } = await authService.resetUserPin(userId);
           return pin;
         } catch (error) {
           console.error("Error resetting PIN:", error);

@@ -158,13 +158,13 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           `${employee.employee_id.toUpperCase()}@${organizationId}.ontime`, 
           crypto.randomUUID(), // Generate a random password
           {
-            name: employee.full_name,
-            employeeId: employee.employee_id.toUpperCase(),
+            full_name: employee.full_name,
+            employee_id: employee.employee_id.toUpperCase(),
             designation: employee.designation,
-            mobileNumber: employee.mobile_number,
+            mobile_number: employee.mobile_number,
             role: employee.role,
-            organizationId: organizationId,
-            isActive: true
+            organization_id: organizationId,
+            is_active: true
           }
         );
         
@@ -172,7 +172,7 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           throw new Error("Failed to create user profile.");
         }
 
-        const pin = await authService.generatePin(newProfile.user.id, organizationId);
+        const { pin } = await authService.generatePinForUser(newProfile.user.id);
         
         results.push({
           success: true,
