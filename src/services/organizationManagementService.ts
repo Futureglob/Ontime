@@ -48,7 +48,6 @@
       status: string;
       assigned_user_name: string;
       created_at: string;
-      due_date: string | null;
     }
 
     export const organizationManagementService = {
@@ -138,7 +137,6 @@
               title,
               status,
               created_at,
-              due_date,
               assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name)
             `)
             .eq("organization_id", organizationId)
@@ -157,7 +155,6 @@
             title: string;
             status: string;
             created_at: string;
-            due_date: string | null;
             assigned_to_profile: { full_name: string; } | null;
           };
 
@@ -167,7 +164,6 @@
             status: task.status,
             assigned_user_name: task.assigned_to_profile?.full_name || "Unassigned",
             created_at: task.created_at,
-            due_date: task.due_date
           }));
         } catch (error) {
           console.error("Error fetching organization tasks:", error);

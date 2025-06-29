@@ -398,9 +398,6 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
                                 <Calendar className="h-3 w-3" />
                                 {new Date(task.created_at).toLocaleDateString()}
                               </span>
-                              {task.due_date && (
-                                <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
-                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
