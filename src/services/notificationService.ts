@@ -1,4 +1,6 @@
+
 import { pwaService } from "./pwaService";
+import type { Notification as NotificationType } from "@/types";
 
 export interface NotificationAction {
   action: string;
@@ -11,7 +13,7 @@ export interface NotificationOptions {
   icon?: string;
   badge?: string;
   tag?: string;
-  data?: Record<string, unknown>; // Changed from any to unknown
+  data?: Record<string, unknown>;
   actions?: NotificationAction[];
   silent?: boolean;
   requireInteraction?: boolean;
@@ -81,7 +83,7 @@ export const notificationService = {
         { action: "view", title: "View Task" },
         { action: "dismiss", title: "Dismiss" }
       ],
-      data: { type: "task_assigned", taskTitle }
+       { type: "task_assigned", taskTitle }
     });
   },
 
@@ -91,7 +93,7 @@ export const notificationService = {
       body: `${updatedBy} updated "${taskTitle}" to ${status.replace("_", " ")}`,
       tag: "task-status",
       icon: "/icons/icon-192x192.svg",
-      data: { type: "task_status", taskTitle, status }
+       { type: "task_status", taskTitle, status }
     });
   },
 
@@ -105,7 +107,7 @@ export const notificationService = {
         { action: "reply", title: "Reply" },
         { action: "view", title: "View Chat" }
       ],
-      data: { type: "message", senderName, taskTitle }
+       { type: "message", senderName, taskTitle }
     });
   },
 
@@ -115,7 +117,7 @@ export const notificationService = {
       body: `${itemCount} items synced successfully`,
       tag: "offline-sync",
       icon: "/icons/icon-192x192.svg",
-      data: { type: "sync", itemCount }
+       { type: "sync", itemCount }
     });
   },
 
@@ -130,7 +132,7 @@ export const notificationService = {
         { action: "view", title: "View Task" },
         { action: "snooze", title: "Remind Later" }
       ],
-      data: { type: "reminder", taskTitle, deadline }
+       { type: "reminder", taskTitle, deadline }
     });
   },
 
@@ -162,7 +164,7 @@ export const notificationService = {
   },
 
   // Handle notification clicks
-  handleNotificationClick(data: Record<string, unknown>): void {
+  handleNotificationClick( Record<string, unknown>): void {
     switch (data.notificationType) {
       case "task_assigned":
       case "task_status":
@@ -203,9 +205,10 @@ export const notificationService = {
   },
 
   // Add missing method for getting unread notifications
-  async getUnreadNotifications(userId: string): Promise<any[]> {
+  async getUnreadNotifications(userId: string): Promise<NotificationType[]> {
     // For now, return empty array - this would need to be implemented with a notifications table
     // TODO: Implement proper notification storage in Supabase
+    console.log("Fetching notifications for user:", userId);
     return [];
   }
 };
