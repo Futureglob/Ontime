@@ -194,10 +194,17 @@ export const notificationService = {
   },
 
   // Get unread notifications from a database (placeholder)
-  async getUnreadNotifications(userId: string): Promise<NotificationType[]> {
+  async getUnreadNotifications(): Promise<NotificationType[]> {
     // TODO: Implement proper notification storage and retrieval from Supabase
     // Removed console.log to prevent spam in console
     return [];
+  },
+
+  // Mark a notification as read
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    // TODO: Implement proper notification storage and retrieval from Supabase
+    // Removed console.log to prevent spam in console
+    console.log(`Marking notification ${notificationId} as read`);
   }
 };
 
