@@ -86,7 +86,7 @@ export const authService = {
       console.log("PIN Login attempt:", { employeeId, pin });
 
       // Use case-insensitive search for employee ID and ensure the user is active.
-      const {  profiles, error: profileError } = await supabase
+      const { data: profiles, error: profileError } = await supabase
         .from("profiles")
         .select(
           `
@@ -123,7 +123,7 @@ export const authService = {
       if (!profiles || profiles.length === 0) {
         console.warn("No active profile found for employee ID:", employeeId);
         // As a fallback, let's check if a user exists with that ID but is inactive
-        const {  inactiveProfile } = await supabase
+        const { data: inactiveProfile } = await supabase
           .from("profiles")
           .select("employee_id, is_active")
           .ilike("employee_id", employeeId)
