@@ -81,35 +81,24 @@ export const messageService = {
 
   async getUnreadMessageCount(userId: string): Promise<number> {
     try {
-      // First get user's tasks with simple queries
-      const { data: assignedTasks } = await supabase
+      // Simplified approach - get tasks first, then count messages
+      const { data: userTasks } = await supabase
         .from("tasks")
         .select("id")
-        .eq("assigned_to", userId);
+        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
 
-      const { data: createdTasks } = await supabase
-        .from("tasks")
-        .select("id")
-        .eq("assigned_by", userId);
+      if (!userTasks || userTasks.length === 0) return 0;
 
-      const taskIds = [
-        ...(assignedTasks?.map(t => t.id) || []),
-        ...(createdTasks?.map(t => t.id) || [])
-      ];
+      const taskIds = userTasks.map(t => t.id);
 
-      if (taskIds.length === 0) return 0;
-
-      const { count, error } = await supabase
+      // Count unread messages for these tasks
+      const { count } = await supabase
         .from("messages")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
+        .in("task_id", taskIds)
         .eq("is_read", false)
-        .neq("sender_id", userId)
-        .in("task_id", taskIds);
+        .neq("sender_id", userId);
 
-      if (error) {
-        console.error("Error fetching unread message count:", error);
-        return 0;
-      }
       return count || 0;
     } catch (error) {
       console.error("Error fetching unread message count:", error);
@@ -119,29 +108,18 @@ export const messageService = {
 
   async getTaskConversations(userId: string) {
     try {
-      // Get tasks assigned to user
-      const { data: assignedTasks } = await supabase
+      // Get user's tasks with simplified query
+      const { data: userTasks } = await supabase
         .from("tasks")
         .select("*")
-        .eq("assigned_to", userId);
+        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
 
-      // Get tasks created by user
-      const { data: createdTasks } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("assigned_by", userId);
+      if (!userTasks || userTasks.length === 0) return [];
 
-      const allTasks = [
-        ...(assignedTasks || []),
-        ...(createdTasks || [])
-      ];
-
-      if (allTasks.length === 0) return [];
-
-      // Get all unique user IDs for profiles
+      // Get profiles for all users involved
       const userIds = [...new Set([
-        ...allTasks.map(t => t.assigned_to),
-        ...allTasks.map(t => t.assigned_by)
+        ...userTasks.map(t => t.assigned_to),
+        ...userTasks.map(t => t.assigned_by)
       ].filter(Boolean))];
 
       const { data: profiles } = await supabase
@@ -151,8 +129,9 @@ export const messageService = {
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
+      // Process each task to get conversation data
       const conversations = await Promise.all(
-        allTasks.map(async (task) => {
+        userTasks.map(async (task) => {
           // Get last message for this task
           const { data: lastMessage } = await supabase
             .from("messages")
@@ -165,7 +144,7 @@ export const messageService = {
           // Get unread count for this task
           const { count: unreadCount } = await supabase
             .from("messages")
-            .select("*", { count: "exact", head: true })
+            .select("id", { count: "exact", head: true })
             .eq("task_id", task.id)
             .eq("is_read", false)
             .neq("sender_id", userId);
