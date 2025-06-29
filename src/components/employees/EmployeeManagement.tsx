@@ -28,7 +28,9 @@ export default function EmployeeManagement() {
     }
 
     try {
+      console.log("Loading user profile for:", user.id);
       const profile = await profileService.getProfile(user.id);
+      console.log("Loaded user profile:", profile);
       setUserProfile(profile);
     } catch (error) {
       console.error("Error loading user profile:", error);
@@ -38,6 +40,7 @@ export default function EmployeeManagement() {
 
   const loadEmployees = useCallback(async () => {
     if (!user || !userProfile) {
+      console.log("No user or userProfile, skipping employee load");
       setLoading(false);
       return;
     }
@@ -50,8 +53,10 @@ export default function EmployeeManagement() {
     }
 
     try {
+      console.log("Loading employees for organization:", userProfile.organization_id);
       const employeesData = await profileService.getOrganizationProfiles(userProfile.organization_id);
-      setEmployees(employeesData as Profile[]);
+      console.log("Loaded employees:", employeesData);
+      setEmployees(employeesData);
     } catch (error) {
       console.error("Error loading employees:", error);
       setEmployees([]);
@@ -69,6 +74,16 @@ export default function EmployeeManagement() {
       loadEmployees();
     }
   }, [userProfile, loadEmployees]);
+
+  // Add debug effect for state changes
+  useEffect(() => {
+    console.log("Current state:", {
+      user: !!user,
+      userProfile: !!userProfile,
+      loading,
+      employeesCount: employees.length
+    });
+  }, [user, userProfile, loading, employees]);
 
   const handleEmployeeCreated = () => {
     setShowEmployeeForm(false);
