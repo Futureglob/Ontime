@@ -217,7 +217,9 @@ export const authService = {
 
   async logPinAttempt(userId: string | null, action: string, details?: string, createdBy?: string) {
     try {
-      await supabase
+      // Make PIN audit logging optional to prevent blocking authentication
+      // Only log if the table exists and is accessible
+      const { error } = await supabase
         .from("pin_audit_logs")
         .insert({
           user_id: userId,
@@ -227,8 +229,14 @@ export const authService = {
           user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "server",
           created_by: createdBy || userId
         });
+      
+      // Don't throw error if logging fails - just log to console
+      if (error) {
+        console.warn("PIN audit logging failed (non-critical):", error);
+      }
     } catch (error) {
-      console.error("Failed to log PIN attempt:", error);
+      // Silently handle logging errors to prevent blocking authentication
+      console.warn("PIN audit logging failed (non-critical):", error);
     }
   },
 
