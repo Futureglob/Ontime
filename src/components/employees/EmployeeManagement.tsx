@@ -28,6 +28,7 @@ export default function EmployeeManagement() {
         setUserProfile(profile);
       } catch (error) {
         console.error("Error loading user profile:", error);
+        setUserProfile(null);
       }
     }
   }, [user]);
@@ -40,20 +41,33 @@ export default function EmployeeManagement() {
         setEmployees(employeesData as Profile[]);
       } catch (error) {
         console.error("Error loading employees:", error);
+        setEmployees([]);
       } finally {
         setLoading(false);
       }
+    } else if (userProfile && !userProfile.organization_id) {
+      // User profile exists but no organization_id - clear loading state
+      console.warn("User profile has no organization_id");
+      setEmployees([]);
+      setLoading(false);
+    } else if (user && userProfile === null) {
+      // User exists but profile failed to load - clear loading state
+      console.warn("Failed to load user profile");
+      setEmployees([]);
+      setLoading(false);
     }
   }, [user, userProfile]);
 
   useEffect(() => {
     if (user) {
       loadUserProfile();
+    } else {
+      setLoading(false);
     }
   }, [user, loadUserProfile]);
 
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile !== null) {
       loadEmployees();
     }
   }, [userProfile, loadEmployees]);
