@@ -17,8 +17,8 @@ import { Task } from "@/types/database";
 interface ChatConversation {
   task_id: string;
   task: Task & {
-    assigned_to_profile?: { full_name: string; role: string; avatar_url?: string };
-    assigned_by_profile?: { full_name: string; role: string; avatar_url?: string };
+    assigned_to_profile?: { full_name: string; designation: string; avatar_url?: string };
+    assigned_by_profile?: { full_name: string; designation: string; avatar_url?: string };
   };
   lastMessage?: {
     content: string;
@@ -108,7 +108,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
     }
   };
 
-  const getOtherParticipant = (conversationTask: Task & { assigned_to_profile?: { full_name: string; role: string; avatar_url?: string }; assigned_by_profile?: { full_name: string; role: string; avatar_url?: string } }) => {
+  const getOtherParticipant = (conversationTask: Task & { assigned_to_profile?: { full_name: string; designation: string; avatar_url?: string }; assigned_by_profile?: { full_name: string; designation: string; avatar_url?: string } }) => {
     if (!user) return null;
     
     if (user.id === conversationTask.assigned_to) {
