@@ -9,7 +9,7 @@ import { Plus, Search, User, Phone, Calendar, Edit, Trash2 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
 // Removed authService
-import { Profile, UserRole } from "@/types/database";
+import { Profile } from "@/types/database";
 import EmployeeForm from "./EmployeeForm";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
