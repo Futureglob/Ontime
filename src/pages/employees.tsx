@@ -5,24 +5,27 @@ import EmployeeManagement from "@/components/employees/EmployeeManagement";
 import LoginForm from "@/components/auth/LoginForm";
 
 export default function EmployeesPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Only show loading when auth is loading and component is mounted
+  // Show loading while checking authentication
   if (!mounted || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600 mx-auto mb-4"></div>
+          <div className="text-lg">Loading...</div>
+        </div>
       </div>
     );
   }
 
-  // Show login form if no user
-  if (!user) {
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
     return <LoginForm />;
   }
 
