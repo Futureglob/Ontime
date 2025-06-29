@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface OrganizationUser {
@@ -33,7 +34,7 @@ export interface TaskSummary {
   id: string;
   title: string;
   status: string;
-  priority?: string; // Making priority optional as it might not exist
+  priority?: string;
   assigned_to?: string;
   assigned_user_name?: string;
   created_at: string;
@@ -43,9 +44,10 @@ export interface TaskSummary {
 export const organizationManagementService = {
   async getOrganizationDetails(orgId: string): Promise<OrganizationDetails> {
     try {
-      // Use an RPC call to get all organization data in one go, including user emails.
+      // Use an RPC call to get all organization data in one go.
       // This RPC function needs to be created in the Supabase dashboard.
-      const { data, error } = await supabase.rpc("get_organization_details", {
+      // We cast to `any` because the generated types might not be updated with the new function.
+      const { data, error } = await (supabase as any).rpc("get_organization_details", {
         org_id: orgId,
       });
 
@@ -103,7 +105,7 @@ export const organizationManagementService = {
         id: task.id,
         title: task.title,
         status: task.status || "pending",
-        priority: task.priority || "medium", // Safely access priority
+        priority: task.priority || "medium",
         assigned_to: task.assigned_to,
         assigned_user_name: task.profiles?.full_name || "Unassigned",
         created_at: task.created_at,
@@ -112,29 +114,6 @@ export const organizationManagementService = {
     } catch (error) {
       console.error("Error fetching organization tasks:", error);
       return [];
-    }
-  },
-
-  async resetUserPassword(userId: string, newPassword: string): Promise<void> {
-    try {
-      // Note: This requires admin privileges in Supabase
-      // In a real implementation, you would need to use the Supabase Admin API
-      // For now, we'll simulate the password reset process
-      
-      console.log("Password reset would be performed for user:", userId);
-      console.log("New password length:", newPassword.length);
-      
-      // In a real implementation, you would:
-      // 1. Use Supabase Admin SDK to update the user's password
-      // 2. Send a password reset email
-      // 3. Log the action for audit purposes
-      
-      // Simulated implementation:
-      throw new Error("Password reset functionality requires Supabase Admin API access. Please implement using service role credentials.");
-      
-    } catch (error) {
-      console.error("Error resetting user password:", error);
-      throw error;
     }
   },
 
@@ -184,7 +163,6 @@ export const organizationManagementService = {
 
   async deleteUser(userId: string): Promise<void> {
     try {
-      // First, check if user has any assigned tasks
       const { count: taskCount } = await supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
@@ -194,7 +172,6 @@ export const organizationManagementService = {
         throw new Error("Cannot delete user with assigned tasks. Please reassign or complete tasks first.");
       }
 
-      // Delete the profile (this won't delete the auth user, just the profile)
       const { error } = await supabase
         .from("profiles")
         .delete()
@@ -202,7 +179,6 @@ export const organizationManagementService = {
 
       if (error) throw error;
 
-      // Note: To fully delete the auth user, you would need admin privileges
       console.log("Profile deleted. Auth user still exists and would need admin API to delete.");
     } catch (error) {
       console.error("Error deleting user:", error);
@@ -233,7 +209,7 @@ export const organizationManagementService = {
 
       return JSON.stringify(exportData, null, 2);
     } catch (error) {
-      console.error("Error exporting organization data:", error);
+      console.error("Error exporting organization ", error);
       throw error;
     }
   }
