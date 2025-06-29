@@ -12,7 +12,7 @@ import EmployeeForm from "./EmployeeForm";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function EmployeeManagement() {
-  const { user } = useAuth();
+  const { user, profile: authProfile } = useAuth();
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,18 +22,27 @@ export default function EmployeeManagement() {
   const [editingEmployee, setEditingEmployee] = useState<Profile | null>(null);
 
   const loadUserProfile = useCallback(async () => {
-    if (!user) {
+    // Check for either user.id or authProfile
+    if (!user?.id && !authProfile) {
       setLoading(false);
       return;
     }
 
     try {
-      const profile = await profileService.getProfile(user.id);
+      let profile;
+      if (user?.id) {
+        profile = await profileService.getProfile(user.id);
+      } else if (authProfile) {
+        // If we have authProfile from PIN login, use it directly
+        profile = authProfile;
+      }
+
       if (!profile) {
         setError("User profile not found");
         setLoading(false);
         return;
       }
+      
       setUserProfile(profile);
       setError(null);
     } catch (error) {
@@ -43,7 +52,7 @@ export default function EmployeeManagement() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, authProfile]);
 
   const loadEmployees = useCallback(async () => {
     if (!userProfile?.organization_id) {
