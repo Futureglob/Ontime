@@ -1,5 +1,6 @@
 
-// import { supabase } from "@/integrations/supabase/client"; // This is unused for now as the service is mocked
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface TaskOverview {
   totalTasks: number;
@@ -36,114 +37,325 @@ export interface TimeAnalytic {
 }
 
 export interface EmployeePerformance {
-    name: string;
-    completed: number;
-    pending: number;
-    overdue: number;
-    efficiency: number;
+  name: string;
+  completed: number;
+  pending: number;
+  overdue: number;
+  efficiency: number;
 }
 
 export interface LocationAnalytics {
-    location: string;
-    taskCount: number;
-    completionRate: number;
-    averageDistance: number;
-    averageDuration: number;
+  location: string;
+  taskCount: number;
+  completionRate: number;
+  averageDistance: number;
+  averageDuration: number;
 }
 
 export const analyticsService = {
-  async getTaskAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }) {
-    console.log("getTaskAnalytics called with", organizationId, dateRange);
-    return {
-      totalTasks: 100,
-      completedTasks: 80,
-      pendingTasks: 15,
-      overdueTasks: 5,
-      completionRate: 80,
-      avgCompletionTime: 4.5, // in hours
-    };
-  },
-
-  async getEmployeePerformance(organizationId?: string, dateRange?: { start: Date; end: Date; }): Promise<EmployeePerformance[]> {
-    console.log("getEmployeePerformance called with", organizationId, dateRange);
-    return [
-      { name: "John Doe", completed: 25, pending: 3, overdue: 1, efficiency: 89 },
-      { name: "Jane Smith", completed: 30, pending: 2, overdue: 0, efficiency: 94 },
-      { name: "Mike Johnson", completed: 20, pending: 5, overdue: 2, efficiency: 74 },
-    ];
-  },
-
-  async getLocationAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }): Promise<LocationAnalytics[]> {
-    console.log("getLocationAnalytics called with", organizationId, dateRange);
-    return [
-      { location: "Downtown", taskCount: 45, completionRate: 85, averageDistance: 5.2, averageDuration: 15 },
-      { location: "Suburbs", taskCount: 35, completionRate: 78, averageDistance: 12.5, averageDuration: 25 },
-      { location: "Industrial", taskCount: 70, completionRate: 82, averageDistance: 8.1, averageDuration: 20 },
-    ];
-  },
-
-  async getTimeSeriesData(organizationId?: string, days: number = 30) {
-    console.log("getTimeSeriesData called with", organizationId, days);
-    const data = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      data.push({
-        date: date.toISOString().split("T")[0],
-        completed: Math.floor(Math.random() * 20) + 10,
-        created: Math.floor(Math.random() * 15) + 15,
-      });
-    }
-    return data;
-  },
-
   async getTaskOverview(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<TaskOverview> {
-    console.log("getTaskOverview called with", organizationId, dateRange);
-    // Mock implementation
+    try {
+      let query = supabase
+        .from("tasks")
+        .select("*")
+        .eq("organization_id", organizationId);
+
+      if (dateRange?.from && dateRange?.to) {
+        query = query
+          .gte("created_at", dateRange.from.toISOString())
+          .lte("created_at", dateRange.to.toISOString());
+      }
+
+      const { data: tasks, error: tasksError } = await query;
+      if (tasksError) throw tasksError;
+
+      const { data: employees, error: employeesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("organization_id", organizationId);
+      if (employeesError) throw employeesError;
+
+      const totalTasks = tasks?.length || 0;
+      const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
+      const inProgressTasks = tasks?.filter(t => t.status === "in_progress").length || 0;
+      const pendingTasks = tasks?.filter(t => t.status === "assigned").length || 0;
+      const overdueTasks = tasks?.filter(t => {
+        if (!t.deadline) return false;
+        return new Date(t.deadline) < new Date() && t.status !== "completed";
+      }).length || 0;
+
+      const totalEmployees = employees?.length || 0;
+      const activeEmployees = employees?.filter(e => e.is_active).length || 0;
+      const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+      return {
+        totalTasks,
+        completedTasks,
+        inProgressTasks,
+        pendingTasks,
+        overdueTasks,
+        totalEmployees,
+        activeEmployees,
+        completionRate,
+        avgCompletionTime: 4.5, // Calculate from actual data later
+        totalWorkingHours: completedTasks * 4.5, // Estimate
+        averageTasksPerEmployee: activeEmployees > 0 ? totalTasks / activeEmployees : 0,
+        totalTravelDistance: 0, // Calculate from location data later
+      };
+    } catch (error) {
+      console.error("Error fetching task overview:", error);
+      // Return fallback data
+      return {
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        pendingTasks: 0,
+        overdueTasks: 0,
+        totalEmployees: 0,
+        activeEmployees: 0,
+        completionRate: 0,
+        avgCompletionTime: 0,
+        totalWorkingHours: 0,
+        averageTasksPerEmployee: 0,
+        totalTravelDistance: 0,
+      };
+    }
+  },
+
+  async getEmployeePerformance(organizationId: string, dateRange?: { start: Date; end: Date; }): Promise<EmployeePerformance[]> {
+    try {
+      const { data: employees, error: employeesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .eq("role", "employee");
+      if (employeesError) throw employeesError;
+
+      const performance = await Promise.all(
+        (employees || []).map(async (employee) => {
+          let taskQuery = supabase
+            .from("tasks")
+            .select("*")
+            .eq("assigned_to", employee.id);
+
+          if (dateRange?.start && dateRange?.end) {
+            taskQuery = taskQuery
+              .gte("created_at", dateRange.start.toISOString())
+              .lte("created_at", dateRange.end.toISOString());
+          }
+
+          const { data: tasks } = await taskQuery;
+          const userTasks = tasks || [];
+
+          const completed = userTasks.filter(t => t.status === "completed").length;
+          const pending = userTasks.filter(t => t.status === "assigned").length;
+          const overdue = userTasks.filter(t => {
+            if (!t.deadline) return false;
+            return new Date(t.deadline) < new Date() && t.status !== "completed";
+          }).length;
+
+          const total = userTasks.length;
+          const efficiency = total > 0 ? (completed / total) * 100 : 0;
+
+          return {
+            name: employee.full_name || "Unknown Employee",
+            completed,
+            pending,
+            overdue,
+            efficiency: Math.round(efficiency),
+          };
+        })
+      );
+
+      return performance;
+    } catch (error) {
+      console.error("Error fetching employee performance:", error);
+      return [];
+    }
+  },
+
+  async getLocationAnalytics(organizationId: string, dateRange?: { start: Date; end: Date; }): Promise<LocationAnalytics[]> {
+    try {
+      let query = supabase
+        .from("tasks")
+        .select("location, status")
+        .eq("organization_id", organizationId)
+        .not("location", "is", null);
+
+      if (dateRange?.start && dateRange?.end) {
+        query = query
+          .gte("created_at", dateRange.start.toISOString())
+          .lte("created_at", dateRange.end.toISOString());
+      }
+
+      const { data: tasks, error } = await query;
+      if (error) throw error;
+
+      const locationMap = new Map<string, { total: number; completed: number }>();
+
+      (tasks || []).forEach(task => {
+        if (!task.location) return;
+        
+        const current = locationMap.get(task.location) || { total: 0, completed: 0 };
+        current.total += 1;
+        if (task.status === "completed") {
+          current.completed += 1;
+        }
+        locationMap.set(task.location, current);
+      });
+
+      return Array.from(locationMap.entries()).map(([location, stats]) => ({
+        location,
+        taskCount: stats.total,
+        completionRate: stats.total > 0 ? (stats.completed / stats.total) * 100 : 0,
+        averageDistance: 0, // Calculate from GPS data later
+        averageDuration: 0, // Calculate from time tracking later
+      }));
+    } catch (error) {
+      console.error("Error fetching location analytics:", error);
+      return [];
+    }
+  },
+
+  async getTimeSeriesData(organizationId: string, days: number = 30): Promise<TaskTrend[]> {
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data: tasks, error } = await supabase
+        .from("tasks")
+        .select("created_at, status, updated_at")
+        .eq("organization_id", organizationId)
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString());
+
+      if (error) throw error;
+
+      const dateMap = new Map<string, { created: number; completed: number }>();
+
+      // Initialize all dates
+      for (let i = 0; i < days; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split("T")[0];
+        dateMap.set(dateStr, { created: 0, completed: 0 });
+      }
+
+      // Count created tasks
+      (tasks || []).forEach(task => {
+        const createdDate = new Date(task.created_at).toISOString().split("T")[0];
+        const current = dateMap.get(createdDate);
+        if (current) {
+          current.created += 1;
+        }
+      });
+
+      // Count completed tasks (by updated_at when status changed to completed)
+      (tasks || []).filter(t => t.status === "completed").forEach(task => {
+        const completedDate = new Date(task.updated_at || task.created_at).toISOString().split("T")[0];
+        const current = dateMap.get(completedDate);
+        if (current) {
+          current.completed += 1;
+        }
+      });
+
+      return Array.from(dateMap.entries()).map(([date, stats]) => ({
+        date,
+        created: stats.created,
+        completed: stats.completed,
+      }));
+    } catch (error) {
+      console.error("Error fetching time series data:", error);
+      return [];
+    }
+  },
+
+  // Legacy methods for backward compatibility
+  async getTaskAnalytics(organizationId?: string, dateRange?: { start: Date; end: Date; }) {
+    if (!organizationId) return { totalTasks: 0, completedTasks: 0, pendingTasks: 0, overdueTasks: 0, completionRate: 0, avgCompletionTime: 0 };
+    const overview = await this.getTaskOverview(organizationId, dateRange ? { from: dateRange.start, to: dateRange.end } : undefined);
     return {
-      totalTasks: 150,
-      completedTasks: 120,
-      inProgressTasks: 10,
-      pendingTasks: 25,
-      overdueTasks: 5,
-      totalEmployees: 45,
-      activeEmployees: 42,
-      completionRate: 80,
-      avgCompletionTime: 4.5,
-      totalWorkingHours: 340.5,
-      averageTasksPerEmployee: 3.5,
-      totalTravelDistance: 150.2,
+      totalTasks: overview.totalTasks,
+      completedTasks: overview.completedTasks,
+      pendingTasks: overview.pendingTasks,
+      overdueTasks: overview.overdueTasks,
+      completionRate: overview.completionRate,
+      avgCompletionTime: overview.avgCompletionTime,
     };
   },
 
   async getTaskTrends(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<TaskTrend[]> {
-    console.log("getTaskTrends called with", organizationId, dateRange);
-    // Mock implementation
-    return [
-      { date: "2024-01-01", completed: 10, created: 15, pending: 5 },
-      { date: "2024-01-02", completed: 12, created: 18, pending: 6 },
-      { date: "2024-01-03", completed: 8, created: 12, pending: 4 }
-    ];
+    const days = dateRange?.from && dateRange?.to 
+      ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))
+      : 30;
+    return this.getTimeSeriesData(organizationId, days);
   },
 
   async getTasksByStatus(organizationId: string): Promise<TaskByStatus[]> {
-    console.log("getTasksByStatus called with", organizationId);
-    // Mock implementation
-    return [
-      { status: "Completed", count: 120, percentage: 80 },
-      { status: "Pending", count: 25, percentage: 17 },
-      { status: "Overdue", count: 5, percentage: 3 }
-    ];
+    try {
+      const { data: tasks, error } = await supabase
+        .from("tasks")
+        .select("status")
+        .eq("organization_id", organizationId);
+
+      if (error) throw error;
+
+      const statusMap = new Map<string, number>();
+      const total = tasks?.length || 0;
+
+      (tasks || []).forEach(task => {
+        const count = statusMap.get(task.status) || 0;
+        statusMap.set(task.status, count + 1);
+      });
+
+      return Array.from(statusMap.entries()).map(([status, count]) => ({
+        status: status.charAt(0).toUpperCase() + status.slice(1).replace("_", " "),
+        count,
+        percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching tasks by status:", error);
+      return [];
+    }
   },
 
   async getTimeAnalytics(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<TimeAnalytic[]> {
-    console.log("getTimeAnalytics called with", organizationId, dateRange);
-    // Mock implementation
-    return [
-      { hour: 8, taskCount: 15, completionRate: 90 },
-      { hour: 10, taskCount: 25, completionRate: 85 },
-      { hour: 14, taskCount: 30, completionRate: 88 },
-      { hour: 16, taskCount: 20, completionRate: 75 }
-    ];
+    try {
+      let query = supabase
+        .from("tasks")
+        .select("created_at, status")
+        .eq("organization_id", organizationId);
+
+      if (dateRange?.from && dateRange?.to) {
+        query = query
+          .gte("created_at", dateRange.from.toISOString())
+          .lte("created_at", dateRange.to.toISOString());
+      }
+
+      const { data: tasks, error } = await query;
+      if (error) throw error;
+
+      const hourMap = new Map<number, { total: number; completed: number }>();
+
+      (tasks || []).forEach(task => {
+        const hour = new Date(task.created_at).getHours();
+        const current = hourMap.get(hour) || { total: 0, completed: 0 };
+        current.total += 1;
+        if (task.status === "completed") {
+          current.completed += 1;
+        }
+        hourMap.set(hour, current);
+      });
+
+      return Array.from(hourMap.entries()).map(([hour, stats]) => ({
+        hour,
+        taskCount: stats.total,
+        completionRate: stats.total > 0 ? (stats.completed / stats.total) * 100 : 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching time analytics:", error);
+      return [];
+    }
   }
 };
