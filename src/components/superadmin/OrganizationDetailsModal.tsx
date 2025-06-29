@@ -26,6 +26,7 @@ import {
 import { organizationManagementService, OrganizationDetails, OrganizationUser, TaskSummary } from "@/services/organizationManagementService";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/toast";
 
 interface OrganizationDetailsModalProps {
   isOpen: boolean;
@@ -41,6 +42,8 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [generatedPin, setGeneratedPin] = useState<string | null>(null);
+  const [auth] = useState(() => supabase.auth.getSession().data);
 
   const loadOrganizationData = useCallback(async () => {
     if (!organizationId) return;
@@ -82,21 +85,49 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
     }
   };
 
-  const handleResetPin = async (user: OrganizationUser) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-        alert("You must be logged in to perform this action.");
-        return;
+  const handleGeneratePin = async (userId: string) => {
+    if (!auth.user) return;
+    setLoading(true);
+    try {
+      const pin = await organizationManagementService.generateUserPin(userId);
+      setGeneratedPin(pin);
+      toast({
+        title: "PIN Generated Successfully",
+        description: `A new PIN has been generated for the user. Please share this securely.`,
+        variant: "success",
+      });
+      loadOrganizationData();
+    } catch (error) {
+      toast({
+        title: "Failed to Generate PIN",
+        description: `An error occurred while generating the PIN: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (confirm(`Are you sure you want to reset the PIN for ${user.full_name}? A new PIN will be generated.`)) {
-      try {
-        const newPin = await organizationManagementService.resetUserPin(user.id, session.user.id);
-        alert(`PIN for ${user.full_name} has been reset. New PIN: ${newPin}. Please share this securely.`);
-        loadOrganizationData();
-      } catch (error) {
-        alert("Failed to reset PIN: " + (error as Error).message);
-      }
+  const handleResetPin = async (userId: string) => {
+    if (!auth.user) return;
+    setLoading(true);
+    try {
+      const pin = await organizationManagementService.resetUserPin(userId);
+      setGeneratedPin(pin);
+      toast({
+        title: "PIN Reset Successfully",
+        description: `The user's PIN has been reset. Please share this securely.`,
+        variant: "success",
+      });
+      loadOrganizationData();
+    } catch (error) {
+      toast({
+        title: "Failed to Reset PIN",
+        description: `An error occurred while resetting the PIN: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -345,7 +376,11 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
                                 <Key className="h-4 w-4 mr-2" />
                                 Reset Password
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleResetPin(user)}>
+                              <DropdownMenuItem onClick={() => handleGeneratePin(user.id)}>
+                                <RefreshCcw className="h-4 w-4 mr-2" />
+                                Generate PIN
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleResetPin(user.id)}>
                                 <RefreshCcw className="h-4 w-4 mr-2" />
                                 Reset PIN
                               </DropdownMenuItem>
