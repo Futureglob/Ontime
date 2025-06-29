@@ -275,18 +275,15 @@ export const authService = {
   async logPinAttempt(userId: string | null, action: string, details?: string, createdBy?: string) {
     // Completely disable PIN audit logging to prevent 400 errors
     // This can be re-enabled once the pin_audit_logs table is properly configured
-    try {
-      console.log("PIN Audit Log (disabled):", {
-        user_id: userId,
-        action,
-        details,
-        created_by: createdBy || userId,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      // Silently handle any logging errors
-      console.warn("PIN audit logging failed (non-critical):", error);
-    }
+    console.log("PIN Audit Log (disabled):", {
+      user_id: userId,
+      action,
+      details,
+      created_by: createdBy || userId,
+      timestamp: new Date().toISOString()
+    });
+    // No database calls to prevent 400 errors
+    return Promise.resolve();
   },
 
   async signUp(email: string, password: string, userData?: Partial<AuthUser>) {
