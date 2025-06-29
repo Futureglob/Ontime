@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Users, Settings, Shield, Globe, Calendar } from "lucide-react";
+import { Building2, Settings, Shield, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Organization {
@@ -37,6 +36,12 @@ interface OrganizationSettings {
   working_hours_end: string;
 }
 
+interface UserProfile {
+  id: string;
+  organization_id: string;
+  role: "organization_admin" | "super_admin" | "task_manager" | "employee";
+}
+
 export default function OrganizationSettings() {
   const { user } = useAuth();
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -51,15 +56,11 @@ export default function OrganizationSettings() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadOrganizationData();
-    }
-  }, [user]);
-
-  const loadOrganizationData = async () => {
+  const loadOrganizationData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
     try {
       // First get user profile to find organization
       const { data: profile, error: profileError } = await supabase
@@ -69,7 +70,7 @@ export default function OrganizationSettings() {
         .single();
 
       if (profileError) throw profileError;
-      setUserProfile(profile);
+      setUserProfile(profile as UserProfile);
 
       if (!profile.organization_id) {
         setLoading(false);
@@ -110,7 +111,11 @@ export default function OrganizationSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadOrganizationData();
+  }, [loadOrganizationData]);
 
   const updateOrganization = async () => {
     if (!organization || !userProfile?.organization_id) return;

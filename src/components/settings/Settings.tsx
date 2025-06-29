@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -38,13 +37,8 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadUserSettings();
-    }
-  }, [user]);
-
-  const loadUserSettings = async () => {
+  const loadUserSettings = useCallback(async () => {
+    if (!user) return;
     try {
       const { data, error } = await supabase
         .from("user_settings")
@@ -69,7 +63,11 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadUserSettings();
+  }, [loadUserSettings]);
 
   const saveSettings = async () => {
     if (!user) return;

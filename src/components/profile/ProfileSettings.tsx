@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Mail, Phone, MapPin, Calendar, Shield, Camera } from "lucide-react";
+import { User, Calendar, Shield, Camera } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Profile {
@@ -40,13 +39,8 @@ export default function ProfileSettings() {
   });
   const [changingPassword, setChangingPassword] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
-  }, [user]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
+    if (!user) return;
     try {
       const { data, error } = await supabase
         .from("profiles")
@@ -66,7 +60,11 @@ export default function ProfileSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const updateProfile = async () => {
     if (!profile || !user) return;
