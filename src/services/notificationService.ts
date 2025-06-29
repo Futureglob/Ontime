@@ -22,6 +22,7 @@ export interface NotificationOptions {
 export const notificationService = {
   // Check if notifications are supported and permission granted
   isSupported(): boolean {
+    if (typeof window === "undefined") return false;
     return "Notification" in window && "serviceWorker" in navigator;
   },
 
@@ -60,8 +61,7 @@ export const notificationService = {
       ...options
     };
 
-    // Try to use service worker for better notification handling
-    if ("serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator && navigator.serviceWorker.ready) {
       const registration = await navigator.serviceWorker.ready;
       if (registration.showNotification) {
         await registration.showNotification(title, defaultOptions);
@@ -69,7 +69,6 @@ export const notificationService = {
       }
     }
 
-    // Fallback to regular notification
     new Notification(title, defaultOptions);
   },
 
@@ -145,7 +144,7 @@ export const notificationService = {
 
   // Clear all notifications with a specific tag
   async clearNotifications(tag: string): Promise<void> {
-    if ("serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator && navigator.serviceWorker.ready) {
       const registration = await navigator.serviceWorker.ready;
       const notifications = await registration.getNotifications({ tag });
       notifications.forEach(notification => notification.close());
@@ -155,9 +154,9 @@ export const notificationService = {
   // Setup notification click handlers
   setupNotificationHandlers(): void {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", (event: MessageEvent) => { // Added MessageEvent type
+      navigator.serviceWorker.addEventListener("message", (event: MessageEvent) => {
         if (event.data && event.data.type === "notification-click") {
-          this.handleNotificationClick(event.data as Record<string, unknown>); // Cast data to Record<string, unknown>
+          this.handleNotificationClick(event.data.data as Record<string, unknown>);
         }
       });
     }
@@ -165,22 +164,17 @@ export const notificationService = {
 
   // Handle notification clicks
   handleNotificationClick( Record<string, unknown>): void {
-    switch (data.notificationType) {
+    if (typeof window === "undefined") return;
+    switch (data?.type) {
       case "task_assigned":
       case "task_status":
-        // Navigate to tasks page
+      case "reminder":
         window.location.href = "/tasks";
         break;
       case "message":
-        // Navigate to chat
-        window.location.href = "/tasks"; // Could be enhanced to open specific chat
-        break;
-      case "reminder":
-        // Navigate to specific task
-        window.location.href = "/tasks";
+        window.location.href = "/chat";
         break;
       default:
-        // Default action
         window.focus();
     }
   },
@@ -192,22 +186,17 @@ export const notificationService = {
       return;
     }
 
-    // Request permission on initialization
     await this.requestPermission();
-    
-    // Setup handlers
     this.setupNotificationHandlers();
     
-    // Register with PWA service for background notifications
-    if (pwaService.isInstalled()) { // Corrected: pwaService.isInstalled() exists
-      await pwaService.registerBackgroundSync("ontime-sync"); // Corrected: pwaService.registerBackgroundSync() exists and expects a tag
+    if (await pwaService.isInstalled()) {
+      await pwaService.registerBackgroundSync("ontime-sync");
     }
   },
 
-  // Add missing method for getting unread notifications
+  // Get unread notifications from a database (placeholder)
   async getUnreadNotifications(userId: string): Promise<NotificationType[]> {
-    // For now, return empty array - this would need to be implemented with a notifications table
-    // TODO: Implement proper notification storage in Supabase
+    // TODO: Implement proper notification storage and retrieval from Supabase
     console.log("Fetching notifications for user:", userId);
     return [];
   }
