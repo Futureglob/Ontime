@@ -1,218 +1,286 @@
-import { supabase } from "@/integrations/supabase/client";
 
-export interface OrganizationUser {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  employee_id?: string;
-  designation?: string;
-  mobile_number?: string;
-  is_active: boolean;
-  last_login?: string;
-  created_at: string;
-  updated_at?: string;
-}
+    import { supabase } from "@/integrations/supabase/client";
+    import { authService } from "./authService";
 
-export interface OrganizationDetails {
-  id: string;
-  name: string;
-  logo_url?: string;
-  primary_color?: string;
-  secondary_color?: string;
-  contact_person?: string;
-  contact_email?: string;
-  is_active: boolean;
-  created_at: string;
-  user_count: number;
-  task_count: number;
-  users: OrganizationUser[];
-}
-
-export interface TaskSummary {
-  id: string;
-  title: string;
-  status: string;
-  priority?: string;
-  assigned_to?: string;
-  assigned_user_name?: string;
-  created_at: string;
-  due_date?: string;
-}
-
-// Define a type for the shape of the task data returned from the query
-type TaskFromQuery = {
-  id: string;
-  title: string;
-  status: string;
-  assigned_to?: string | null;
-  created_at: string;
-  profiles: { full_name: string } | null;
-};
-
-export const organizationManagementService = {
-  async getOrganizationDetails(orgId: string): Promise<OrganizationDetails> {
-    try {
-      // The `rpc` call is not strongly typed by default for functions not in generated types.
-      // Using a type assertion here is a pragmatic approach to call the custom database function.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).rpc("get_organization_details", {
-        org_id: orgId,
-      });
-
-      if (error) throw error;
-      if (!data) throw new Error("Organization not found.");
-
-      // We cast the result to our expected interface.
-      const details = data as OrganizationDetails;
-
-      return {
-        ...details,
-        users: details.users.map((user: OrganizationUser) => ({
-            ...user,
-            email: user.email || "no-email@system.com" // Provide a fallback email for users without one
-        }))
-      };
-    } catch (error) {
-      console.error("Error fetching organization details:", error);
-      throw error;
+    interface OrganizationFromDB {
+      id: string;
+      name: string;
+      logo_url: string | null;
+      primary_color: string | null;
+      secondary_color: string | null;
+      created_at: string;
+      updated_at: string;
+      contact_person: string | null;
+      contact_email: string | null;
+      is_active: boolean;
     }
-  },
 
-  async getOrganizationTasks(orgId: string, limit: number = 50): Promise<TaskSummary[]> {
-    try {
-      // Query only the columns that exist in the tasks table
-      const { data: tasks, error } = await supabase
-        .from("tasks")
-        .select(`
-          id,
-          title,
-          status,
-          assigned_to,
-          created_at,
-          profiles!tasks_assigned_to_fkey (
-            full_name
-          )
-        `)
-        .eq("organization_id", orgId)
-        .order("created_at", { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-
-      // Map the query result to the TaskSummary interface, providing fallbacks for nullable fields
-      return (tasks as TaskFromQuery[] || []).map((task) => ({
-        id: task.id,
-        title: task.title,
-        status: task.status || "pending",
-        priority: "medium", // Default priority since column doesn't exist
-        assigned_to: task.assigned_to || undefined,
-        assigned_user_name: task.profiles?.full_name || "Unassigned",
-        created_at: task.created_at,
-        due_date: undefined // Default since column doesn't exist
-      }));
-    } catch (error) {
-      console.error("Error fetching organization tasks:", error);
-      return [];
+    export interface OrganizationDetails {
+      id: string;
+      name: string;
+      contact_person: string | null;
+      contact_email: string | null;
+      is_active: boolean;
+      created_at: string;
+      user_count: number;
+      task_count: number;
+      users: OrganizationUser[];
     }
-  },
 
-  async sendPasswordResetEmail(email: string): Promise<void> {
-    try {
-        if (!email || email === "no-email@system.com") {
-            throw new Error("User does not have a valid email address.");
+    export interface OrganizationUser {
+      id: string;
+      full_name: string;
+      email: string;
+      employee_id: string | null;
+      designation: string | null;
+      mobile_number: string | null;
+      role: string;
+      is_active: boolean;
+      created_at: string;
+      pin_hash: string | null;
+      pin_expires_at: string | null;
+      failed_pin_attempts: number;
+      pin_locked_until: string | null;
+    }
+
+    export interface TaskSummary {
+      id: string;
+      title: string;
+      status: string;
+      assigned_user_name: string;
+      created_at: string;
+      due_date: string | null;
+    }
+
+    export const organizationManagementService = {
+      async getOrganizationDetails(organizationId: string): Promise<OrganizationDetails> {
+        try {
+          // Get organization basic info
+          const { data, error: orgError } = await supabase
+            .from("organizations")
+            .select("*")
+            .eq("id", organizationId)
+            .single();
+
+          if (orgError) throw orgError;
+
+          const org = data as OrganizationFromDB;
+
+          // Get users count and details
+          const {  users, error: usersError } = await supabase
+            .from("profiles")
+            .select(`
+              id,
+              full_name,
+              employee_id,
+              designation,
+              mobile_number,
+              role,
+              is_active,
+              created_at,
+              pin_hash,
+              pin_expires_at,
+              failed_pin_attempts,
+              pin_locked_until
+            `)
+            .eq("organization_id", organizationId);
+
+          if (usersError) throw usersError;
+
+          // Get tasks count
+          const { count: taskCount, error: taskError } = await supabase
+            .from("tasks")
+            .select("*", { count: "exact", head: true })
+            .eq("organization_id", organizationId);
+
+          if (taskError) throw taskError;
+
+          // Add email from auth.users for each user
+          const usersWithEmail = await Promise.all(
+            (users || []).map(async (user) => {
+              try {
+                const {  { user: authUser } } = await supabase.auth.admin.getUserById(user.id);
+                return {
+                  ...user,
+                  email: authUser?.email || "no-email@system.com"
+                };
+              } catch {
+                return {
+                  ...user,
+                  email: "no-email@system.com"
+                };
+              }
+            })
+          );
+
+          return {
+            id: org.id,
+            name: org.name,
+            contact_person: org.contact_person,
+            contact_email: org.contact_email,
+            is_active: org.is_active,
+            created_at: org.created_at,
+            user_count: users?.length || 0,
+            task_count: taskCount || 0,
+            users: usersWithEmail
+          };
+        } catch (error) {
+          console.error("Error fetching organization details:", error);
+          throw error;
         }
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`
-      });
+      },
 
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error sending password reset email:", error);
-      throw error;
-    }
-  },
+      async getOrganizationTasks(organizationId: string): Promise<TaskSummary[]> {
+        try {
+          const { data, error } = await supabase
+            .from("tasks")
+            .select(`
+              id,
+              title,
+              status,
+              created_at,
+              due_date,
+              assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name)
+            `)
+            .eq("organization_id", organizationId)
+            .order("created_at", { ascending: false });
 
-  async toggleUserStatus(userId: string, isActive: boolean): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_active: isActive })
-        .eq("id", userId);
+          if (error) {
+            console.error("Error fetching organization tasks:", error);
+            if (error.code === '42703') { // PostgreSQL error for undefined column
+                return [];
+            }
+            throw error;
+          }
+          
+          type RawTask = {
+            id: string;
+            title: string;
+            status: string;
+            created_at: string;
+            due_date: string | null;
+            assigned_to_profile: { full_name: string; } | null;
+          };
 
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error toggling user status:", error);
-      throw error;
-    }
-  },
+          return (data as RawTask[] || []).map((task) => ({
+            id: task.id,
+            title: task.title,
+            status: task.status,
+            assigned_user_name: task.assigned_to_profile?.full_name || "Unassigned",
+            created_at: task.created_at,
+            due_date: task.due_date
+          }));
+        } catch (error) {
+          console.error("Error fetching organization tasks:", error);
+          return [];
+        }
+      },
 
-  async updateUserRole(userId: string, newRole: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ role: newRole })
-        .eq("id", userId);
+      async sendPasswordResetEmail(email: string): Promise<void> {
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+          });
+          
+          if (error) throw error;
+        } catch (error) {
+          console.error("Error sending password reset email:", error);
+          throw error;
+        }
+      },
 
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      throw error;
-    }
-  },
+      async generateUserPin(userId: string, adminId: string): Promise<string> {
+        try {
+          const pin = await authService.generatePinForUser(userId, adminId);
+          return pin;
+        } catch (error) {
+          console.error("Error generating PIN:", error);
+          throw error;
+        }
+      },
 
-  async deleteUser(userId: string): Promise<void> {
-    try {
-      const { count: taskCount } = await supabase
-        .from("tasks")
-        .select("*", { count: "exact", head: true })
-        .eq("assigned_to", userId);
+      async resetUserPin(userId: string, adminId: string): Promise<string> {
+        try {
+          const pin = await authService.resetUserPin(userId, adminId);
+          return pin;
+        } catch (error) {
+          console.error("Error resetting PIN:", error);
+          throw error;
+        }
+      },
 
-      if ((taskCount || 0) > 0) {
-        throw new Error("Cannot delete user with assigned tasks. Please reassign or complete tasks first.");
+      async toggleUserStatus(userId: string, isActive: boolean): Promise<void> {
+        try {
+          const { error } = await supabase
+            .from("profiles")
+            .update({ is_active: isActive })
+            .eq("id", userId);
+
+          if (error) throw error;
+        } catch (error) {
+          console.error("Error toggling user status:", error);
+          throw error;
+        }
+      },
+
+      async updateUserRole(userId: string, newRole: string): Promise<void> {
+        try {
+          const { error } = await supabase
+            .from("profiles")
+            .update({ role: newRole })
+            .eq("id", userId);
+
+          if (error) throw error;
+        } catch (error) {
+          console.error("Error updating user role:", error);
+          throw error;
+        }
+      },
+
+      async deleteUser(userId: string): Promise<void> {
+        try {
+          // First, delete from profiles table
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .delete()
+            .eq("id", userId);
+
+          if (profileError) throw profileError;
+
+          // Then delete from auth.users (requires admin privileges)
+          const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+          
+          if (authError) {
+            console.warn("Could not delete from auth.users:", authError);
+            // Don't throw here as profile deletion succeeded
+          }
+        } catch (error) {
+          console.error("Error deleting user:", error);
+          throw error;
+        }
+      },
+
+      async exportOrganizationData(organizationId: string): Promise<string> {
+        try {
+          const [orgDetails, tasks] = await Promise.all([
+            this.getOrganizationDetails(organizationId),
+            this.getOrganizationTasks(organizationId)
+          ]);
+
+          const exportData = {
+            organization: orgDetails,
+            tasks: tasks,
+            exportedAt: new Date().toISOString(),
+            exportedBy: "Super Admin"
+          };
+
+          return JSON.stringify(exportData, null, 2);
+        } catch (error) {
+          console.error("Error exporting organization ", error);
+          throw error;
+        }
       }
+    };
 
-      const { error } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userId);
-
-      if (error) throw error;
-
-      console.log("Profile deleted. Auth user still exists and would need admin API to delete.");
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      throw error;
-    }
-  },
-
-  async exportOrganizationData(orgId: string): Promise<string> {
-    try {
-      const orgDetails = await this.getOrganizationDetails(orgId);
-      const tasks = await this.getOrganizationTasks(orgId, 1000);
-
-      const exportData = {
-        organization: {
-          id: orgDetails.id,
-          name: orgDetails.name,
-          contact_person: orgDetails.contact_person,
-          contact_email: orgDetails.contact_email,
-          created_at: orgDetails.created_at,
-          user_count: orgDetails.user_count,
-          task_count: orgDetails.task_count
-        },
-        users: orgDetails.users,
-        tasks: tasks,
-        exported_at: new Date().toISOString(),
-        exported_by: "Super Admin"
-      };
-
-      return JSON.stringify(exportData, null, 2);
-    } catch (error) {
-      console.error("Error exporting organization ", error);
-      throw error;
-    }
-  }
-};
-
-export default organizationManagementService;
+    export default organizationManagementService;
+  

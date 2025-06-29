@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,12 @@ import {
   UserX,
   UserCheck,
   Key,
-  Trash2
+  Trash2,
+  RefreshCcw
 } from "lucide-react";
 import { organizationManagementService, OrganizationDetails, OrganizationUser, TaskSummary } from "@/services/organizationManagementService";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OrganizationDetailsModalProps {
   isOpen: boolean;
@@ -80,6 +83,24 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
     }
   };
 
+  const handleResetPin = async (user: OrganizationUser) => {
+    const {  { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+        alert("You must be logged in to perform this action.");
+        return;
+    }
+
+    if (confirm(`Are you sure you want to reset the PIN for ${user.full_name}? A new PIN will be generated.`)) {
+      try {
+        const newPin = await organizationManagementService.resetUserPin(user.id, session.user.id);
+        alert(`PIN for ${user.full_name} has been reset. New PIN: ${newPin}. Please share this securely.`);
+        loadOrganizationData();
+      } catch (error) {
+        alert("Failed to reset PIN: " + (error as Error).message);
+      }
+    }
+  };
+
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
       await organizationManagementService.toggleUserStatus(userId, !currentStatus);
@@ -124,7 +145,7 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      alert("Failed to export data: " + (error as Error).message);
+      alert("Failed to export  " + (error as Error).message);
     }
   };
 
@@ -322,6 +343,10 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
                                 <Key className="h-4 w-4 mr-2" />
                                 Reset Password
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleResetPin(user)}>
+                                <RefreshCcw className="h-4 w-4 mr-2" />
+                                Reset PIN
+                              </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleToggleUserStatus(user.id, user.is_active)}
                               >
@@ -379,14 +404,6 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {task.priority && (
-                                <Badge variant={
-                                task.priority === "high" ? "destructive" :
-                                task.priority === "medium" ? "default" : "secondary"
-                                }>
-                                {task.priority.toUpperCase()}
-                                </Badge>
-                            )}
                             <Badge variant={
                               task.status === "completed" ? "default" :
                               task.status === "in_progress" ? "secondary" : "outline"
