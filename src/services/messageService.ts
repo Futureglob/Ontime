@@ -82,11 +82,7 @@ export const messageService = {
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
         .select(`
-          id,
-          title,
-          status,
-          assigned_to,
-          assigned_by,
+          *,
           assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role),
           assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role)
         `)
