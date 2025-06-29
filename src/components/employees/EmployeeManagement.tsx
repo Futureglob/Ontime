@@ -22,49 +22,47 @@ export default function EmployeeManagement() {
   const [editingEmployee, setEditingEmployee] = useState<Profile | null>(null);
 
   const loadUserProfile = useCallback(async () => {
-    if (user) {
-      try {
-        const profile = await profileService.getProfile(user.id);
-        setUserProfile(profile);
-      } catch (error) {
-        console.error("Error loading user profile:", error);
-        setUserProfile(null);
-      }
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const profile = await profileService.getProfile(user.id);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+      setUserProfile(null);
     }
   }, [user]);
 
   const loadEmployees = useCallback(async () => {
-    if (user && userProfile && userProfile.organization_id) {
-      try {
-        setLoading(true);
-        const employeesData = await profileService.getOrganizationProfiles(userProfile.organization_id);
-        setEmployees(employeesData as Profile[]);
-      } catch (error) {
-        console.error("Error loading employees:", error);
-        setEmployees([]);
-      } finally {
-        setLoading(false);
-      }
-    } else if (userProfile && !userProfile.organization_id) {
-      // User profile exists but no organization_id - clear loading state
+    if (!user || !userProfile) {
+      setLoading(false);
+      return;
+    }
+
+    if (!userProfile.organization_id) {
       console.warn("User profile has no organization_id");
       setEmployees([]);
       setLoading(false);
-    } else if (user && userProfile === null) {
-      // User exists but profile failed to load - clear loading state
-      console.warn("Failed to load user profile");
+      return;
+    }
+
+    try {
+      const employeesData = await profileService.getOrganizationProfiles(userProfile.organization_id);
+      setEmployees(employeesData as Profile[]);
+    } catch (error) {
+      console.error("Error loading employees:", error);
       setEmployees([]);
+    } finally {
       setLoading(false);
     }
   }, [user, userProfile]);
 
   useEffect(() => {
-    if (user) {
-      loadUserProfile();
-    } else {
-      setLoading(false);
-    }
-  }, [user, loadUserProfile]);
+    loadUserProfile();
+  }, [loadUserProfile]);
 
   useEffect(() => {
     if (userProfile !== null) {
@@ -167,6 +165,18 @@ export default function EmployeeManagement() {
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">Loading employees...</div>
       </div>
+    );
+  }
+
+  if (!userProfile?.organization_id) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <div className="text-muted-foreground">
+            No organization found. Please contact your administrator.
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
