@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,8 +36,6 @@ export default function OrgAdminDashboard() {
     { id: "settings", label: "Settings", component: <OrganizationSettings /> },
     { id: "messaging", label: "Messaging", component: <RealTimeMessaging /> },
   ];
-
-  const activeTabComponent = tabs.find(tab => tab.id === activeTab)?.component;
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
