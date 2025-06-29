@@ -118,7 +118,7 @@ export const messageService = {
 
           return {
             task_id: task.id,
-            task: task as any,
+            task: task,
             lastMessage: lastMessage || undefined,
             unreadCount: unreadCount || 0,
           };
