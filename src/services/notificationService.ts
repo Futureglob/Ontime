@@ -1,4 +1,3 @@
-
 import { pwaService } from "./pwaService";
 import type { Notification as NotificationType } from "@/types";
 
@@ -197,7 +196,7 @@ export const notificationService = {
   // Get unread notifications from a database (placeholder)
   async getUnreadNotifications(userId: string): Promise<NotificationType[]> {
     // TODO: Implement proper notification storage and retrieval from Supabase
-    console.log("Fetching notifications for user:", userId);
+    // Removed console.log to prevent spam in console
     return [];
   }
 };
