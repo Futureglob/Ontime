@@ -20,12 +20,10 @@ import {
   UserX,
   UserCheck,
   Key,
-  Trash2,
-  RefreshCcw
+  Trash2
 } from "lucide-react";
 import { organizationManagementService, OrganizationDetails, OrganizationUser, TaskSummary } from "@/services/organizationManagementService";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 
 interface OrganizationDetailsModalProps {
   isOpen: boolean;

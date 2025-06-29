@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { authService } from "@/services/authService";
 import { useRouter } from "next/router";
 import Sidebar from "./Sidebar";
 import { messageService } from "@/services/messageService";
@@ -13,7 +12,7 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -38,7 +37,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleSignOut = async () => {
     try {
-      await authService.signOut();
+      await logout();
       router.push("/");
     } catch (error) {
       console.error("Error signing out:", error);
