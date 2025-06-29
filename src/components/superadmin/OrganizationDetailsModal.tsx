@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { organizationManagementService, OrganizationDetails, OrganizationUser, TaskSummary } from "@/services/organizationManagementService";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface OrganizationDetailsModalProps {
@@ -42,8 +41,6 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [generatedPin, setGeneratedPin] = useState<string | null>(null);
-  const [auth] = useState(() => supabase.auth.getSession().data);
 
   const loadOrganizationData = useCallback(async () => {
     if (!organizationId) return;
@@ -59,7 +56,6 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
       setTasks(taskList);
     } catch (error) {
       console.error("Error loading organization ", error);
-      // Display a message to the user in the modal
       setOrgDetails(null);
     } finally {
       setLoading(false);
@@ -85,38 +81,10 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
     }
   };
 
-  const handleGeneratePin = async (employeeId: string) => {
-    try {
-      const generatedPin = await superAdminService.generatePin(employeeId);
-      toast.success(`New PIN generated for employee: ${generatedPin}`);
-      onAdminAction();
-    } catch (error: any) {
-      toast.error(`Failed to generate PIN: ${error.message}`);
-    }
-  };
-
-  const handleAddAdmin = async (profileId: string) => {
-    try {
-      const {  sessionData } = await supabase.auth.getSession();
-      const session = sessionData.session;
-      if (!session) {
-        throw new Error("Not authenticated");
-      }
-      const { data, error } = await supabase.from("organization_users").update({ is_admin: true }).eq("id", profileId);
-      if (error) {
-        throw error;
-      }
-      toast.success(`User added as admin successfully`);
-      onAdminAction();
-    } catch (error: any) {
-      toast.error(`Failed to add admin: ${error.message}`);
-    }
-  };
-
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
       await organizationManagementService.toggleUserStatus(userId, !currentStatus);
-      loadOrganizationData(); // Refresh data
+      loadOrganizationData();
     } catch (error) {
       alert("Failed to update user status: " + (error as Error).message);
     }
@@ -125,7 +93,7 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
       await organizationManagementService.updateUserRole(userId, newRole);
-      loadOrganizationData(); // Refresh data
+      loadOrganizationData();
     } catch (error) {
       alert("Failed to update user role: " + (error as Error).message);
     }
@@ -135,7 +103,7 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
     if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
       try {
         await organizationManagementService.deleteUser(userId);
-        loadOrganizationData(); // Refresh data
+        loadOrganizationData();
       } catch (error) {
         alert("Failed to delete user: " + (error as Error).message);
       }
@@ -157,7 +125,7 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      alert("Failed to export  " + (error as Error).message);
+      alert("Failed to export data: " + (error as Error).message);
     }
   };
 
@@ -358,17 +326,7 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
                                 <Key className="h-4 w-4 mr-2" />
                                 Reset Password
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleGeneratePin(user.id)}>
-                                <RefreshCcw className="h-4 w-4 mr-2" />
-                                Generate PIN
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleResetPin(user.id)}>
-                                <RefreshCcw className="h-4 w-4 mr-2" />
-                                Reset PIN
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleToggleUserStatus(user.id, user.is_active)}
-                              >
+                              <DropdownMenuItem onClick={() => handleToggleUserStatus(user.id, user.is_active)}>
                                 {user.is_active ? (
                                   <>
                                     <UserX className="h-4 w-4 mr-2" />
