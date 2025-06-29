@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,11 +14,18 @@ export default function EmployeeManagement() {
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [employeesLoading, setEmployeesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Profile | null>(null);
+
+  // Memoize the profile to prevent unnecessary re-renders
+  const currentProfile = useMemo(() => {
+    if (user?.id) {
+      return userProfile;
+    }
+    return authProfile;
+  }, [user?.id, userProfile, authProfile]);
 
   const loadUserProfile = useCallback(async () => {
     if (!user?.id && !authProfile) {
@@ -28,21 +34,22 @@ export default function EmployeeManagement() {
     }
 
     try {
-      let profile;
-      if (user?.id) {
-        profile = await profileService.getProfile(user.id);
-      } else if (authProfile) {
-        profile = authProfile;
-      }
-
-      if (!profile) {
-        setError("User profile not found");
-        setLoading(false);
+      if (authProfile) {
+        setUserProfile(authProfile);
+        setError(null);
         return;
       }
-      
-      setUserProfile(profile);
-      setError(null);
+
+      if (user?.id) {
+        const profile = await profileService.getProfile(user.id);
+        if (!profile) {
+          setError("User profile not found");
+          setUserProfile(null);
+          return;
+        }
+        setUserProfile(profile);
+        setError(null);
+      }
     } catch (error) {
       console.error("Error loading user profile:", error);
       setError("Failed to load user profile");
@@ -50,36 +57,34 @@ export default function EmployeeManagement() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, authProfile?.id]);
+  }, [user?.id, authProfile]); // Simplified dependencies
 
   const loadEmployees = useCallback(async () => {
-    if (!userProfile?.organization_id) {
-      return;
-    }
+    const orgId = currentProfile?.organization_id;
+    if (!orgId || loading) return;
 
-    setEmployeesLoading(true);
     try {
-      const employeesData = await profileService.getOrganizationProfiles(userProfile.organization_id);
+      const employeesData = await profileService.getOrganizationProfiles(orgId);
       setEmployees(employeesData || []);
       setError(null);
     } catch (error) {
       console.error("Error loading employees:", error);
       setError("Failed to load employees");
       setEmployees([]);
-    } finally {
-      setEmployeesLoading(false);
     }
-  }, [userProfile?.organization_id]);
+  }, [currentProfile?.organization_id, loading]);
 
+  // Load user profile on mount or when auth changes
   useEffect(() => {
     loadUserProfile();
   }, [loadUserProfile]);
 
+  // Load employees when profile is loaded
   useEffect(() => {
-    if (userProfile?.organization_id) {
+    if (currentProfile?.organization_id && !loading) {
       loadEmployees();
     }
-  }, [userProfile?.organization_id, loadEmployees]);
+  }, [currentProfile?.organization_id, loading, loadEmployees]);
 
   const handleEmployeeCreated = () => {
     setShowEmployeeForm(false);
