@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Message, Task } from "@/types/database";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
@@ -79,32 +78,52 @@ export const messageService = {
 
   async getTaskConversations(userId: string) {
     try {
-      // First get user's tasks
-      const { data: userTasks, error: tasksError } = await supabase
+      // 1. Get user's tasks with profiles
+      const {  tasks, error: tasksError } = await supabase
         .from("tasks")
         .select(`
           id,
           title,
           status,
           assigned_to,
-          assigned_by
+          assigned_by,
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role, avatar_url),
+          assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role, avatar_url)
         `)
         .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
 
-      if (tasksError) {
-        console.error("Error fetching user tasks:", tasksError);
-        return [];
-      }
+      if (tasksError) throw tasksError;
+      if (!tasks || tasks.length === 0) return [];
 
-      if (!userTasks || userTasks.length === 0) {
-        return [];
-      }
+      const conversations = await Promise.all(
+        tasks.map(async (task) => {
+          const {  lastMessage } = await supabase
+            .from("messages")
+            .select("content, created_at, sender_id")
+            .eq("task_id", task.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-      // Get conversations for these tasks
-      const conversations = userTasks.map(task => ({
-        task_id: task.id,
-        task: task
-      }));
+          const { count: unreadCount, error: countError } = await supabase
+            .from("messages")
+            .select("*", { count: "exact", head: true })
+            .eq("task_id", task.id)
+            .eq("is_read", false)
+            .neq("sender_id", userId);
+
+          if (countError) {
+            console.error(`Error getting unread count for task ${task.id}`, countError);
+          }
+
+          return {
+            task_id: task.id,
+            task: task as any,
+            lastMessage: lastMessage || undefined,
+            unreadCount: unreadCount || 0,
+          };
+        })
+      );
 
       return conversations;
     } catch (error) {

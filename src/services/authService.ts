@@ -136,7 +136,9 @@ export const authService = {
       if (profile.pin_hash !== expectedPinHash) {
         // Increment failed attempts
         const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
-        const updates: any = { failed_pin_attempts: newFailedAttempts };
+        const updates: { failed_pin_attempts: number; pin_locked_until?: string } = {
+          failed_pin_attempts: newFailedAttempts,
+        };
         
         // Lock account after 5 failed attempts
         if (newFailedAttempts >= 5) {
