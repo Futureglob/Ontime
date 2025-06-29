@@ -34,7 +34,7 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
     designation: employee?.designation || "",
     mobile_number: employee?.mobile_number || "",
     role: employee?.role || "employee", // Default to string value
-    email: employee?.email || "",
+    email: "", // Remove employee?.email since email doesn't exist on Profile type
     password: ""
   });
 
