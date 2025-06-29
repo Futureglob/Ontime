@@ -1,3 +1,4 @@
+
     import {
       createContext,
       useContext,
@@ -41,6 +42,7 @@
           if (result && result.user) {
             setUser(result.user);
             setProfile(result.profile as Profile);
+            localStorage.removeItem("pin-profile");
           }
         } catch (error) {
           console.error("Login error:", error);
@@ -53,11 +55,9 @@
           const result = await authService.signInWithPin(employeeId, pin);
           if (result && result.profile) {
             setUser(null);
-            // Ensure proper typing of the profile
-            const typedProfile = result.profile as Database["public"]["Tables"]["profiles"]["Row"] & {
-              organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
-            };
+            const typedProfile = result.profile as Profile;
             setProfile(typedProfile);
+            localStorage.setItem("pin-profile", JSON.stringify(typedProfile));
             console.log("Profile set after PIN login:", typedProfile);
           }
         } catch (error) {
@@ -74,6 +74,7 @@
         } finally {
           setUser(null);
           setProfile(null);
+          localStorage.removeItem("pin-profile");
         }
       }, []);
 
@@ -83,12 +84,19 @@
 
         const checkUser = async () => {
           try {
-            const { data: { session } } = await supabase.auth.getSession();
+            const {  { session } } = await supabase.auth.getSession();
             if (session?.user && mounted) {
               setUser(session.user);
               const userProfile = await authService.getUserProfile(session.user.id);
               if (mounted) {
                 setProfile(userProfile as Profile);
+                localStorage.removeItem("pin-profile");
+              }
+            } else {
+              const storedPinProfile = localStorage.getItem("pin-profile");
+              if (storedPinProfile && mounted) {
+                const parsedProfile = JSON.parse(storedPinProfile);
+                setProfile(parsedProfile);
               }
             }
           } catch (error) {
@@ -105,28 +113,21 @@
         const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
           if (!mounted) return;
           
-          console.log("Auth state changed:", { session, mounted });
-          
-          setLoading(true);
-          try {
-            if (session?.user) {
+          if (session?.user) {
+            if(user?.id !== session.user.id) {
+              setLoading(true);
               setUser(session.user);
               const userProfile = await authService.getUserProfile(session.user.id);
               if (mounted) {
-                console.log("Setting profile:", userProfile);
                 setProfile(userProfile as Profile);
+                localStorage.removeItem("pin-profile");
+                setLoading(false);
               }
-            } else {
-              setUser(null);
-              setProfile(null);
             }
-          } catch (error) {
-            console.error("Error in auth state change:", error);
+          } else {
             setUser(null);
-            setProfile(null);
-          } finally {
-            if (mounted) {
-              setLoading(false);
+            if (!localStorage.getItem("pin-profile")) {
+              setProfile(null);
             }
           }
         });
@@ -137,7 +138,7 @@
           mounted = false;
           subscription?.unsubscribe();
         };
-      }, []);
+      }, [user]);
 
       const value = useMemo(
         () => ({

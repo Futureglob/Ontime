@@ -26,7 +26,7 @@ import {
 import { organizationManagementService, OrganizationDetails, OrganizationUser, TaskSummary } from "@/services/organizationManagementService";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/toast";
+import { toast } from "sonner";
 
 interface OrganizationDetailsModalProps {
   isOpen: boolean;
@@ -85,49 +85,31 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
     }
   };
 
-  const handleGeneratePin = async (userId: string) => {
-    if (!auth.user) return;
-    setLoading(true);
+  const handleGeneratePin = async (employeeId: string) => {
     try {
-      const pin = await organizationManagementService.generateUserPin(userId);
-      setGeneratedPin(pin);
-      toast({
-        title: "PIN Generated Successfully",
-        description: `A new PIN has been generated for the user. Please share this securely.`,
-        variant: "success",
-      });
-      loadOrganizationData();
-    } catch (error) {
-      toast({
-        title: "Failed to Generate PIN",
-        description: `An error occurred while generating the PIN: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      const generatedPin = await superAdminService.generatePin(employeeId);
+      toast.success(`New PIN generated for employee: ${generatedPin}`);
+      onAdminAction();
+    } catch (error: any) {
+      toast.error(`Failed to generate PIN: ${error.message}`);
     }
   };
 
-  const handleResetPin = async (userId: string) => {
-    if (!auth.user) return;
-    setLoading(true);
+  const handleAddAdmin = async (profileId: string) => {
     try {
-      const pin = await organizationManagementService.resetUserPin(userId);
-      setGeneratedPin(pin);
-      toast({
-        title: "PIN Reset Successfully",
-        description: `The user's PIN has been reset. Please share this securely.`,
-        variant: "success",
-      });
-      loadOrganizationData();
-    } catch (error) {
-      toast({
-        title: "Failed to Reset PIN",
-        description: `An error occurred while resetting the PIN: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      const {  sessionData } = await supabase.auth.getSession();
+      const session = sessionData.session;
+      if (!session) {
+        throw new Error("Not authenticated");
+      }
+      const { data, error } = await supabase.from("organization_users").update({ is_admin: true }).eq("id", profileId);
+      if (error) {
+        throw error;
+      }
+      toast.success(`User added as admin successfully`);
+      onAdminAction();
+    } catch (error: any) {
+      toast.error(`Failed to add admin: ${error.message}`);
     }
   };
 
