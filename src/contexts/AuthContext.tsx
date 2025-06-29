@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useContext,
@@ -84,7 +83,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
     const checkUser = async () => {
       try {
-        const {  { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && mounted) {
           setUser(session.user);
           const userProfile = await authService.getUserProfile(session.user.id);
