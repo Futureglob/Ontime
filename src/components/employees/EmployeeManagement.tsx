@@ -5,10 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 // Removed Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 // Removed Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-import { Plus, Search, User, Phone, Calendar, Edit, Trash2 } from "lucide-react"; // Removed MapPin
+import { Plus, Search, User, Phone, Calendar, Edit, Trash2, RotateCcw } from "lucide-react"; // Removed MapPin
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
-// Removed authService
 import { Profile } from "@/types/database";
 import EmployeeForm from "./EmployeeForm";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -79,6 +78,26 @@ export default function EmployeeManagement() {
     }
   };
 
+  const handleResetPin = async (employee: Profile) => {
+    try {
+      // Reset PIN by clearing pin_hash and related fields
+      await profileService.updateProfile(employee.id, {
+        pin_hash: null,
+        pin_created_at: null,
+        pin_expires_at: null,
+        failed_pin_attempts: 0,
+        pin_locked_until: null,
+        pin_reset_requested_at: new Date().toISOString()
+      });
+      
+      alert(`PIN reset successfully for ${employee.full_name}. They can set a new PIN on next login.`);
+      loadEmployees();
+    } catch (error) {
+      console.error("Error resetting PIN:", error);
+      alert("Failed to reset PIN. Please try again.");
+    }
+  };
+
   const canDeleteEmployee = (employee: Profile) => {
     if (!userProfile) return false;
 
@@ -90,6 +109,23 @@ export default function EmployeeManagement() {
     // Managers can only delete employees.
     if (userProfile.role === "manager") {
       return employee.role === "employee";
+    }
+
+    return false;
+  };
+
+  const canResetPin = (employee: Profile) => {
+    if (!userProfile) return false;
+
+    const currentUserRole = userProfile.role;
+    const targetUserRole = employee.role;
+
+    if (currentUserRole === "org_admin") {
+      return targetUserRole === "task_manager" || targetUserRole === "employee";
+    }
+
+    if (currentUserRole === "task_manager") {
+      return targetUserRole === "employee";
     }
 
     return false;
@@ -248,6 +284,19 @@ export default function EmployeeManagement() {
                   <Edit className="h-3 w-3 mr-1" />
                   Edit
                 </Button>
+                
+                {canResetPin(employee) && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="px-3"
+                    onClick={() => handleResetPin(employee)}
+                    title="Reset PIN"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                )}
+                
                 {canDeleteEmployee(employee) && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
