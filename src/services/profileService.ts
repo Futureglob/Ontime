@@ -1,13 +1,16 @@
 
-        import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type OrganizationRow = Database["public"]["Tables"]["organizations"]["Row"];
+
+export type Profile = ProfileRow & { organization: OrganizationRow | null };
 
 export const profileService = {
-  async getProfile(userId: string) {
+  async getProfile(userId: string): Promise<Profile | null> {
     const { data, error } = await supabase
       .from("profiles")
       .select("*, organization:organizations(*)")
@@ -60,4 +63,3 @@ export const profileService = {
     if (error) throw error;
   }
 };
-      

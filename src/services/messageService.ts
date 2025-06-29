@@ -91,18 +91,9 @@ export const messageService = {
   async getTaskConversations(userId: string) {
     try {
       // Simplified approach - get tasks first, then messages separately
-      const { data: tasks, error: tasksError } = await supabase
+      const {  tasks, error: tasksError } = await supabase
         .from("tasks")
-        .select(`
-          id,
-          title,
-          status,
-          assigned_to,
-          assigned_by,
-          created_at,
-          deadline,
-          location
-        `)
+        .select(`*`)
         .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
 
       if (tasksError) {

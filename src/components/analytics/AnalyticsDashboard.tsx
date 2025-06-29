@@ -11,7 +11,7 @@ import { format, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { analyticsService, TaskOverview, EmployeePerformance, LocationAnalytics, TaskTrend } from "@/services/analyticsService";
 import { useAuth } from "@/contexts/AuthContext";
-import { profileService } from "@/services/profileService";
+import { profileService, Profile } from "@/services/profileService";
 import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import EmployeePerformanceChart from "./EmployeePerformanceChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";
@@ -20,7 +20,7 @@ import TimeSeriesChart from "./TimeSeriesChart";
 const AnalyticsDashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),
     to: new Date(),
