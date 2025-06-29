@@ -143,11 +143,6 @@ export const authService = {
         throw new Error("account_locked");
       }
 
-      if (!profile.pin_hash) {
-        console.warn("No PIN hash found for employee:", employeeId);
-        throw new Error("invalid_pin");
-      }
-
       if (profile.pin_expires_at && new Date(profile.pin_expires_at) < new Date()) {
         throw new Error("pin_expired");
       }
@@ -160,7 +155,7 @@ export const authService = {
         storedHash: profile.pin_hash 
       });
       
-      // If no PIN hash exists, set it for the employee
+      // If no PIN hash exists, set it for the employee on first login
       if (!profile.pin_hash) {
         console.log("No PIN hash found, setting PIN hash for employee:", employeeId);
         const { error: updateError } = await supabase
@@ -181,6 +176,15 @@ export const authService = {
 
         console.log("PIN hash set successfully for employee:", employeeId);
         
+        // Reset failed attempts on successful login
+        await supabase
+          .from("profiles")
+          .update({
+            failed_pin_attempts: 0,
+            pin_locked_until: null
+          })
+          .eq("id", profile.id);
+
         return { user: null, profile: { ...profile, pin_hash: expectedPinHash }, isPinLogin: true };
       }
       
