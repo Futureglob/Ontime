@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Bell, LogOut } from "lucide-react";
@@ -18,21 +18,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
+  const loadUnreadCount = useCallback(async () => {
     if (user?.id) {
-      loadUnreadCount();
+      try {
+        const count = await messageService.getUnreadMessageCount(user.id);
+        setUnreadCount(count);
+      } catch (error) {
+        console.error("Error loading unread count:", error);
+        setUnreadCount(0);
+      }
     }
   }, [user?.id]);
 
-  const loadUnreadCount = async () => {
-    try {
-      const count = await messageService.getUnreadMessageCount(user?.id || "");
-      setUnreadCount(count);
-    } catch (error) {
-      console.error("Error loading unread count:", error);
-      setUnreadCount(0);
-    }
-  };
+  useEffect(() => {
+    loadUnreadCount();
+  }, [loadUnreadCount]);
 
   const handleSignOut = async () => {
     try {

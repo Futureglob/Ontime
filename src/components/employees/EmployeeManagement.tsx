@@ -80,14 +80,18 @@ export default function EmployeeManagement() {
   };
 
   const canDeleteEmployee = (employee: Profile) => {
-    // Org admin cannot delete other org admins or themselves
-    if (userProfile?.role === UserRole.ORG_ADMIN) {
-      return employee.role !== UserRole.ORG_ADMIN && employee.id !== userProfile.id;
+    if (!userProfile) return false;
+
+    // Org admins can only delete employees. They cannot delete other admins or managers.
+    if (userProfile.role === "org_admin") {
+      return employee.role === "employee";
     }
-    // Task managers can only delete regular employees
-    if (userProfile?.role === UserRole.MANAGER) {
-      return employee.role === UserRole.EMPLOYEE;
+
+    // Managers can only delete employees.
+    if (userProfile.role === "manager") {
+      return employee.role === "employee";
     }
+
     return false;
   };
 
@@ -100,8 +104,8 @@ export default function EmployeeManagement() {
 
   const getEmployeeStats = () => {
     const total = employees.length;
-    const active = employees.filter(e => e.role === UserRole.EMPLOYEE).length;
-    const managers = employees.filter(e => e.role === UserRole.MANAGER).length;
+    const active = employees.filter(e => e.role === "employee").length;
+    const managers = employees.filter(e => e.role === "manager").length;
     
     return { total, active, managers };
   };
@@ -201,7 +205,7 @@ export default function EmployeeManagement() {
                     <p className="text-sm text-muted-foreground">{employee.employee_id}</p>
                   </div>
                 </div>
-                <Badge variant={employee.role === UserRole.MANAGER ? "default" : "secondary"}>
+                <Badge variant={employee.role === "manager" ? "default" : "secondary"}>
                   {employee.role?.toUpperCase()}
                 </Badge>
               </div>
