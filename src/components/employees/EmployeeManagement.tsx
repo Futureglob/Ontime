@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 // Removed Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 import { Plus, Search, User, Phone, Calendar, Edit, Trash2, RotateCcw } from "lucide-react"; // Removed MapPin
 import { useAuth } from "@/contexts/AuthContext";
-import { profileService } from "@/services/profileService";
-import { Profile } from "@/types/database";
+import { profileService, type Profile } from "@/services/profileService";
 import EmployeeForm from "./EmployeeForm";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -17,6 +16,7 @@ export default function EmployeeManagement() {
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Profile | null>(null);
@@ -28,42 +28,41 @@ export default function EmployeeManagement() {
     }
 
     try {
-      console.log("Loading user profile for:", user.id);
       const profile = await profileService.getProfile(user.id);
-      console.log("Loaded user profile:", profile);
+      if (!profile) {
+        setError("User profile not found");
+        setLoading(false);
+        return;
+      }
       setUserProfile(profile);
+      setError(null);
     } catch (error) {
       console.error("Error loading user profile:", error);
+      setError("Failed to load user profile");
       setUserProfile(null);
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
   const loadEmployees = useCallback(async () => {
-    if (!user || !userProfile) {
-      console.log("No user or userProfile, skipping employee load");
-      setLoading(false);
+    if (!userProfile?.organization_id) {
       return;
     }
 
-    if (!userProfile.organization_id) {
-      console.warn("User profile has no organization_id");
-      setEmployees([]);
-      setLoading(false);
-      return;
-    }
-
+    setLoading(true);
     try {
-      console.log("Loading employees for organization:", userProfile.organization_id);
       const employeesData = await profileService.getOrganizationProfiles(userProfile.organization_id);
-      console.log("Loaded employees:", employeesData);
-      setEmployees(employeesData);
+      setEmployees(employeesData || []);
+      setError(null);
     } catch (error) {
       console.error("Error loading employees:", error);
+      setError("Failed to load employees");
       setEmployees([]);
     } finally {
       setLoading(false);
     }
-  }, [user, userProfile]);
+  }, [userProfile]);
 
   useEffect(() => {
     loadUserProfile();
@@ -180,6 +179,16 @@ export default function EmployeeManagement() {
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">Loading employees...</div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <div className="text-red-500">{error}</div>
+        </CardContent>
+      </Card>
     );
   }
 

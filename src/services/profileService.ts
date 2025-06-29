@@ -10,19 +10,30 @@ export type Profile = ProfileRow & { organization: OrganizationRow | null };
 
 export const profileService = {
   async getProfile(userId: string): Promise<Profile | null> {
+    console.log("Fetching profile for user:", userId);
     const { data, error } = await supabase
       .from("profiles")
-      .select("*, organization:organizations(*)")
+      .select(`
+        *,
+        organization:organizations(*)
+      `)
       .eq("id", userId)
       .single();
-    if (error && error.code !== "PGRST116") {
-        console.error("Error fetching profile:", error);
-        throw error;
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        console.log("No profile found for user:", userId);
+        return null;
+      }
+      console.error("Error fetching profile:", error);
+      throw error;
     }
+
+    console.log("Fetched profile:", data);
     return data;
   },
 
-  async getOrganizationProfiles(organizationId: string) {
+  async getOrganizationProfiles(organizationId: string): Promise<Profile[]> {
     console.log("Fetching profiles for organization:", organizationId);
     const { data, error } = await supabase
       .from("profiles")
@@ -30,14 +41,16 @@ export const profileService = {
         *,
         organization:organizations(*)
       `)
-      .eq("organization_id", organizationId);
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
       
     if (error) {
       console.error("Error fetching organization profiles:", error);
-      return [];
+      throw error;
     }
-    console.log("Fetched profiles:", data);
-    return data;
+
+    console.log("Fetched profiles count:", data?.length);
+    return data || [];
   },
 
   async createProfile(profileData: ProfileInsert) {
