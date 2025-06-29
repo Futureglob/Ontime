@@ -35,22 +35,28 @@ export const profileService = {
 
   async getOrganizationProfiles(organizationId: string): Promise<Profile[]> {
     console.log("Fetching profiles for organization:", organizationId);
-    const { data, error } = await supabase
-      .from("profiles")
-      .select(`
-        *,
-        organization:organizations(*)
-      `)
-      .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          *,
+          organization:organizations(*)
+        `)
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false });
       
-    if (error) {
-      console.error("Error fetching organization profiles:", error);
-      throw error;
-    }
+      if (error) {
+        console.error("Error fetching organization profiles:", error);
+        throw error;
+      }
 
-    console.log("Fetched profiles count:", data?.length);
-    return data || [];
+      console.log("Fetched profiles count:", data?.length);
+      console.log("Fetched profiles data:", data);
+      return data || [];
+    } catch (err) {
+      console.error("Error in getOrganizationProfiles:", err);
+      throw err;
+    }
   },
 
   async createProfile(profileData: ProfileInsert) {

@@ -53,7 +53,12 @@
           const result = await authService.signInWithPin(employeeId, pin);
           if (result && result.profile) {
             setUser(null);
-            setProfile(result.profile as unknown as Profile);
+            // Ensure proper typing of the profile
+            const typedProfile = result.profile as Database["public"]["Tables"]["profiles"]["Row"] & {
+              organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
+            };
+            setProfile(typedProfile);
+            console.log("Profile set after PIN login:", typedProfile);
           }
         } catch (error) {
           console.error("PIN login error:", error);
@@ -97,28 +102,36 @@
 
         checkUser();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
           if (!mounted) return;
+          
+          console.log("Auth state changed:", { session, mounted });
+          
           setLoading(true);
-          if (session?.user) {
-            setUser(session.user);
-            try {
+          try {
+            if (session?.user) {
+              setUser(session.user);
               const userProfile = await authService.getUserProfile(session.user.id);
               if (mounted) {
+                console.log("Setting profile:", userProfile);
                 setProfile(userProfile as Profile);
               }
-            } catch (error) {
-              console.error("Error fetching profile on auth change:", error);
+            } else {
+              setUser(null);
               setProfile(null);
             }
-          } else {
+          } catch (error) {
+            console.error("Error in auth state change:", error);
             setUser(null);
             setProfile(null);
-          }
-          if (mounted) {
-            setLoading(false);
+          } finally {
+            if (mounted) {
+              setLoading(false);
+            }
           }
         });
+
+        const subscription = data.subscription;
 
         return () => {
           mounted = false;

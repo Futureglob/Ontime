@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,17 +38,23 @@ export default function EmployeeManagement() {
   const [editingEmployee, setEditingEmployee] = useState<Profile | null>(null);
 
   const loadEmployees = useCallback(async () => {
+    console.log("loadEmployees called with profile:", userProfile);
+    
     if (!userProfile?.organization_id) {
+      console.log("No organization ID found:", userProfile);
       setEmployeesLoading(false);
       return;
     }
 
+    console.log("Loading employees for organization:", userProfile.organization_id);
     setEmployeesLoading(true);
     setError(null);
+    
     try {
       const employeesData = await profileService.getOrganizationProfiles(
         userProfile.organization_id
       );
+      console.log("Loaded employees:", employeesData);
       setEmployees(employeesData || []);
     } catch (err) {
       console.error("Error loading employees:", err);
@@ -58,13 +63,15 @@ export default function EmployeeManagement() {
     } finally {
       setEmployeesLoading(false);
     }
-  }, [userProfile?.organization_id]);
+  }, [userProfile]); // Added userProfile to dependencies
 
   useEffect(() => {
-    if (!authLoading) {
+    console.log("Effect triggered - Auth loading:", authLoading, "Profile:", userProfile);
+    
+    if (!authLoading && userProfile?.organization_id) {
       loadEmployees();
     }
-  }, [authLoading, loadEmployees]);
+  }, [authLoading, userProfile, loadEmployees]);
 
   const handleEmployeeCreated = () => {
     setShowEmployeeForm(false);
