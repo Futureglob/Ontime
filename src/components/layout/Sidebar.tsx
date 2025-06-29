@@ -12,12 +12,15 @@ import {
   Settings, 
   Building2,
   User,
-  ShieldCheck // Added for Super Admin
+  ShieldCheck,
+  Bell // Added for notifications
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
-import { Profile } from "@/types/database"; // Removed unused UserRole import
-import { superAdminService } from "@/services/superAdminService"; // Import superAdminService
+import { Profile } from "@/types/database";
+import { superAdminService } from "@/services/superAdminService";
+import { taskService } from "@/services/taskService";
+import { notificationService } from "@/services/notificationService";
 import Image from "next/image";
 
 const baseNavigation = [
@@ -38,6 +41,9 @@ export default function Sidebar() {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [navigation, setNavigation] = useState(baseNavigation);
+  const [taskCount, setTaskCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const loadUserProfile = useCallback(async () => {
     if (user) {
@@ -46,10 +52,20 @@ export default function Sidebar() {
         setUserProfile(profile);
         const superAdminStatus = await superAdminService.isSuperAdmin(user.id);
         setIsSuperAdmin(superAdminStatus);
+        
+        // Load real task count
+        const tasks = await taskService.getTasksForUser(user.id);
+        setTaskCount(tasks.length);
+        
+        // Load notification count
+        const notifications = await notificationService.getUnreadNotifications(user.id);
+        setNotificationCount(notifications.length);
       } catch (error) {
-        console.error("Error loading user profile or super admin status:", error);
+        console.error("Error loading user data:", error);
         setUserProfile(null);
         setIsSuperAdmin(false);
+        setTaskCount(0);
+        setNotificationCount(0);
       }
     }
   }, [user]);
@@ -79,7 +95,6 @@ export default function Sidebar() {
     }
   }, [isSuperAdmin]);
 
-
   // Show all navigation items for now - role-based filtering can be added later
   const filteredNavigation = navigation; // Use the dynamic navigation state
 
@@ -94,7 +109,7 @@ export default function Sidebar() {
   return (
     <div className="flex h-full flex-col bg-white border-r border-gray-200">
       <div className="flex h-16 items-center px-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1">
           <Image
             src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
             alt="OnTime Logo"
@@ -102,6 +117,26 @@ export default function Sidebar() {
             height={32}
             className="bg-transparent mix-blend-multiply"
           />
+        </div>
+        
+        {/* Notification Bell */}
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative p-2"
+            onClick={() => setShowNotifications(!showNotifications)}
+          >
+            <Bell className="h-4 w-4" />
+            {notificationCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+              >
+                {notificationCount}
+              </Badge>
+            )}
+          </Button>
         </div>
       </div>
 
@@ -120,9 +155,9 @@ export default function Sidebar() {
               >
                 <item.icon className="h-4 w-4" />
                 {item.name}
-                {item.name === "Tasks" && (
+                {item.name === "Tasks" && taskCount > 0 && (
                   <Badge variant="secondary" className="ml-auto">
-                    5
+                    {taskCount}
                   </Badge>
                 )}
               </Button>

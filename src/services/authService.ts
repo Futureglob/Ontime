@@ -240,16 +240,15 @@ export const authService = {
         localStorage.removeItem("auth-storage");
         sessionStorage.clear();
         
-        // Redirect to login page instead of causing 404
-        window.location.href = "/";
+        // Force reload to clear all state and redirect to home
+        window.location.replace("/");
       }
     } catch (error) {
       console.error("Sign out error:", error);
       // Even if there's an error, redirect to home
       if (typeof window !== "undefined") {
-        window.location.href = "/";
+        window.location.replace("/");
       }
-      throw error;
     }
   },
 
