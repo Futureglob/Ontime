@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AuthUser {
@@ -23,25 +24,11 @@ export const authService = {
       if (error) throw error;
 
       if (data.user) {
-        const { data: profile, error: profileError } = await supabase
+        const {  profile, error: profileError } = await supabase
           .from("profiles")
           .select(`
-            id,
-            full_name,
-            role,
-            organization_id,
-            employee_id,
-            designation,
-            mobile_number,
-            is_active,
-            organization:organizations(
-              id,
-              name,
-              logo_url,
-              primary_color,
-              secondary_color,
-              is_active
-            )
+            *,
+            organization:organizations(*)
           `)
           .eq("id", data.user.id)
           .single();
@@ -85,31 +72,12 @@ export const authService = {
     try {
       console.log("PIN Login attempt:", { employeeId, pin });
 
-      // Use case-insensitive search for employee ID and ensure the user is active.
-      const { data: profiles, error: profileError } = await supabase
+      const {  profiles, error: profileError } = await supabase
         .from("profiles")
         .select(
           `
-          id,
-          full_name,
-          role,
-          organization_id,
-          employee_id,
-          designation,
-          mobile_number,
-          is_active,
-          pin_hash,
-          pin_expires_at,
-          failed_pin_attempts,
-          pin_locked_until,
-          organization:organizations(
-            id,
-            name,
-            logo_url,
-            primary_color,
-            secondary_color,
-            is_active
-          )
+          *,
+          organization:organizations(*)
         `
         )
         .ilike("employee_id", employeeId)
@@ -122,8 +90,7 @@ export const authService = {
 
       if (!profiles || profiles.length === 0) {
         console.warn("No active profile found for employee ID:", employeeId);
-        // As a fallback, let's check if a user exists with that ID but is inactive
-        const { data: inactiveProfile } = await supabase
+        const {  inactiveProfile } = await supabase
           .from("profiles")
           .select("employee_id, is_active")
           .ilike("employee_id", employeeId)
@@ -141,7 +108,6 @@ export const authService = {
           "Profiles:",
           profiles
         );
-        // This indicates a data integrity issue.
         throw new Error("invalid_pin");
       }
 
@@ -169,11 +135,8 @@ export const authService = {
         throw new Error("pin_expired");
       }
 
-      // In a real app, use a secure hashing library like bcrypt.
-      // For this project, we're using a simple string comparison.
       const expectedPinHash = `pin_${pin}`;
 
-      // If no PIN hash exists, this is the first login. Set the PIN.
       if (!profile.pin_hash) {
         console.log("First-time PIN setup for employee:", employeeId);
         const { error: updateError } = await supabase
@@ -195,15 +158,14 @@ export const authService = {
         }
 
         console.log("PIN hash set successfully for employee:", employeeId);
-        // Return the profile with the new hash for the session
+        const fullProfile = await this.getUserProfile(profile.id);
         return {
           user: null,
-          profile: { ...profile, pin_hash: expectedPinHash },
+          profile: fullProfile,
           isPinLogin: true,
         };
       }
 
-      // Verify existing PIN hash
       if (profile.pin_hash !== expectedPinHash) {
         console.warn("PIN mismatch for employee:", employeeId);
 
@@ -217,7 +179,7 @@ export const authService = {
 
         if (newFailedAttempts >= 5) {
           const lockUntil = new Date();
-          lockUntil.setMinutes(lockUntil.getMinutes() + 15); // Lock for 15 minutes
+          lockUntil.setMinutes(lockUntil.getMinutes() + 15);
           updates.pin_locked_until = lockUntil.toISOString();
           console.warn(
             `Account for employee ${employeeId} locked for 15 minutes.`
@@ -229,7 +191,6 @@ export const authService = {
         throw new Error("invalid_pin");
       }
 
-      // On successful login, reset failed attempts
       if (profile.failed_pin_attempts > 0) {
         await supabase
           .from("profiles")
@@ -241,10 +202,9 @@ export const authService = {
       }
 
       console.log("PIN login successful for employee:", employeeId);
-      return { user: null, profile, isPinLogin: true };
+      const fullProfile = await this.getUserProfile(profile.id);
+      return { user: null, profile: fullProfile, isPinLogin: true };
     } catch (error) {
-      // Catch specific errors to provide better feedback if needed,
-      // otherwise, re-throw the original error.
       if (
         error instanceof Error &&
         ["account_locked", "pin_expired", "invalid_pin"].includes(error.message)
@@ -253,7 +213,7 @@ export const authService = {
         throw error;
       }
       console.error("An unexpected error occurred during PIN sign in:", error);
-      throw new Error("invalid_pin"); // Generic error for anything else
+      throw new Error("invalid_pin");
     }
   },
 
@@ -298,8 +258,6 @@ export const authService = {
   },
 
   async logPinAttempt(userId: string | null, action: string, details?: string, createdBy?: string) {
-    // Completely disable PIN audit logging to prevent 400 errors
-    // This can be re-enabled once the pin_audit_logs table is properly configured
     console.log("PIN Audit Log (disabled):", {
       user_id: userId,
       action,
@@ -307,7 +265,6 @@ export const authService = {
       created_by: createdBy || userId,
       timestamp: new Date().toISOString()
     });
-    // No database calls to prevent 400 errors
     return Promise.resolve();
   },
 
@@ -334,17 +291,14 @@ export const authService = {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear any local storage or session data
       if (typeof window !== "undefined") {
         localStorage.removeItem("auth-storage");
         sessionStorage.clear();
         
-        // Force reload to clear all state and redirect to home
         window.location.replace("/");
       }
     } catch (error) {
       console.error("Sign out error:", error);
-      // Even if there's an error, redirect to home
       if (typeof window !== "undefined") {
         window.location.replace("/");
       }
@@ -352,7 +306,7 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {  { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     
     if (user) {
@@ -390,7 +344,7 @@ export const authService = {
     let organizationId = userData.organizationId;
     
     if (userData.role === "super_admin") {
-      const { data: systemOrg, error: orgError } = await supabase
+      const {  systemOrg, error: orgError } = await supabase
         .from("organizations")
         .select("id")
         .eq("name", "System Administration")
@@ -445,7 +399,7 @@ export const authService = {
     const { error } = await supabase
       .from("profiles")
       .update({
-        pin_hash: `pin_${pin}`, // Simple hash for demo - should use proper hashing
+        pin_hash: `pin_${pin}`,
         pin_created_at: new Date().toISOString(),
         pin_expires_at: expiresAt.toISOString(),
         failed_pin_attempts: 0,
