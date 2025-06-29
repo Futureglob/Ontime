@@ -79,7 +79,7 @@ export const messageService = {
   async getTaskConversations(userId: string) {
     try {
       // 1. Get user's tasks with profiles
-      const {  tasks, error: tasksError } = await supabase
+      const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
         .select(`
           id,
@@ -87,8 +87,8 @@ export const messageService = {
           status,
           assigned_to,
           assigned_by,
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role, avatar_url),
-          assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role, avatar_url)
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, role),
+          assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, role)
         `)
         .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
 
@@ -97,7 +97,7 @@ export const messageService = {
 
       const conversations = await Promise.all(
         tasks.map(async (task) => {
-          const {  lastMessage } = await supabase
+          const { data: lastMessage } = await supabase
             .from("messages")
             .select("content, created_at, sender_id")
             .eq("task_id", task.id)
