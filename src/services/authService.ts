@@ -160,9 +160,9 @@ export const authService = {
         storedHash: profile.pin_hash 
       });
       
-      // If no PIN hash exists, set it for the employee (development mode)
-      if (!profile.pin_hash && process.env.NODE_ENV === "development") {
-        console.log("Setting PIN hash for employee:", employeeId);
+      // If no PIN hash exists, set it for the employee
+      if (!profile.pin_hash) {
+        console.log("No PIN hash found, setting PIN hash for employee:", employeeId);
         const { error: updateError } = await supabase
           .from("profiles")
           .update({
@@ -181,18 +181,10 @@ export const authService = {
 
         console.log("PIN hash set successfully for employee:", employeeId);
         
-        // Reset failed attempts on successful login
-        await supabase
-          .from("profiles")
-          .update({
-            failed_pin_attempts: 0,
-            pin_locked_until: null
-          })
-          .eq("id", profile.id);
-
-        return { user: null, profile, isPinLogin: true };
+        return { user: null, profile: { ...profile, pin_hash: expectedPinHash }, isPinLogin: true };
       }
       
+      // Verify existing PIN hash
       if (profile.pin_hash !== expectedPinHash) {
         console.warn("PIN mismatch for employee:", employeeId);
         
