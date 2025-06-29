@@ -85,6 +85,14 @@ export const authService = {
     try {
       console.log("PIN Login attempt:", { employeeId: employeeId.toUpperCase(), pin });
       
+      // Debug: First check what profiles exist
+      const { data: allProfiles, error: debugError } = await supabase
+        .from("profiles")
+        .select("employee_id, full_name, is_active, pin_hash")
+        .limit(10);
+      
+      console.log("Debug - All profiles:", allProfiles);
+      
       // First try to find the profile without .single() to avoid 406 errors
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
@@ -123,6 +131,13 @@ export const authService = {
       // Check if we found exactly one profile
       if (!profiles || profiles.length === 0) {
         console.warn("No profile found for employee ID:", employeeId);
+        // Try without case sensitivity
+        const { data: profilesNoCase, error: noCaseError } = await supabase
+          .from("profiles")
+          .select("employee_id, full_name, is_active")
+          .ilike("employee_id", employeeId);
+        
+        console.log("Debug - Case insensitive search:", profilesNoCase);
         throw new Error("invalid_pin");
       }
 
