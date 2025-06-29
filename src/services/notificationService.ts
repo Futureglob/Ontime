@@ -82,7 +82,7 @@ export const notificationService = {
         { action: "view", title: "View Task" },
         { action: "dismiss", title: "Dismiss" }
       ],
-       { type: "task_assigned", taskTitle }
+      data: { type: "task_assigned", taskTitle }
     });
   },
 
@@ -92,7 +92,7 @@ export const notificationService = {
       body: `${updatedBy} updated "${taskTitle}" to ${status.replace("_", " ")}`,
       tag: "task-status",
       icon: "/icons/icon-192x192.svg",
-       { type: "task_status", taskTitle, status }
+      data: { type: "task_status", taskTitle, status }
     });
   },
 
@@ -106,7 +106,7 @@ export const notificationService = {
         { action: "reply", title: "Reply" },
         { action: "view", title: "View Chat" }
       ],
-       { type: "message", senderName, taskTitle }
+      data: { type: "message", senderName, taskTitle }
     });
   },
 
@@ -116,7 +116,7 @@ export const notificationService = {
       body: `${itemCount} items synced successfully`,
       tag: "offline-sync",
       icon: "/icons/icon-192x192.svg",
-       { type: "sync", itemCount }
+      data: { type: "sync", itemCount }
     });
   },
 
@@ -131,7 +131,7 @@ export const notificationService = {
         { action: "view", title: "View Task" },
         { action: "snooze", title: "Remind Later" }
       ],
-       { type: "reminder", taskTitle, deadline }
+      data: { type: "reminder", taskTitle, deadline }
     });
   },
 
@@ -163,7 +163,7 @@ export const notificationService = {
   },
 
   // Handle notification clicks
-  handleNotificationClick( Record<string, unknown>): void {
+  handleNotificationClick(data: Record<string, unknown>): void {
     if (typeof window === "undefined") return;
     switch (data?.type) {
       case "task_assigned":
