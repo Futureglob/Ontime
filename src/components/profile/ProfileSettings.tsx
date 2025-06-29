@@ -204,7 +204,7 @@ export default function ProfileSettings() {
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: data.publicUrl })
+        .update({ avatar_url: data.publicUrl } as any)
         .eq('id', user.id);
 
       if (updateError) throw updateError;
