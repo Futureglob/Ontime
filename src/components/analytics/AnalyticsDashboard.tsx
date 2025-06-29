@@ -10,13 +10,17 @@ import { CalendarIcon, Download, TrendingUp, Users, MapPin, Clock } from "lucide
 import { format, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { analyticsService, TaskOverview, EmployeePerformance, LocationAnalytics, TaskTrend } from "@/services/analyticsService";
+import { useAuth } from "@/contexts/AuthContext";
+import { profileService } from "@/services/profileService";
 import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import EmployeePerformanceChart from "./EmployeePerformanceChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";
 import TimeSeriesChart from "./TimeSeriesChart";
 
 const AnalyticsDashboard = () => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),
     to: new Date(),
@@ -27,9 +31,24 @@ const AnalyticsDashboard = () => {
   const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytics[]>([]);
   const [timeSeriesData, setTimeSeriesData] = useState<TaskTrend[]>([]);
 
+  // Load user profile to get organization ID
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (user) {
+        try {
+          const profile = await profileService.getProfile(user.id);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error("Error loading user profile:", error);
+        }
+      }
+    };
+    loadUserProfile();
+  }, [user]);
+
   useEffect(() => {
     const fetchData = async () => {
-      if (!dateRange?.from || !dateRange?.to) {
+      if (!dateRange?.from || !dateRange?.to || !userProfile?.organization_id) {
         return;
       }
       try {
@@ -40,10 +59,10 @@ const AnalyticsDashboard = () => {
           locationData,
           timeData,
         ] = await Promise.all([
-          analyticsService.getTaskOverview("org_123", { from: dateRange.from, to: dateRange.to }),
-          analyticsService.getEmployeePerformance("org_123", { start: dateRange.from, end: dateRange.to }),
-          analyticsService.getLocationAnalytics("org_123", { start: dateRange.from, end: dateRange.to }),
-          analyticsService.getTimeSeriesData("org_123", 30),
+          analyticsService.getTaskOverview(userProfile.organization_id, { from: dateRange.from, to: dateRange.to }),
+          analyticsService.getEmployeePerformance(userProfile.organization_id, { start: dateRange.from, end: dateRange.to }),
+          analyticsService.getLocationAnalytics(userProfile.organization_id, { start: dateRange.from, end: dateRange.to }),
+          analyticsService.getTimeSeriesData(userProfile.organization_id, 30),
         ]);
   
         setTaskAnalytics(taskData);
@@ -58,7 +77,7 @@ const AnalyticsDashboard = () => {
     };
 
     fetchData();
-  }, [dateRange]);
+  }, [dateRange, userProfile?.organization_id]);
 
   const exportData = () => {
     const data = {
