@@ -22,6 +22,7 @@ import Image from "next/image";
 import AddOrganizationModal from "./AddOrganizationModal";
 import EditOrganizationModal from "./EditOrganizationModal";
 import SystemSettingsModal from "./SystemSettingsModal";
+import OrganizationDetailsModal from "./OrganizationDetailsModal";
 
 interface DashboardDisplayStats extends SystemStats {
   activeSuperAdmins: number;
@@ -44,7 +45,9 @@ export default function SuperAdminDashboard() {
   const [showAddOrgModal, setShowAddOrgModal] = useState(false);
   const [showEditOrgModal, setShowEditOrgModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<OrganizationForSuperAdminView | null>(null);
+  const [selectedOrgIdForDetails, setSelectedOrgIdForDetails] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -77,6 +80,11 @@ export default function SuperAdminDashboard() {
     } catch (error) {
       console.error("Logout error:", error);
     }
+  };
+
+  const handleViewDetails = (orgId: string) => {
+    setSelectedOrgIdForDetails(orgId);
+    setShowDetailsModal(true);
   };
 
   const handleEditOrganization = (org: OrganizationForSuperAdminView) => {
@@ -231,7 +239,7 @@ export default function SuperAdminDashboard() {
                           <Badge variant={org.is_active ? "default" : "destructive"}>
                             {org.is_active ? "Active" : "Inactive"}
                           </Badge>
-                          <Button variant="ghost" size="sm" title="View Details">
+                          <Button variant="ghost" size="sm" title="View Details" onClick={() => handleViewDetails(org.id)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button 
@@ -400,6 +408,12 @@ export default function SuperAdminDashboard() {
       <SystemSettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+      />
+
+      <OrganizationDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        organizationId={selectedOrgIdForDetails}
       />
     </div>
   );

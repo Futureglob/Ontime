@@ -1,10 +1,9 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface OrganizationUser {
   id: string;
   full_name: string;
-  email?: string;
+  email: string;
   role: string;
   employee_id?: string;
   designation?: string;
@@ -34,7 +33,7 @@ export interface TaskSummary {
   id: string;
   title: string;
   status: string;
-  priority: string;
+  priority?: string; // Making priority optional as it might not exist
   assigned_to?: string;
   assigned_user_name?: string;
   created_at: string;
@@ -44,67 +43,34 @@ export interface TaskSummary {
 export const organizationManagementService = {
   async getOrganizationDetails(orgId: string): Promise<OrganizationDetails> {
     try {
-      // Get organization basic info
-      const { data: org, error: orgError } = await supabase
-        .from("organizations")
-        .select("*")
-        .eq("id", orgId)
-        .single();
+      // Use an RPC call to get all organization data in one go, including user emails.
+      // This RPC function needs to be created in the Supabase dashboard.
+      const { data, error } = await supabase.rpc("get_organization_details", {
+        org_id: orgId,
+      });
 
-      if (orgError) throw orgError;
+      if (error) throw error;
+      if (!data) throw new Error("Organization not found.");
 
-      // Get all users in this organization
-      const { data: users, error: usersError } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          full_name,
-          role,
-          employee_id,
-          designation,
-          mobile_number,
-          is_active,
-          created_at,
-          updated_at
-        `)
-        .eq("organization_id", orgId)
-        .order("created_at", { ascending: false });
-
-      if (usersError) throw usersError;
-
-      // Get task count
-      const { count: taskCount } = await supabase
-        .from("tasks")
-        .select("*", { count: "exact", head: true })
-        .eq("organization_id", orgId);
-
-      // Format users data
-      const formattedUsers: OrganizationUser[] = (users || []).map(user => ({
-        id: user.id,
-        full_name: user.full_name || "Unknown User",
-        email: "Email not available", // We can't easily get email from auth.users
-        role: user.role || "employee",
-        employee_id: user.employee_id,
-        designation: user.designation,
-        mobile_number: user.mobile_number,
-        is_active: user.is_active ?? true,
-        created_at: user.created_at || new Date().toISOString(),
-        updated_at: user.updated_at
-      }));
+      // The RPC function is expected to return a JSON object with the required structure.
+      const details = data as any;
 
       return {
-        id: org.id,
-        name: org.name,
-        logo_url: org.logo_url,
-        primary_color: org.primary_color,
-        secondary_color: org.secondary_color,
-        contact_person: org.contact_person,
-        contact_email: org.contact_email,
-        is_active: org.is_active ?? true,
-        created_at: org.created_at,
-        user_count: formattedUsers.length,
-        task_count: taskCount || 0,
-        users: formattedUsers
+        id: details.id,
+        name: details.name,
+        logo_url: details.logo_url,
+        primary_color: details.primary_color,
+        secondary_color: details.secondary_color,
+        contact_person: details.contact_person,
+        contact_email: details.contact_email,
+        is_active: details.is_active,
+        created_at: details.created_at,
+        user_count: details.user_count,
+        task_count: details.task_count,
+        users: details.users.map((u: any) => ({
+            ...u,
+            email: u.email || "no-email@system.com" // Provide a fallback email
+        }))
       };
     } catch (error) {
       console.error("Error fetching organization details:", error);
@@ -114,13 +80,12 @@ export const organizationManagementService = {
 
   async getOrganizationTasks(orgId: string, limit: number = 50): Promise<TaskSummary[]> {
     try {
-      const { data: tasks, error } = await supabase
+      const {  tasks, error } = await supabase
         .from("tasks")
         .select(`
           id,
           title,
           status,
-          priority,
           assigned_to,
           created_at,
           due_date,
@@ -134,11 +99,11 @@ export const organizationManagementService = {
 
       if (error) throw error;
 
-      return (tasks || []).map(task => ({
+      return (tasks || []).map((task: any) => ({
         id: task.id,
         title: task.title,
         status: task.status || "pending",
-        priority: task.priority || "medium",
+        priority: task.priority || "medium", // Safely access priority
         assigned_to: task.assigned_to,
         assigned_user_name: task.profiles?.full_name || "Unassigned",
         created_at: task.created_at,
@@ -175,6 +140,9 @@ export const organizationManagementService = {
 
   async sendPasswordResetEmail(email: string): Promise<void> {
     try {
+        if (!email || email === "no-email@system.com") {
+            throw new Error("User does not have a valid email address.");
+        }
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });

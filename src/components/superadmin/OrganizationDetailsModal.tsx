@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Users, 
-  Tasks, 
+  ClipboardList, 
   Settings, 
   Download, 
   RefreshCw, 
   Shield, 
-  Mail, 
   Phone, 
   Calendar,
   MoreVertical,
@@ -42,13 +40,7 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  useEffect(() => {
-    if (isOpen && organizationId) {
-      loadOrganizationData();
-    }
-  }, [isOpen, organizationId]);
-
-  const loadOrganizationData = async () => {
+  const loadOrganizationData = useCallback(async () => {
     if (!organizationId) return;
     
     try {
@@ -61,16 +53,28 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
       setOrgDetails(details);
       setTasks(taskList);
     } catch (error) {
-      console.error("Error loading organization data:", error);
+      console.error("Error loading organization ", error);
+      // Display a message to the user in the modal
+      setOrgDetails(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId]);
+
+  useEffect(() => {
+    if (isOpen && organizationId) {
+      loadOrganizationData();
+    }
+  }, [isOpen, organizationId, loadOrganizationData]);
 
   const handlePasswordReset = async (user: OrganizationUser) => {
+    if (!user.email || user.email === "no-email@system.com") {
+        alert(`Cannot send password reset. User ${user.full_name} has no valid email address.`);
+        return;
+    }
     try {
-      await organizationManagementService.sendPasswordResetEmail(user.email || "");
-      alert(`Password reset email sent to ${user.full_name}`);
+      await organizationManagementService.sendPasswordResetEmail(user.email);
+      alert(`Password reset email sent to ${user.full_name} (${user.email})`);
     } catch (error) {
       alert("Failed to send password reset email: " + (error as Error).message);
     }
@@ -207,7 +211,7 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Tasks className="h-4 w-4 text-green-600" />
+                        <ClipboardList className="h-4 w-4 text-green-600" />
                         <span>Total Tasks</span>
                       </div>
                       <span className="font-semibold">{orgDetails.task_count}</span>
@@ -290,12 +294,20 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
                                 </span>
                               )}
                             </div>
+                            <p className="text-xs text-gray-400">{user.email}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={user.role === "org_admin" ? "default" : "secondary"}>
-                            {user.role.replace("_", " ").toUpperCase()}
-                          </Badge>
+                          <Select value={user.role} onValueChange={(newRole) => handleRoleChange(user.id, newRole)}>
+                            <SelectTrigger className="w-32 h-8 text-xs">
+                                <SelectValue placeholder="Role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="org_admin">Admin</SelectItem>
+                                <SelectItem value="manager">Manager</SelectItem>
+                                <SelectItem value="employee">Employee</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <Badge variant={user.is_active ? "default" : "destructive"}>
                             {user.is_active ? "Active" : "Inactive"}
                           </Badge>
@@ -367,12 +379,14 @@ export default function OrganizationDetailsModal({ isOpen, onClose, organization
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={
-                              task.priority === "high" ? "destructive" :
-                              task.priority === "medium" ? "default" : "secondary"
-                            }>
-                              {task.priority.toUpperCase()}
-                            </Badge>
+                            {task.priority && (
+                                <Badge variant={
+                                task.priority === "high" ? "destructive" :
+                                task.priority === "medium" ? "default" : "secondary"
+                                }>
+                                {task.priority.toUpperCase()}
+                                </Badge>
+                            )}
                             <Badge variant={
                               task.status === "completed" ? "default" :
                               task.status === "in_progress" ? "secondary" : "outline"
