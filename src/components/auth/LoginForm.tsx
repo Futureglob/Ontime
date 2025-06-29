@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,28 +118,11 @@ export default function LoginForm() {
     <div className="min-h-screen flex items-center justify-center light-blue-gradient py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <Image
-              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
-              alt="OnTime Logo"
-              width={115}
-              height={64}
-              className="bg-transparent mix-blend-multiply"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" }}
-            />
-          </div>
+          {/* Temporarily removed logo to fix page loading issue */}
           <div className="flex items-center justify-center gap-3 mt-6">
             <h2 className="text-3xl font-extrabold text-sky-900">
-              Sign in
+              OnTime - Sign in
             </h2>
-            <Image
-              src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
-              alt="OnTime Logo"
-              width={87}
-              height={48}
-              className="bg-transparent mix-blend-multiply"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" }}
-            />
           </div>
           <p className="mt-2 text-sm text-sky-700">
             Task management made simple
