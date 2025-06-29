@@ -62,7 +62,23 @@ export default function ProfileSettings() {
       
       // Set profile with default values for missing fields
       setProfile({
-        ...data,
+        id: data.id,
+        organization_id: data.organization_id,
+        employee_id: data.employee_id,
+        full_name: data.full_name,
+        designation: data.designation,
+        mobile_number: data.mobile_number,
+        role: data.role,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        is_active: data.is_active,
+        pin_hash: data.pin_hash,
+        pin_attempts: data.pin_attempts || 0,
+        pin_locked_until: data.pin_locked_until,
+        last_login: data.last_login,
+        last_location_lat: data.last_location_lat || 0,
+        last_location_lng: data.last_location_lng || 0,
+        pin_reset_requested_at: data.pin_reset_requested_at,
         email: data.email || user.email || "",
         phone: data.phone || data.mobile_number || "",
         bio: data.bio || "",
@@ -90,17 +106,17 @@ export default function ProfileSettings() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
           full_name: profile.full_name,
           designation: profile.designation,
           mobile_number: profile.mobile_number,
           updated_at: new Date().toISOString()
         })
-        .eq("id", user.id);
+        .eq('id', user.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       toast({
         title: "Success",
