@@ -122,6 +122,15 @@ export const authService = {
 
       if (!profiles || profiles.length === 0) {
         console.warn("No active profile found for employee ID:", employeeId);
+        // As a fallback, let's check if a user exists with that ID but is inactive
+        const {  inactiveProfile } = await supabase
+          .from("profiles")
+          .select("employee_id, is_active")
+          .ilike("employee_id", employeeId)
+          .limit(1);
+        if (inactiveProfile && inactiveProfile.length > 0) {
+          console.warn("An inactive profile was found for employee ID:", employeeId);
+        }
         throw new Error("invalid_pin");
       }
 
