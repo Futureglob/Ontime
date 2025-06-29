@@ -19,7 +19,7 @@ export const authService = {
     }
 
     if (data.user) {
-      const {  profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select(`*, organization:organizations(*)`)
         .eq("id", data.user.id)
@@ -39,7 +39,7 @@ export const authService = {
   async signInWithPin(employeeId: string, pin: string) {
     console.log("Attempting PIN sign-in for employee ID:", employeeId);
 
-    const {  profiles, error: profileError } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select(`*, organization:organizations(*)`)
       .eq("employee_id", employeeId)
@@ -80,7 +80,7 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    const {  { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError) {
         console.error("Error getting session:", sessionError);
@@ -88,7 +88,7 @@ export const authService = {
     }
 
     if (session?.user) {
-        const {  profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select(`*, organization:organizations(*)`)
             .eq("id", session.user.id)
