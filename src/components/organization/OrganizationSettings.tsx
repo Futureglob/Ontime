@@ -102,12 +102,12 @@ export default function OrganizationSettings() {
           secondary_color: orgData.secondary_color,
           created_at: orgData.created_at,
           updated_at: orgData.updated_at,
-          description: orgData.description || "",
-          website: orgData.website || "",
-          phone: orgData.phone || "",
-          email: orgData.email || "",
-          address: orgData.address || "",
-          is_active: orgData.is_active ?? true
+          description: (orgData as any).description || "",
+          website: (orgData as any).website || "",
+          phone: (orgData as any).phone || "",
+          email: (orgData as any).email || "",
+          address: (orgData as any).address || "",
+          is_active: (orgData as any).is_active ?? true
         });
 
         // Set default organization settings
@@ -150,11 +150,6 @@ export default function OrganizationSettings() {
           logo_url: organization.logo_url,
           primary_color: organization.primary_color,
           secondary_color: organization.secondary_color,
-          description: organization.description,
-          website: organization.website,
-          phone: organization.phone,
-          email: organization.email,
-          address: organization.address,
           updated_at: new Date().toISOString()
         })
         .eq("id", userProfile.organization_id);

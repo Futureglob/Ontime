@@ -73,17 +73,17 @@ export default function ProfileSettings() {
         updated_at: data.updated_at,
         is_active: data.is_active,
         pin_hash: data.pin_hash,
-        pin_attempts: data.pin_attempts || 0,
+        pin_attempts: (data as any).pin_attempts || 0,
         pin_locked_until: data.pin_locked_until,
-        last_login: data.last_login,
-        last_location_lat: data.last_location_lat || 0,
-        last_location_lng: data.last_location_lng || 0,
+        last_login: (data as any).last_login || "",
+        last_location_lat: (data as any).last_location_lat || 0,
+        last_location_lng: (data as any).last_location_lng || 0,
         pin_reset_requested_at: data.pin_reset_requested_at,
-        email: data.email || user.email || "",
-        phone: data.phone || data.mobile_number || "",
-        bio: data.bio || "",
-        location: data.location || "",
-        avatar_url: data.avatar_url || ""
+        email: (data as any).email || user.email || "",
+        phone: (data as any).phone || data.mobile_number || "",
+        bio: (data as any).bio || "",
+        location: (data as any).location || "",
+        avatar_url: (data as any).avatar_url || ""
       });
     } catch (error) {
       console.error("Error loading profile:", error);
