@@ -19,41 +19,51 @@ import { UserRole, TaskStatus, Profile, Task } from "@/types/database";
 import { useRouter } from "next/router";
 
 export default function DashboardOverview() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
-    if (!user) return;
+    // Use profile if available (PIN login), otherwise use user (regular login)
+    const currentProfile = profile || (user ? await profileService.getProfile(user.id) : null);
+    
+    if (!currentProfile) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const profile = await profileService.getProfile(user.id);
-      setUserProfile(profile);
+      setUserProfile(currentProfile);
 
       const fetchTasks = async () => {
-        if (!user) return;
         try {
           let fetchedTasks;
-          if (profile?.role === "employee") {
-            fetchedTasks = await taskService.getUserTasks(user.id);
+          if (currentProfile.role === "employee") {
+            // For PIN login, use profile.id, for regular login use user.id
+            const userId = profile?.id || user?.id;
+            if (userId) {
+              fetchedTasks = await taskService.getUserTasks(userId);
+            }
           } else {
-            fetchedTasks = await taskService.getTasksForOrganization(profile.organization_id);
+            fetchedTasks = await taskService.getTasksForOrganization(currentProfile.organization_id);
           }
           setTasks(fetchedTasks || []);
         } catch (error) {
-          console.error("Error loading dashboard ", error);
+          console.error("Error loading tasks:", error);
+          setTasks([]);
         }
       };
 
       await fetchTasks();
     } catch (error) {
-      console.error("Error loading dashboard ", error);
+      console.error("Error loading dashboard:", error);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, profile]);
 
   useEffect(() => {
     loadData();

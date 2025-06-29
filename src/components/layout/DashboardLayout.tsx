@@ -13,22 +13,24 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const loadUnreadCount = useCallback(async () => {
-    if (user?.id) {
+    // Use profile.id for PIN login, user.id for regular login
+    const userId = profile?.id || user?.id;
+    if (userId) {
       try {
-        const count = await messageService.getUnreadMessageCount(user.id);
+        const count = await messageService.getUnreadMessageCount(userId);
         setUnreadCount(count);
       } catch (error) {
         console.error("Error loading unread count:", error);
         setUnreadCount(0);
       }
     }
-  }, [user?.id]);
+  }, [user?.id, profile?.id]);
 
   useEffect(() => {
     loadUnreadCount();
@@ -82,7 +84,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
                 <div className="flex items-center gap-2">
                   <div className="hidden sm:block text-right">
-                    <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {profile?.full_name || user?.email}
+                    </p>
                     <p className="text-xs text-gray-500">Online</p>
                   </div>
                   <Button variant="ghost" size="sm" onClick={handleSignOut}>
