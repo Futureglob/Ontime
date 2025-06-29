@@ -1,424 +1,108 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  name?: string;
-  role?: string;
-  organizationId?: string;
-  employeeId?: string;
-  designation?: string;
-  mobileNumber?: string;
-  isActive?: boolean;
-}
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
+  organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
+};
 
 export const authService = {
   async signIn(email: string, password: string) {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        const {  profile, error: profileError } = await supabase
-          .from("profiles")
-          .select(`
-            *,
-            organization:organizations(*)
-          `)
-          .eq("id", data.user.id)
-          .single();
-
-        if (profileError) {
-          console.error("Profile fetch error:", profileError);
-          if (email === "superadmin@system.com") {
-            const { data: systemOrg, error: orgError } = await supabase
-              .from("organizations")
-              .select("id")
-              .eq("name", "System Administration")
-              .single();
-
-            if (orgError) throw orgError;
-
-            if (systemOrg) {
-              const newProfile = await this.createUserProfile(data.user.id, {
-                email: email,
-                name: "System Administrator",
-                role: "super_admin",
-                organizationId: systemOrg.id,
-                isActive: true
-              });
-              return { user: data.user, profile: newProfile };
-            }
-          }
-          throw profileError;
-        }
-
-        return { user: data.user, profile };
-      }
-
-      return { user: data.user, profile: null };
-    } catch (error) {
-      console.error("Sign in error:", error);
-      throw error;
-    }
-  },
-
-  async signInWithPin(employeeId: string, pin: string) {
-    try {
-      console.log("PIN Login attempt:", { employeeId, pin });
-
-      const {  profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select(
-          `
-          *,
-          organization:organizations(*)
-        `
-        )
-        .ilike("employee_id", employeeId)
-        .eq("is_active", true);
-
-      if (profileError) {
-        console.error("Profile query error:", profileError);
-        throw new Error("invalid_pin");
-      }
-
-      if (!profiles || profiles.length === 0) {
-        console.warn("No active profile found for employee ID:", employeeId);
-        const {  inactiveProfile } = await supabase
-          .from("profiles")
-          .select("employee_id, is_active")
-          .ilike("employee_id", employeeId)
-          .limit(1);
-        if (inactiveProfile && inactiveProfile.length > 0) {
-          console.warn("An inactive profile was found for employee ID:", employeeId);
-        }
-        throw new Error("invalid_pin");
-      }
-
-      if (profiles.length > 1) {
-        console.warn(
-          "Multiple active profiles found for employee ID:",
-          employeeId,
-          "Profiles:",
-          profiles
-        );
-        throw new Error("invalid_pin");
-      }
-
-      const profile = profiles[0];
-      console.log("Profile found:", {
-        id: profile.id,
-        employee_id: profile.employee_id,
-        pin_hash: profile.pin_hash ? "Exists" : "NULL",
-        role: profile.role,
-      });
-
-      if (
-        profile.pin_locked_until &&
-        new Date(profile.pin_locked_until) > new Date()
-      ) {
-        console.warn("Account locked for employee:", employeeId);
-        throw new Error("account_locked");
-      }
-
-      if (
-        profile.pin_expires_at &&
-        new Date(profile.pin_expires_at) < new Date()
-      ) {
-        console.warn("PIN expired for employee:", employeeId);
-        throw new Error("pin_expired");
-      }
-
-      const expectedPinHash = `pin_${pin}`;
-
-      if (!profile.pin_hash) {
-        console.log("First-time PIN setup for employee:", employeeId);
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({
-            pin_hash: expectedPinHash,
-            pin_created_at: new Date().toISOString(),
-            pin_expires_at: new Date(
-              Date.now() + 90 * 24 * 60 * 60 * 1000
-            ).toISOString(), // 90 days
-            failed_pin_attempts: 0,
-            pin_locked_until: null,
-          })
-          .eq("id", profile.id);
-
-        if (updateError) {
-          console.error("Error setting PIN hash on first login:", updateError);
-          throw new Error("invalid_pin");
-        }
-
-        console.log("PIN hash set successfully for employee:", employeeId);
-        const fullProfile = await this.getUserProfile(profile.id);
-        return {
-          user: null,
-          profile: fullProfile,
-          isPinLogin: true,
-        };
-      }
-
-      if (profile.pin_hash !== expectedPinHash) {
-        console.warn("PIN mismatch for employee:", employeeId);
-
-        const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
-        const updates: {
-          failed_pin_attempts: number;
-          pin_locked_until?: string | null;
-        } = {
-          failed_pin_attempts: newFailedAttempts,
-        };
-
-        if (newFailedAttempts >= 5) {
-          const lockUntil = new Date();
-          lockUntil.setMinutes(lockUntil.getMinutes() + 15);
-          updates.pin_locked_until = lockUntil.toISOString();
-          console.warn(
-            `Account for employee ${employeeId} locked for 15 minutes.`
-          );
-        }
-
-        await supabase.from("profiles").update(updates).eq("id", profile.id);
-
-        throw new Error("invalid_pin");
-      }
-
-      if (profile.failed_pin_attempts > 0) {
-        await supabase
-          .from("profiles")
-          .update({
-            failed_pin_attempts: 0,
-            pin_locked_until: null,
-          })
-          .eq("id", profile.id);
-      }
-
-      console.log("PIN login successful for employee:", employeeId);
-      const fullProfile = await this.getUserProfile(profile.id);
-      return { user: null, profile: fullProfile, isPinLogin: true };
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        ["account_locked", "pin_expired", "invalid_pin"].includes(error.message)
-      ) {
-        console.error(`PIN sign in failed: ${error.message}`, error);
-        throw error;
-      }
-      console.error("An unexpected error occurred during PIN sign in:", error);
-      throw new Error("invalid_pin");
-    }
-  },
-
-  async generatePin(userId: string, adminId: string): Promise<string> {
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 90);
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        pin_hash: "placeholder_hash",
-        pin_created_at: new Date().toISOString(),
-        pin_expires_at: expiresAt.toISOString(),
-        failed_pin_attempts: 0,
-        pin_locked_until: null,
-        pin_reset_requested: false,
-        pin_reset_requested_at: null
-      })
-      .eq("id", userId);
-
-    if (error) throw error;
-
-    await this.logPinAttempt(userId, "created", "PIN created by admin", adminId);
-
-    return pin;
-  },
-
-  async requestPinReset(employeeId: string) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        pin_reset_requested: true,
-        pin_reset_requested_at: new Date().toISOString()
-      })
-      .eq("employee_id", employeeId.toUpperCase());
-
-    if (error) throw error;
-
-    await this.logPinAttempt(null, "reset_requested", `PIN reset requested for ${employeeId}`);
-  },
-
-  async logPinAttempt(userId: string | null, action: string, details?: string, createdBy?: string) {
-    console.log("PIN Audit Log (disabled):", {
-      user_id: userId,
-      action,
-      details,
-      created_by: createdBy || userId,
-      timestamp: new Date().toISOString()
-    });
-    return Promise.resolve();
-  },
-
-  async signUp(email: string, password: string, userData?: Partial<AuthUser>) {
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
-
-    if (data.user && userData) {
-      await this.createUserProfile(data.user.id, {
-        ...userData,
-        email: data.user.email || email,
-      });
+    if (error) {
+      console.error("Sign in error:", error);
+      throw error;
     }
 
-    return data;
+    if (data.user) {
+      const {  profile, error: profileError } = await supabase
+        .from("profiles")
+        .select(`*, organization:organizations(*)`)
+        .eq("id", data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Profile fetch error on sign-in:", profileError);
+        throw profileError;
+      }
+      
+      return { user: data.user, profile: profile as Profile };
+    }
+
+    return { user: null, profile: null };
+  },
+
+  async signInWithPin(employeeId: string, pin: string) {
+    console.log("Attempting PIN sign-in for employee ID:", employeeId);
+
+    const {  profiles, error: profileError } = await supabase
+      .from("profiles")
+      .select(`*, organization:organizations(*)`)
+      .eq("employee_id", employeeId)
+      .eq("is_active", true);
+
+    if (profileError) {
+      console.error("Error fetching profile by PIN:", profileError);
+      throw new Error("Invalid credentials");
+    }
+
+    if (!profiles || profiles.length === 0) {
+      console.warn("No active profile found for employee ID:", employeeId);
+      throw new Error("Invalid credentials");
+    }
+
+    const profile = profiles[0];
+    
+    // This is a simplified placeholder for PIN verification.
+    // In a real app, you'd use something like bcrypt to compare a hashed PIN.
+    const pinIsValid = profile.pin_hash === `pin_${pin}`;
+
+    if (!pinIsValid) {
+        console.warn("Invalid PIN for employee ID:", employeeId);
+        // Here you would implement logic for failed attempts, account locking, etc.
+        throw new Error("Invalid credentials");
+    }
+    
+    console.log("PIN login successful for:", employeeId);
+    return { user: null, profile: profile as Profile, isPinLogin: true };
   },
 
   async signOut() {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("auth-storage");
-        sessionStorage.clear();
-        
-        window.location.replace("/");
-      }
-    } catch (error) {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
       console.error("Sign out error:", error);
-      if (typeof window !== "undefined") {
-        window.location.replace("/");
-      }
+      throw error;
     }
   },
 
   async getCurrentUser() {
-    const {  { user }, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    
-    if (user) {
-      const profile = await this.getUserProfile(user.id);
-      return { user, profile };
+    const {  { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+        console.error("Error getting session:", sessionError);
+        return { user: null, profile: null };
     }
-    
+
+    if (session?.user) {
+        const {  profile, error: profileError } = await supabase
+            .from("profiles")
+            .select(`*, organization:organizations(*)`)
+            .eq("id", session.user.id)
+            .single();
+
+        if (profileError) {
+            console.error("Error fetching profile for current user:", profileError);
+            return { user: session.user, profile: null };
+        }
+        return { user: session.user, profile: profile as Profile };
+    }
+
     return { user: null, profile: null };
   },
-
-  async getUserProfile(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(`
-          *,
-          organization:organizations(*)
-        `)
-        .eq("id", userId)
-        .single();
-
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching user profile:", error);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Get user profile error:", error);
-      return null;
-    }
-  },
-
-  async createUserProfile(userId: string, userData: Partial<AuthUser> & { email: string }) {
-    let organizationId = userData.organizationId;
-    
-    if (userData.role === "super_admin") {
-      const {  systemOrg, error: orgError } = await supabase
-        .from("organizations")
-        .select("id")
-        .eq("name", "System Administration")
-        .single();
-      
-      if (orgError) throw orgError;
-      organizationId = systemOrg?.id;
-    }
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .insert({
-        id: userId,
-        full_name: userData.name || "User",
-        role: userData.role || "employee",
-        organization_id: organizationId,
-        employee_id: userData.employeeId,
-        designation: userData.designation,
-        mobile_number: userData.mobileNumber,
-        is_active: userData.isActive !== false,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return data;
-  },
-
-  async resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    
-    if (error) throw error;
-  },
-
-  async updatePassword(newPassword: string) {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
-    
-    if (error) throw error;
-  },
-
-  async generatePinForUser(userId: string, adminId: string): Promise<string> {
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 90);
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        pin_hash: `pin_${pin}`,
-        pin_created_at: new Date().toISOString(),
-        pin_expires_at: expiresAt.toISOString(),
-        failed_pin_attempts: 0,
-        pin_locked_until: null,
-        pin_reset_requested: false,
-        pin_reset_requested_at: null
-      })
-      .eq("id", userId);
-
-    if (error) throw error;
-
-    await this.logPinAttempt(userId, "pin_generated", "PIN generated by admin", adminId);
-
-    return pin;
-  },
-
-  async resetUserPin(userId: string, adminId: string): Promise<string> {
-    return this.generatePinForUser(userId, adminId);
-  }
 };
 
 export default authService;
