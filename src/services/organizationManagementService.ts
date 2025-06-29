@@ -1,4 +1,3 @@
-
     import { supabase } from "@/integrations/supabase/client";
     import { authService } from "./authService";
 
@@ -67,7 +66,7 @@
           const org = data as OrganizationFromDB;
 
           // Get users count and details
-          const {  users, error: usersError } = await supabase
+          const { data: users, error: usersError } = await supabase
             .from("profiles")
             .select(`
               id,
@@ -99,7 +98,7 @@
           const usersWithEmail = await Promise.all(
             (users || []).map(async (user) => {
               try {
-                const {  { user: authUser } } = await supabase.auth.admin.getUserById(user.id);
+                const { data: { user: authUser } } = await supabase.auth.admin.getUserById(user.id);
                 return {
                   ...user,
                   email: authUser?.email || "no-email@system.com"
