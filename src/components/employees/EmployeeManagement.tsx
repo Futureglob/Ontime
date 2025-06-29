@@ -1,11 +1,10 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// Removed Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
-// Removed Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-import { Plus, Search, User, Phone, Calendar, Edit, Trash2, RotateCcw } from "lucide-react"; // Removed MapPin
+import { Plus, Search, User, Phone, Calendar, Edit, Trash2, RotateCcw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileService, type Profile } from "@/services/profileService";
 import EmployeeForm from "./EmployeeForm";
@@ -16,13 +15,13 @@ export default function EmployeeManagement() {
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Profile | null>(null);
 
   const loadUserProfile = useCallback(async () => {
-    // Check for either user.id or authProfile
     if (!user?.id && !authProfile) {
       setLoading(false);
       return;
@@ -33,7 +32,6 @@ export default function EmployeeManagement() {
       if (user?.id) {
         profile = await profileService.getProfile(user.id);
       } else if (authProfile) {
-        // If we have authProfile from PIN login, use it directly
         profile = authProfile;
       }
 
@@ -52,14 +50,14 @@ export default function EmployeeManagement() {
     } finally {
       setLoading(false);
     }
-  }, [user, authProfile]);
+  }, [user?.id, authProfile?.id]);
 
   const loadEmployees = useCallback(async () => {
     if (!userProfile?.organization_id) {
       return;
     }
 
-    setLoading(true);
+    setEmployeesLoading(true);
     try {
       const employeesData = await profileService.getOrganizationProfiles(userProfile.organization_id);
       setEmployees(employeesData || []);
@@ -69,29 +67,19 @@ export default function EmployeeManagement() {
       setError("Failed to load employees");
       setEmployees([]);
     } finally {
-      setLoading(false);
+      setEmployeesLoading(false);
     }
-  }, [userProfile]);
+  }, [userProfile?.organization_id]);
 
   useEffect(() => {
     loadUserProfile();
   }, [loadUserProfile]);
 
   useEffect(() => {
-    if (userProfile !== null) {
+    if (userProfile?.organization_id) {
       loadEmployees();
     }
-  }, [userProfile, loadEmployees]);
-
-  // Add debug effect for state changes
-  useEffect(() => {
-    console.log("Current state:", {
-      user: !!user,
-      userProfile: !!userProfile,
-      loading,
-      employeesCount: employees.length
-    });
-  }, [user, userProfile, loading, employees]);
+  }, [userProfile?.organization_id, loadEmployees]);
 
   const handleEmployeeCreated = () => {
     setShowEmployeeForm(false);
@@ -115,7 +103,6 @@ export default function EmployeeManagement() {
 
   const handleResetPin = async (employee: Profile) => {
     try {
-      // Reset PIN by clearing pin_hash and related fields
       await profileService.updateProfile(employee.id, {
         pin_hash: null,
         pin_created_at: null,
@@ -136,12 +123,10 @@ export default function EmployeeManagement() {
   const canDeleteEmployee = (employee: Profile) => {
     if (!userProfile) return false;
 
-    // Org admins can only delete employees. They cannot delete other admins or managers.
     if (userProfile.role === "org_admin") {
       return employee.role === "employee";
     }
 
-    // Managers can only delete employees.
     if (userProfile.role === "manager") {
       return employee.role === "employee";
     }
@@ -284,106 +269,112 @@ export default function EmployeeManagement() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredEmployees.map((employee) => (
-          <Card key={employee.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
-                    <User className="h-5 w-5 text-gray-600" />
+      {employeesLoading ? (
+        <div className="flex items-center justify-center h-32">
+          <div className="text-lg">Loading employee data...</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredEmployees.map((employee) => (
+            <Card key={employee.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
+                      <User className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-semibold">{employee.full_name}</CardTitle>
+                      <p className="text-sm text-muted-foreground">{employee.employee_id}</p>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">{employee.full_name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{employee.employee_id}</p>
+                  <Badge variant={employee.role === "manager" ? "default" : "secondary"}>
+                    {employee.role?.toUpperCase()}
+                  </Badge>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-3">
+                {employee.designation && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Role:</span>
+                    <span className="font-medium">{employee.designation}</span>
                   </div>
-                </div>
-                <Badge variant={employee.role === "manager" ? "default" : "secondary"}>
-                  {employee.role?.toUpperCase()}
-                </Badge>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-3">
-              {employee.designation && (
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Role:</span>
-                  <span className="font-medium">{employee.designation}</span>
-                </div>
-              )}
+                )}
 
-              {employee.mobile_number && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Phone:</span>
-                  <span className="font-medium">{employee.mobile_number}</span>
-                </div>
-              )}
+                {employee.mobile_number && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span className="font-medium">{employee.mobile_number}</span>
+                  </div>
+                )}
 
-              {employee.created_at && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Joined:</span>
-                  <span className="font-medium">
-                    {new Date(employee.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
+                {employee.created_at && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Joined:</span>
+                    <span className="font-medium">
+                      {new Date(employee.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
 
-              <div className="flex gap-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => handleEditEmployee(employee)}
-                >
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
-                </Button>
-                
-                {canResetPin(employee) && (
+                <div className="flex gap-2 pt-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="px-3"
-                    onClick={() => handleResetPin(employee)}
-                    title="Reset PIN"
+                    className="flex-1"
+                    onClick={() => handleEditEmployee(employee)}
                   >
-                    <RotateCcw className="h-3 w-3" />
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
                   </Button>
-                )}
-                
-                {canDeleteEmployee(employee) && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="px-3">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Employee</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete {employee.full_name}? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteEmployee(employee)}>
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  
+                  {canResetPin(employee) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="px-3"
+                      onClick={() => handleResetPin(employee)}
+                      title="Reset PIN"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </Button>
+                  )}
+                  
+                  {canDeleteEmployee(employee) && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="px-3">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {employee.full_name}? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteEmployee(employee)}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {filteredEmployees.length === 0 && (
+      {!employeesLoading && filteredEmployees.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <div className="text-muted-foreground">
