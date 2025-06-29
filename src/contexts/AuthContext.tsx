@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useContext,
@@ -92,10 +93,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem("pin-profile");
           }
         } else {
+          // Only check for PIN profile if no Supabase session
           const storedPinProfile = localStorage.getItem("pin-profile");
           if (storedPinProfile && mounted) {
-            const parsedProfile = JSON.parse(storedPinProfile);
-            setProfile(parsedProfile);
+            try {
+              const parsedProfile = JSON.parse(storedPinProfile);
+              setProfile(parsedProfile);
+              setUser(null); // Ensure user is null for PIN login
+            } catch (error) {
+              console.error("Error parsing stored PIN profile:", error);
+              localStorage.removeItem("pin-profile");
+            }
           }
         }
       } catch (error) {
@@ -109,26 +117,37 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
     checkUser();
 
-    const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
+      console.log("Auth state change:", event, session?.user?.id);
+      
       if (session?.user) {
-        if(user?.id !== session.user.id) {
-          setLoading(true);
-          setUser(session.user);
+        // Regular Supabase authentication
+        setLoading(true);
+        setUser(session.user);
+        try {
           const userProfile = await authService.getUserProfile(session.user.id);
           if (mounted) {
             setProfile(userProfile as Profile);
-            localStorage.removeItem("pin-profile");
+            localStorage.removeItem("pin-profile"); // Clear PIN profile
+          }
+        } catch (error) {
+          console.error("Error loading user profile:", error);
+        } finally {
+          if (mounted) {
             setLoading(false);
           }
         }
-      } else {
+      } else if (event === "SIGNED_OUT") {
+        // Only clear state on explicit sign out
         setUser(null);
-        if (!localStorage.getItem("pin-profile")) {
+        const storedPinProfile = localStorage.getItem("pin-profile");
+        if (!storedPinProfile) {
           setProfile(null);
         }
       }
+      // Don't clear PIN authentication on other auth state changes
     });
 
     const subscription = data.subscription;
@@ -137,7 +156,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription?.unsubscribe();
     };
-  }, [user]);
+  }, []); // Remove the [user] dependency to prevent loops
 
   const value = useMemo(
     () => ({
