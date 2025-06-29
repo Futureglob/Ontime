@@ -34,7 +34,7 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
     designation: employee?.designation || "",
     mobile_number: employee?.mobile_number || "",
     role: employee?.role || "employee", // Default to string value
-    email: "",
+    email: employee?.email || "",
     password: ""
   });
 
@@ -171,31 +171,35 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
             </Select>
           </div>
 
-          {!employee && (
-            <>
-              <div>
-                <label className="text-sm font-medium">Email *</label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="Enter email address"
-                  required
-                />
-              </div>
+          <div>
+            <label className="text-sm font-medium">Email {!employee ? "*" : ""}</label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+              placeholder="Enter email address"
+              required={!employee}
+              disabled={!!employee}
+            />
+            {employee && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Email cannot be changed for existing employees
+              </p>
+            )}
+          </div>
 
-              <div>
-                <label className="text-sm font-medium">Password *</label>
-                <Input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  placeholder="Enter password (min 6 characters)"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </>
+          {!employee && (
+            <div>
+              <label className="text-sm font-medium">Password *</label>
+              <Input
+                type="password"
+                value={formData.password}
+                onChange={(e) => handleInputChange("password", e.target.value)}
+                placeholder="Enter password (min 6 characters)"
+                required
+                minLength={6}
+              />
+            </div>
           )}
 
           <div className="flex gap-3 pt-4">
