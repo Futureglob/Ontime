@@ -83,6 +83,8 @@ export const authService = {
 
   async signInWithPin(employeeId: string, pin: string) {
     try {
+      console.log("PIN Login attempt:", { employeeId: employeeId.toUpperCase(), pin });
+      
       // First try to find the profile without .single() to avoid 406 errors
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
@@ -116,9 +118,10 @@ export const authService = {
         throw new Error("invalid_pin");
       }
 
+      console.log("Found profiles:", profiles);
+
       // Check if we found exactly one profile
       if (!profiles || profiles.length === 0) {
-        // Don't log to pin_audit_logs if it might not exist
         console.warn("No profile found for employee ID:", employeeId);
         throw new Error("invalid_pin");
       }
@@ -129,12 +132,19 @@ export const authService = {
       }
 
       const profile = profiles[0];
+      console.log("Profile found:", { 
+        id: profile.id, 
+        employee_id: profile.employee_id, 
+        pin_hash: profile.pin_hash,
+        role: profile.role 
+      });
 
       if (profile.pin_locked_until && new Date(profile.pin_locked_until) > new Date()) {
         throw new Error("account_locked");
       }
 
       if (!profile.pin_hash) {
+        console.warn("No PIN hash found for employee:", employeeId);
         throw new Error("invalid_pin");
       }
 
@@ -144,7 +154,15 @@ export const authService = {
 
       // Simple PIN verification - in production, this should be server-side
       const expectedPinHash = `pin_${pin}`;
+      console.log("PIN verification:", { 
+        provided: pin, 
+        expectedHash: expectedPinHash, 
+        storedHash: profile.pin_hash 
+      });
+      
       if (profile.pin_hash !== expectedPinHash) {
+        console.warn("PIN mismatch for employee:", employeeId);
+        
         // Increment failed attempts
         const newFailedAttempts = (profile.failed_pin_attempts || 0) + 1;
         const updates: { failed_pin_attempts: number; pin_locked_until?: string } = {
@@ -165,6 +183,8 @@ export const authService = {
 
         throw new Error("invalid_pin");
       }
+
+      console.log("PIN login successful for employee:", employeeId);
 
       // Reset failed attempts on successful login
       await supabase

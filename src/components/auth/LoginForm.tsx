@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Mail, Lock, User, KeyRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
+import devDataService from "@/services/devDataService";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -26,6 +27,13 @@ export default function LoginForm() {
     employeeId: "",
     pin: ""
   });
+
+  // Setup test data on component mount (development only)
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      devDataService.setupTestEmployees();
+    }
+  }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
