@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Message, Task } from "@/types/database"; // Added Task import
+import { Message, Task } from "@/types/database";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 export interface MessageWithSender extends Message {
@@ -17,7 +18,7 @@ export const messageService = {
       .insert([{
         task_id: taskId,
         sender_id: senderId,
-        receiver_id: senderId, // Assuming sender is also a receiver for now, adjust as needed
+        receiver_id: senderId,
         content,
         is_read: false,
       }])
@@ -56,53 +57,90 @@ export const messageService = {
     if (error) throw error;
   },
 
-  // Get unread message count for a user
   async getUnreadMessageCount(userId: string): Promise<number> {
     try {
+      // First get tasks where user is involved
+      const { data: userTasks, error: tasksError } = await supabase
+        .from("tasks")
+        .select("id")
+        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+
+      if (tasksError) throw tasksError;
+
+      if (!userTasks || userTasks.length === 0) {
+        return 0;
+      }
+
+      const taskIds = userTasks.map(task => task.id);
+
+      // Then count unread messages for those tasks
       const { count, error } = await supabase
         .from("messages")
         .select("*", { count: "exact", head: true })
         .eq("is_read", false)
-        .not("sender_id", "eq", userId) // Count messages not sent by the user
-        .or(`task_id.in.(SELECT id FROM tasks WHERE assigned_to = '${userId}' OR assigned_by = '${userId}')`); // User is part of the task
+        .neq("sender_id", userId)
+        .in("task_id", taskIds);
 
       if (error) throw error;
       return count || 0;
     } catch (error) {
       console.error("Error fetching unread message count:", error);
-      throw error;
+      return 0;
     }
   },
 
   async getTaskConversations(userId: string) {
-    const { data, error } = await supabase
-      .from("messages")
-      .select(`
-        task_id,
-        tasks!inner(
+    try {
+      // First get tasks where user is involved
+      const { data: userTasks, error: tasksError } = await supabase
+        .from("tasks")
+        .select(`
           id,
           title,
           status,
           assigned_to,
           assigned_by,
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, designation), 
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name, designation),
           assigned_by_profile:profiles!tasks_assigned_by_fkey(full_name, designation)
-        )
-      `)
-      .or(`sender_id.eq.${userId},tasks.assigned_to.eq.${userId},tasks.assigned_by.eq.${userId}`)
-      .order("created_at", { ascending: false });
+        `)
+        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
 
-    if (error) throw error;
+      if (tasksError) throw tasksError;
 
-    // Group by task_id and get latest message for each task
-    const conversations = new Map();
-    data?.forEach(msg => {
-      if (!conversations.has(msg.task_id)) {
-        conversations.set(msg.task_id, msg);
+      if (!userTasks || userTasks.length === 0) {
+        return [];
       }
-    });
 
-    return Array.from(conversations.values());
+      const taskIds = userTasks.map(task => task.id);
+
+      // Get latest message for each task
+      const { data: messages, error: messagesError } = await supabase
+        .from("messages")
+        .select("task_id, created_at")
+        .in("task_id", taskIds)
+        .order("created_at", { ascending: false });
+
+      if (messagesError) throw messagesError;
+
+      // Group by task_id and get latest message for each task
+      const conversations = new Map();
+      messages?.forEach(msg => {
+        if (!conversations.has(msg.task_id)) {
+          const task = userTasks.find(t => t.id === msg.task_id);
+          if (task) {
+            conversations.set(msg.task_id, {
+              task_id: msg.task_id,
+              tasks: task
+            });
+          }
+        }
+      });
+
+      return Array.from(conversations.values());
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+      return [];
+    }
   },
 
   subscribeToTaskMessages(taskId: string, callback: (payload: RealtimePostgresChangesPayload<Message>) => void) {
@@ -128,7 +166,6 @@ export const messageService = {
       .subscribe();
   },
 
-  // Generate a generic task update message
   generateTaskUpdateMessage(task: Task): string {
     return `Task Update: ${task.title}
 Status: ${task.status}
@@ -136,7 +173,6 @@ Location: ${task.location || "Not specified"}
 Deadline: ${task.deadline ? new Date(task.deadline).toLocaleDateString() : "N/A"}`;
   },
 
-  // Generate WhatsApp share link
   generateWhatsAppLink(phoneNumber: string | undefined, message: string): string {
     const encodedMessage = encodeURIComponent(message);
     if (phoneNumber) {

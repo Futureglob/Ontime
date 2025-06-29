@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { profileService } from "@/services/profileService";
 import { authService } from "@/services/authService"; 
@@ -106,6 +106,9 @@ export default function EmployeeForm({ employee, organizationId, onClose, onEmpl
           <DialogTitle>
             {employee ? "Edit Employee" : "Add New Employee"}
           </DialogTitle>
+          <DialogDescription>
+            {employee ? "Update employee information below." : "Enter the details for the new employee."}
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">

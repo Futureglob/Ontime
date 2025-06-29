@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, MapPin } from "lucide-react";
@@ -108,6 +108,9 @@ export default function TaskForm({ onClose, onTaskCreated, employees }: TaskForm
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
+          <DialogDescription>
+            Fill in the details below to create a new task for your team.
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -150,12 +153,12 @@ export default function TaskForm({ onClose, onTaskCreated, employees }: TaskForm
 
             <div>
               <label className="text-sm font-medium">Assign to Employee</label>
-              <Select value={formData.assigned_to || ""} onValueChange={(value) => handleInputChange("assigned_to", value || undefined)}>
+              <Select value={formData.assigned_to || "unassigned"} onValueChange={(value) => handleInputChange("assigned_to", value === "unassigned" ? undefined : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select employee (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.full_name} ({employee.employee_id})
