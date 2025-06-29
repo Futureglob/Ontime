@@ -41,37 +41,36 @@ export interface TaskSummary {
   due_date?: string;
 }
 
+// Define a type for the shape of the task data returned from the query
+type TaskFromQuery = {
+  id: string;
+  title: string;
+  status: string;
+  assigned_to?: string | null;
+  created_at: string;
+  profiles: { full_name: string } | null;
+};
+
 export const organizationManagementService = {
   async getOrganizationDetails(orgId: string): Promise<OrganizationDetails> {
     try {
-      // Use an RPC call to get all organization data in one go.
-      // This RPC function needs to be created in the Supabase dashboard.
-      // We cast to `any` because the generated types might not be updated with the new function.
-      const { data, error } = await (supabase as any).rpc("get_organization_details", {
+      // The `rpc` call is not strongly typed by default for functions not in generated types.
+      // Using a type assertion here is a pragmatic approach to call the custom database function.
+      const { data, error } = await supabase.rpc("get_organization_details", {
         org_id: orgId,
       });
 
       if (error) throw error;
       if (!data) throw new Error("Organization not found.");
 
-      // The RPC function is expected to return a JSON object with the required structure.
-      const details = data as any;
+      // We cast the result to our expected interface.
+      const details = data as OrganizationDetails;
 
       return {
-        id: details.id,
-        name: details.name,
-        logo_url: details.logo_url,
-        primary_color: details.primary_color,
-        secondary_color: details.secondary_color,
-        contact_person: details.contact_person,
-        contact_email: details.contact_email,
-        is_active: details.is_active,
-        created_at: details.created_at,
-        user_count: details.user_count,
-        task_count: details.task_count,
-        users: details.users.map((u: any) => ({
-            ...u,
-            email: u.email || "no-email@system.com" // Provide a fallback email
+        ...details,
+        users: details.users.map((user: OrganizationUser) => ({
+            ...user,
+            email: user.email || "no-email@system.com" // Provide a fallback email for users without one
         }))
       };
     } catch (error) {
@@ -82,7 +81,8 @@ export const organizationManagementService = {
 
   async getOrganizationTasks(orgId: string, limit: number = 50): Promise<TaskSummary[]> {
     try {
-      const {  tasks, error } = await supabase
+      // Query only the columns that exist in the tasks table
+      const { data: tasks, error } = await supabase
         .from("tasks")
         .select(`
           id,
@@ -90,7 +90,6 @@ export const organizationManagementService = {
           status,
           assigned_to,
           created_at,
-          due_date,
           profiles!tasks_assigned_to_fkey (
             full_name
           )
@@ -101,15 +100,16 @@ export const organizationManagementService = {
 
       if (error) throw error;
 
-      return (tasks || []).map((task: any) => ({
+      // Map the query result to the TaskSummary interface, providing fallbacks for nullable fields
+      return (tasks as TaskFromQuery[] || []).map((task) => ({
         id: task.id,
         title: task.title,
         status: task.status || "pending",
-        priority: task.priority || "medium",
-        assigned_to: task.assigned_to,
+        priority: "medium", // Default priority since column doesn't exist
+        assigned_to: task.assigned_to || undefined,
         assigned_user_name: task.profiles?.full_name || "Unassigned",
         created_at: task.created_at,
-        due_date: task.due_date
+        due_date: undefined // Default since column doesn't exist
       }));
     } catch (error) {
       console.error("Error fetching organization tasks:", error);
