@@ -55,6 +55,7 @@ export const organizationManagementService = {
     try {
       // The `rpc` call is not strongly typed by default for functions not in generated types.
       // Using a type assertion here is a pragmatic approach to call the custom database function.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).rpc("get_organization_details", {
         org_id: orgId,
       });
