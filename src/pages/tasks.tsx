@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -6,7 +5,7 @@ import TaskManagement from "@/components/tasks/TaskManagement";
 import LoginForm from "@/components/auth/LoginForm";
 
 export default function TasksPage() {
-  const { user, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -21,7 +20,7 @@ export default function TasksPage() {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return <LoginForm />;
   }
 
