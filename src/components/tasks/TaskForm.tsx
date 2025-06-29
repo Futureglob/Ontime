@@ -158,7 +158,7 @@ export default function TaskForm({ onClose, onTaskCreated, employees }: TaskForm
                   <SelectValue placeholder="Select employee (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.full_name} ({employee.employee_id})
