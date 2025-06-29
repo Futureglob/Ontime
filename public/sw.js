@@ -1,7 +1,7 @@
 
-const CACHE_NAME = 'ontime-v2';
-const STATIC_CACHE = 'ontime-static-v2';
-const DYNAMIC_CACHE = 'ontime-dynamic-v2';
+const CACHE_NAME = 'ontime-v3';
+const STATIC_CACHE = 'ontime-static-v3';
+const DYNAMIC_CACHE = 'ontime-dynamic-v3';
 
 const urlsToCache = [
   '/',
@@ -23,6 +23,9 @@ self.addEventListener('install', (event) => {
       })
       .then(() => {
         return self.skipWaiting();
+      })
+      .catch((error) => {
+        console.error('Service Worker install failed:', error);
       })
   );
 });
@@ -56,8 +59,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip external requests
+  // Skip external requests and invalid URLs
   if (url.origin !== location.origin) {
+    return;
+  }
+
+  // Skip requests to non-existent auth routes
+  if (url.pathname.includes('/auth/login') || url.pathname.includes('/login')) {
+    console.log('Skipping auth route:', url.pathname);
     return;
   }
 
@@ -66,12 +75,16 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          const responseClone = response.clone();
-          caches.open(DYNAMIC_CACHE)
-            .then(cache => cache.put(request, responseClone));
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(DYNAMIC_CACHE)
+              .then(cache => cache.put(request, responseClone))
+              .catch(error => console.error('Cache put failed:', error));
+          }
           return response;
         })
-        .catch(() => {
+        .catch((error) => {
+          console.log('API fetch failed, trying cache:', error);
           return caches.match(request);
         })
     );
@@ -83,7 +96,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request)
         .then(response => {
-          return response || fetch(request);
+          return response || fetch(request).catch(() => {
+            console.log('Static asset fetch failed:', url.pathname);
+            return new Response('Offline', { status: 503 });
+          });
         })
     );
     return;
@@ -93,17 +109,24 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then(response => {
-        if (response.status === 200) {
+        if (response.ok) {
           const responseClone = response.clone();
           caches.open(DYNAMIC_CACHE)
-            .then(cache => cache.put(request, responseClone));
+            .then(cache => cache.put(request, responseClone))
+            .catch(error => console.error('Cache put failed:', error));
         }
         return response;
       })
-      .catch(() => {
+      .catch((error) => {
+        console.log('Fetch failed, trying cache for:', url.pathname, error);
         return caches.match(request)
           .then(response => {
-            return response || caches.match('/');
+            return response || caches.match('/').then(fallback => {
+              return fallback || new Response('Offline', { 
+                status: 503,
+                statusText: 'Service Unavailable'
+              });
+            });
           });
       })
   );
@@ -113,7 +136,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('sync', (event) => {
   console.log('Background sync triggered:', event.tag);
   
-  if (event.tag === 'background-sync-ontime') {
+  if (event.tag === 'sync-ontime' || event.tag === 'background-sync-ontime') {
     event.waitUntil(syncOfflineData());
   }
 });
@@ -170,15 +193,13 @@ self.addEventListener('notificationclick', (event) => {
       clients.openWindow('/tasks')
     );
   } else if (event.action === 'close') {
-    // Just close the notification
     return;
   } else {
-    // Default action - open the app
     event.waitUntil(
       clients.matchAll({ type: 'window' }).then(clientList => {
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
-          if (client.url === '/' && 'focus' in client) {
+          if (client.url.includes(location.origin) && 'focus' in client) {
             return client.focus();
           }
         }
@@ -208,7 +229,6 @@ async function syncOfflineData() {
   try {
     console.log('Starting background sync...');
     
-    // Get offline data from IndexedDB or localStorage
     const offlineActions = getStoredOfflineActions();
     const cachedPhotos = getStoredCachedPhotos();
     
@@ -217,7 +237,6 @@ async function syncOfflineData() {
       return;
     }
 
-    // Sync offline actions
     for (const action of offlineActions) {
       try {
         await syncAction(action);
@@ -227,7 +246,6 @@ async function syncOfflineData() {
       }
     }
 
-    // Sync cached photos
     for (const photo of cachedPhotos) {
       try {
         await syncPhoto(photo);
@@ -239,7 +257,6 @@ async function syncOfflineData() {
 
     console.log('Background sync completed');
     
-    // Notify all clients about sync completion
     const clients = await self.clients.matchAll();
     clients.forEach(client => {
       client.postMessage({
@@ -255,31 +272,25 @@ async function syncOfflineData() {
 
 // Helper functions for offline data management
 function getStoredOfflineActions() {
-  // This would typically use IndexedDB, but for simplicity using a mock
   return [];
 }
 
 function getStoredCachedPhotos() {
-  // This would typically use IndexedDB, but for simplicity using a mock
   return [];
 }
 
 function removeOfflineAction(id) {
-  // Remove from storage
   console.log('Removing offline action:', id);
 }
 
 function removeCachedPhoto(id) {
-  // Remove from storage
   console.log('Removing cached photo:', id);
 }
 
 async function syncAction(action) {
-  // Sync individual action
   console.log('Syncing action:', action);
 }
 
 async function syncPhoto(photo) {
-  // Sync individual photo
   console.log('Syncing photo:', photo);
 }
