@@ -1,24 +1,24 @@
+
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/router";
 import Sidebar from "./Sidebar";
-import { messageService } from "@/services/messageService";
+import messageService from "@/services/messageService";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, profile, logout } = useAuth();
+  const { signOut, user, profile } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const loadUnreadCount = useCallback(async () => {
-    // Use profile.id for PIN login, user.id for regular login
     const userId = profile?.id || user?.id;
     if (userId) {
       try {
@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         setUnreadCount(0);
       }
     }
-  }, [user?.id, profile?.id]);
+  }, [profile, user]);
 
   useEffect(() => {
     loadUnreadCount();
@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleSignOut = async () => {
     try {
-      await logout();
+      await signOut();
       router.push("/");
     } catch (error) {
       console.error("Error signing out:", error);
@@ -45,8 +45,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex h-screen">
+    <div className="flex min-h-screen bg-gray-50">
+      <div className="flex h-screen w-full">
         <div className="hidden lg:flex lg:w-64 lg:flex-col">
           <Sidebar />
         </div>

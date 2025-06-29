@@ -1,51 +1,70 @@
-import "@/styles/globals.css";
-import type { AppProps } from "next/app";
-import AuthProvider from "@/contexts/AuthContext";
-import { Toaster } from "@/components/ui/sonner";
-import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
-import Head from "next/head";
-import { useEffect } from "react";
-import { pwaService } from "@/services/pwaService";
 
-export default function App({ Component, pageProps }: AppProps) {
-  useEffect(() => {
-    // Check if we're in an iframe (workspace preview)
-    const isInIframe = window !== window.parent;
-    
-    // Only run PWA service registration on the client side after mount
-    // Skip PWA registration in iframe environments (like workspace preview)
-    if (typeof window !== "undefined" && "serviceWorker" in navigator && !isInIframe) {
-      // Delay PWA registration to avoid build issues
-      setTimeout(async () => {
-        try {
-          await pwaService.registerServiceWorker();
-          console.log("Service Worker registered successfully");
-          
-          // Only attempt background sync if supported
-          if ("sync" in window.ServiceWorkerRegistration.prototype) {
-            pwaService.registerBackgroundSync();
+    import "@/styles/globals.css";
+    import type { AppProps } from "next/app";
+    import AuthProvider from "@/contexts/AuthContext";
+    import { Toaster } from "@/components/ui/sonner";
+    import { useEffect } from "react";
+
+    export default function App({ Component, pageProps }: AppProps) {
+      useEffect(() => {
+        const cleanup = async () => {
+          if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+            console.log("Starting service worker and cache cleanup...");
+            
+            const cleanupFlag = "sw_cleanup_done_v2";
+            if (sessionStorage.getItem(cleanupFlag)) {
+              console.log("Cleanup has already been performed in this session.");
+              return;
+            }
+
+            // Unregister all service workers
+            try {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              if (registrations.length) {
+                console.log("Unregistering existing service workers...");
+                for (const registration of registrations) {
+                  await registration.unregister();
+                  console.log(`Service worker unregistered: ${registration.scope}`);
+                }
+              } else {
+                console.log("No service workers to unregister.");
+              }
+            } catch (error) {
+              console.error("Error during service worker unregistration:", error);
+            }
+
+            // Clear all caches
+            if ("caches" in window) {
+              try {
+                const keys = await caches.keys();
+                if (keys.length > 0) {
+                  console.log("Clearing all caches...");
+                  await Promise.all(keys.map(key => caches.delete(key)));
+                  console.log("All caches cleared.");
+                } else {
+                  console.log("No caches to clear.");
+                }
+              } catch (error) {
+                console.error("Error clearing caches:", error);
+              }
+            }
+            
+            console.log("Cleanup complete. Reloading the page to apply changes.");
+            sessionStorage.setItem(cleanupFlag, "true");
+            window.location.reload();
           }
-        } catch (error) {
-          console.error("PWA service registration failed:", error);
-        }
-      }, 1000);
-    }
-  }, []);
+        };
 
-  return (
-    <AuthProvider>
-      <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="OnTime" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#3B82F6" />
-      </Head>
-      <Component {...pageProps} />
-      <Toaster richColors />
-      <PWAInstallPrompt />
-    </AuthProvider>
-  );
-}
+        cleanup();
+      }, []);
+
+      return (
+        <AuthProvider>
+          <div className="min-h-screen bg-background font-sans antialiased">
+            <Toaster />
+            <Component {...pageProps} />
+          </div>
+        </AuthProvider>
+      );
+    }
+  

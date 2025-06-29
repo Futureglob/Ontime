@@ -20,15 +20,18 @@ export default function HomePage() {
     if (mounted && !loading && isAuthenticated && profile && !redirecting) {
       setRedirecting(true);
       
-      // Redirect based on role
-      if (profile.role === "super_admin") {
-        router.push("/superadmin").catch(console.error);
-      } else if (profile.role === "org_admin") {
-        router.push("/orgadmin").catch(console.error);
-      } else {
-        // For regular employees, stay on main dashboard
-        setRedirecting(false);
-      }
+      // Add delay to ensure state updates are processed
+      setTimeout(() => {
+        // Redirect based on role
+        if (profile.role === "super_admin") {
+          router.push("/superadmin").catch(console.error);
+        } else if (profile.role === "org_admin") {
+          router.push("/orgadmin").catch(console.error);
+        } else {
+          // For regular employees, stay on main dashboard
+          setRedirecting(false);
+        }
+      }, 100);
     }
   }, [mounted, loading, isAuthenticated, profile, router, redirecting]);
 
