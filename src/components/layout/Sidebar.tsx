@@ -37,7 +37,7 @@ const baseNavigation = [
 
 export default function Sidebar() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [navigation, setNavigation] = useState(baseNavigation);
@@ -46,19 +46,29 @@ export default function Sidebar() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   const loadUserProfile = useCallback(async () => {
-    if (user) {
+    // Check for either user (email login) or profile (PIN login)
+    const currentUserId = user?.id || profile?.id;
+    
+    if (currentUserId) {
       try {
-        const profile = await profileService.getProfile(user.id);
-        setUserProfile(profile);
-        const superAdminStatus = await superAdminService.isSuperAdmin(user.id);
+        let currentProfile = profile;
+        
+        // If we have a user but no profile, fetch it
+        if (user && !profile) {
+          currentProfile = await profileService.getProfile(user.id);
+        }
+        
+        setUserProfile(currentProfile);
+        
+        const superAdminStatus = await superAdminService.isSuperAdmin(currentUserId);
         setIsSuperAdmin(superAdminStatus);
         
         // Load real task count
-        const tasks = await taskService.getTasksForUser(user.id);
+        const tasks = await taskService.getTasksForUser(currentUserId);
         setTaskCount(tasks.length);
         
         // Load notification count
-        const notifications = await notificationService.getUnreadNotifications(user.id);
+        const notifications = await notificationService.getUnreadNotifications(currentUserId);
         setNotificationCount(notifications.length);
       } catch (error) {
         console.error("Error loading user data:", error);
@@ -67,8 +77,14 @@ export default function Sidebar() {
         setTaskCount(0);
         setNotificationCount(0);
       }
+    } else {
+      // Clear state when no user/profile
+      setUserProfile(null);
+      setIsSuperAdmin(false);
+      setTaskCount(0);
+      setNotificationCount(0);
     }
-  }, [user]);
+  }, [user, profile]);
 
   useEffect(() => {
     loadUserProfile();
@@ -95,8 +111,31 @@ export default function Sidebar() {
     }
   }, [isSuperAdmin]);
 
-  // Show all navigation items for now - role-based filtering can be added later
-  const filteredNavigation = navigation; // Use the dynamic navigation state
+  // Filter navigation based on user role
+  const filteredNavigation = navigation.filter(item => {
+    const currentProfile = userProfile || profile;
+    if (!currentProfile) return true; // Show all if no profile
+    
+    const userRole = currentProfile.role;
+    
+    // Role-based navigation filtering
+    switch (userRole) {
+      case 'employee':
+        // Employees can only see basic functionality
+        return ['Dashboard', 'Tasks', 'Field Work', 'Messages', 'Profile'].includes(item.name);
+      case 'task_manager':
+        // Task managers can see most features except organization management
+        return !['Organization', 'Super Admin'].includes(item.name);
+      case 'org_admin':
+        // Org admins can see everything except Super Admin
+        return item.name !== 'Super Admin';
+      case 'super_admin':
+        // Super admins can see everything
+        return true;
+      default:
+        return true;
+    }
+  });
 
   const handleNavigation = (href: string) => {
     if (href === "/") {
@@ -166,7 +205,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {userProfile && (
+      {(userProfile || profile) && (
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">
@@ -174,10 +213,10 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {userProfile.full_name || "User"}
+                {(userProfile || profile)?.full_name || "User"}
               </p>
               <p className="text-xs text-gray-500 capitalize">
-                {userProfile.role || "Employee"}
+                {(userProfile || profile)?.role?.replace('_', ' ') || "Employee"}
               </p>
             </div>
           </div>
