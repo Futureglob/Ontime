@@ -73,16 +73,25 @@ export default function ProfileSettings() {
         updated_at: data.updated_at,
         is_active: data.is_active,
         pin_hash: data.pin_hash,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pin_attempts: (data as any).pin_attempts || 0,
         pin_locked_until: data.pin_locked_until,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         last_login: (data as any).last_login || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         last_location_lat: (data as any).last_location_lat || 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         last_location_lng: (data as any).last_location_lng || 0,
         pin_reset_requested_at: data.pin_reset_requested_at,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         email: (data as any).email || user.email || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         phone: (data as any).phone || data.mobile_number || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         bio: (data as any).bio || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         location: (data as any).location || "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         avatar_url: (data as any).avatar_url || ""
       });
     } catch (error) {
@@ -204,6 +213,7 @@ export default function ProfileSettings() {
 
       const { error: updateError } = await supabase
         .from('profiles')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .update({ avatar_url: data.publicUrl } as any)
         .eq('id', user.id);
 

@@ -102,11 +102,17 @@ export default function OrganizationSettings() {
           secondary_color: orgData.secondary_color,
           created_at: orgData.created_at,
           updated_at: orgData.updated_at,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           description: (orgData as any).description || "",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           website: (orgData as any).website || "",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           phone: (orgData as any).phone || "",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           email: (orgData as any).email || "",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           address: (orgData as any).address || "",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           is_active: (orgData as any).is_active ?? true
         });
 
