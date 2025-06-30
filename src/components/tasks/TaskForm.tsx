@@ -101,9 +101,9 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
       }
       onSuccess();
       onCancel();
-    } catch (e) {
-      console.error("Failed to save task:", e);
-      // Do not show alert, handle error silently or with a toast
+    } catch (error) {
+      console.error("Failed to save task:", error);
+      toast({ title: "Error", description: "Failed to save task.", variant: "destructive" });
     } finally {
       setLoading(false);
     }

@@ -1,38 +1,44 @@
-import { useEffect, useState } from "react";
+
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import EmployeeManagement from "@/components/employees/EmployeeManagement";
-import LoginForm from "@/components/auth/LoginForm";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 export default function EmployeesPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  const [mounted, setMounted] = useState(false);
+  const { currentProfile, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (!loading && !currentProfile) {
+      router.push("/");
+    }
+  }, [loading, currentProfile, router]);
 
-  // Show loading while checking authentication
-  if (!mounted || authLoading) {
+  if (loading || !currentProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600 mx-auto mb-4"></div>
-          <div className="text-lg">Loading...</div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        Loading...
       </div>
     );
   }
 
-  // Show login form if not authenticated
-  if (!isAuthenticated) {
-    return <LoginForm />;
+  if (currentProfile.role !== "org_admin" && currentProfile.role !== "task_manager") {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <h1 className="text-2xl font-bold">Access Denied</h1>
+          <p>You do not have permission to view this page.</p>
+        </div>
+      </DashboardLayout>
+    );
   }
 
-  // User is authenticated, show employee management
   return (
     <DashboardLayout>
-      <EmployeeManagement />
+      <div className="p-6">
+        <EmployeeManagement />
+      </div>
     </DashboardLayout>
   );
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
@@ -7,61 +6,51 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authService } from "@/services/authService";
 
 export default function SuperAdminPage() {
-  const { user, profile, loading: authLoading, signOut } = useAuth();
-  const router = useRouter();
-  const [isSuperAdminAuthenticated, setIsSuperAdminAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const { currentProfile, loading, logout } = useAuth();
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (user && profile) {
-        if (profile.role === "super_admin") {
-          setIsSuperAdminAuthenticated(true);
-        } else {
-          // If a non-super-admin is logged in, deny access and sign them out
-          setError("Access denied. You are not a super admin.");
-          signOut();
-          router.push("/");
-        }
-      } else {
-        setIsSuperAdminAuthenticated(false);
-      }
+  const handleLogin = async (password: string) => {
+    const email = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
+    if (!email) {
+      console.error("Super admin email not configured");
+      return;
     }
-  }, [authLoading, user, profile, router, signOut]);
-
-  const handleSuperAdminLogin = async (email: string, password: string) => {
-    setLoading(true);
-    setError(undefined);
     try {
-      // The auth context will handle the login state update
-      await authService.signIn(email, password);
-      // The useEffect will handle the role check and redirection
-    } catch (err) {
-      setError((err as Error).message || "Super admin login failed");
-      setIsSuperAdminAuthenticated(false);
-    } finally {
-      setLoading(false);
+      const { error } = await authService.login(email, password);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Super admin login failed", error);
+      alert("Login failed. Please check credentials.");
     }
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
-  if (!isSuperAdminAuthenticated) {
-    return (
-      <SuperAdminLogin
-        onLogin={handleSuperAdminLogin}
-        loading={loading}
-        error={error}
-      />
-    );
+  if (!currentProfile || currentProfile.role !== "super_admin") {
+    return <SuperAdminLogin onLogin={handleLogin} />;
   }
 
-  return <SuperAdminDashboard />;
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Super Admin Dashboard
+          </h1>
+          <button
+            onClick={logout}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Logout
+          </button>
+        </div>
+      </header>
+      <main className="py-10">
+        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+          <SuperAdminDashboard />
+        </div>
+      </main>
+    </div>
+  );
 }

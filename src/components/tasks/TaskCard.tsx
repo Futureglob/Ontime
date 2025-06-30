@@ -1,23 +1,23 @@
-
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EnrichedTask } from "@/services/taskService";
-import { Calendar, User, Edit, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Task } from "@/services/taskService";
+import { Edit, Trash2 } from "lucide-react";
 
 interface TaskCardProps {
-  task: EnrichedTask;
-  onEdit: (task: EnrichedTask) => void;
-  onDelete: (taskId: string) => void;
+  task: Task;
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
 }
 
 export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
-  const { profile } = useAuth();
+  const { currentProfile } = useAuth();
 
-  const canModify = profile?.role === 'super_admin' || 
-                    profile?.role === 'org_admin' || 
-                    (profile?.role === 'task_manager' && task.created_by === profile.id);
+  const canModify =
+    currentProfile?.role === "org_admin" ||
+    currentProfile?.role === "super_admin" ||
+    (currentProfile?.role === "task_manager" && task.created_by === currentProfile.id);
 
   const getPriorityColor = (priority: string | null) => {
     switch (priority) {
@@ -83,7 +83,7 @@ export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="destructive" size="sm" onClick={() => onDelete(task.id)}>
+          <Button variant="destructive" size="sm" onClick={() => onDelete(task)}>
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>

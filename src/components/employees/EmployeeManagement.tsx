@@ -55,8 +55,7 @@ export default function EmployeeManagement() {
         userProfile.organization_id
       );
       setEmployees(employeesData || []);
-    } catch (e) {
-      console.error("Failed to load employees:", e);
+    } catch {
       setError("Failed to load employees");
       setEmployees([]);
     } finally {

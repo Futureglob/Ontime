@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { taskService, Task } from "@/services/taskService";
+import { profileService } from "@/services/profileService";
+import { Task } from "@/services/taskService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,33 +15,38 @@ import { Search, Map } from "lucide-react";
 import FieldTaskCard from "./FieldTaskCard";
 import PhotoCapture from "./PhotoCapture";
 
+type EnrichedTask = Task & {
+  assignee_name?: string;
+  client_name?: string;
+};
+
 export default function FieldWork() {
-  const { profile } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { currentProfile } = useAuth();
+  const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
   const [isPhotoCaptureOpen, setIsPhotoCaptureOpen] = useState(false);
 
   const loadTasks = useCallback(async () => {
-    if (!profile) return;
+    if (!currentProfile) return;
     setLoading(true);
     try {
-      const fetchedTasks = await taskService.getTasksForUser();
+      const fetchedTasks = await profileService.getTasksForUser(currentProfile.id);
       setTasks(fetchedTasks.filter(t => t.task_type === 'field_work'));
     } catch (error) {
       console.error("Failed to load field tasks:", error);
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [currentProfile]);
 
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
 
-  const handleTakePhoto = (task: Task) => {
+  const handleTakePhoto = (task: EnrichedTask) => {
     setSelectedTask(task);
     setIsPhotoCaptureOpen(true);
   };

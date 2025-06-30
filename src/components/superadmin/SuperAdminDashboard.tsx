@@ -21,14 +21,16 @@ import SystemSettingsModal from "./SystemSettingsModal";
 import OrganizationDetailsModal from "./OrganizationDetailsModal";
 import { toast } from "sonner";
 import AnalyticsDashboard from "../analytics/AnalyticsDashboard";
+import { Organization } from "@/types";
 
 interface DashboardDisplayStats extends SystemStats {
   activeSuperAdmins: number;
 }
 
 export default function SuperAdminDashboard() {
-  const { profile, signOut } = useAuth();
-  const [organizations, setOrganizations] = useState<OrganizationForSuperAdminView[]>([]);
+  const { currentProfile, logout } = useAuth();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
   const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
   const [stats, setStats] = useState<DashboardDisplayStats>({
     total_organizations: 0,
@@ -51,6 +53,7 @@ export default function SuperAdminDashboard() {
   }, []);
 
   const loadDashboardData = async () => {
+    setLoading(true);
     try {
       const orgsData = await superAdminService.getOrganizations(); 
       const adminsData = await superAdminService.getSuperAdmins();
@@ -66,11 +69,12 @@ export default function SuperAdminDashboard() {
       console.error("Error loading dashboard: ", error);
       toast.error("Failed to load dashboard data.");
     }
+    setLoading(false);
   };
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await logout();
       toast.success("Logged out successfully");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -279,7 +283,7 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  if (!profile) {
+  if (!currentProfile) {
     return null; // or a spinner
   }
 
@@ -309,7 +313,7 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="font-medium">Welcome, {profile.full_name}</span>
+              <span className="font-medium">Welcome, {currentProfile.full_name}</span>
               <Button onClick={() => setShowSettingsModal(true)}>
                 System Settings
               </Button>

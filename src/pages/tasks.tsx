@@ -1,4 +1,3 @@
-
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import TaskManagement from "@/components/tasks/TaskManagement";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,26 +5,24 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 
 export default function TasksPage() {
-  const { profile, loading } = useAuth();
+  const { currentProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !profile) {
-      router.push('/');
+    if (!loading && !currentProfile) {
+      router.push("/");
     }
-  }, [profile, loading, router]);
+  }, [loading, currentProfile, router]);
 
-  if (loading || !profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
+  if (loading || !currentProfile) {
+    return <div>Loading...</div>;
   }
 
   return (
     <DashboardLayout>
-      <TaskManagement />
+      <div className="p-6">
+        <TaskManagement />
+      </div>
     </DashboardLayout>
   );
 }

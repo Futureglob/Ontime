@@ -76,14 +76,14 @@ interface AnalyticsData {
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 export default function CompleteAnalyticsDashboard() {
-  const { profile } = useAuth();
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const { currentProfile } = useAuth();
+  const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("30d");
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAnalyticsData = useCallback(async () => {
-    if (!profile?.organization_id) return;
+    if (!currentProfile?.organization_id) return;
 
     try {
       setLoading(true);
@@ -128,13 +128,13 @@ export default function CompleteAnalyticsDashboard() {
         ]
       };
 
-      setData(mockData);
+      setMetrics(mockData);
     } catch (error) {
       console.error("Error loading analytics ", error);
     } finally {
       setLoading(false);
     }
-  }, [profile?.organization_id]);
+  }, [currentProfile?.organization_id]);
 
   useEffect(() => {
     loadAnalyticsData();
@@ -147,18 +147,18 @@ export default function CompleteAnalyticsDashboard() {
   };
 
   const exportData = () => {
-    if (!data) return;
+    if (!metrics) return;
     
     const csvContent = `
 Task Overview
-Total Tasks,${data.overview.totalTasks}
-Completed Tasks,${data.overview.completedTasks}
-Pending Tasks,${data.overview.pendingTasks}
-Overdue Tasks,${data.overview.overdueTasks}
-Completion Rate,${data.overview.completionRate}%
+Total Tasks,${metrics.overview.totalTasks}
+Completed Tasks,${metrics.overview.completedTasks}
+Pending Tasks,${metrics.overview.pendingTasks}
+Overdue Tasks,${metrics.overview.overdueTasks}
+Completion Rate,${metrics.overview.completionRate}%
 
 Employee Performance
-${data.employeePerformance.map(emp => 
+${metrics.employeePerformance.map(emp => 
   `${emp.name},${emp.completed},${emp.pending},${emp.overdue},${emp.efficiency}%`
 ).join("\n")}
     `;
@@ -182,7 +182,7 @@ ${data.employeePerformance.map(emp =>
     );
   }
 
-  if (!data) {
+  if (!metrics) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-lg text-gray-500">No analytics data available</div>
@@ -230,7 +230,7 @@ ${data.employeePerformance.map(emp =>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Tasks</p>
-                <p className="text-2xl font-bold text-gray-900">{data.overview.totalTasks}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.overview.totalTasks}</p>
               </div>
               <CheckSquare className="h-8 w-8 text-blue-600" />
             </div>
@@ -246,7 +246,7 @@ ${data.employeePerformance.map(emp =>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Completion Rate</p>
-                <p className="text-2xl font-bold text-gray-900">{data.overview.completionRate}%</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.overview.completionRate}%</p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />
             </div>
@@ -262,12 +262,12 @@ ${data.employeePerformance.map(emp =>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Employees</p>
-                <p className="text-2xl font-bold text-gray-900">{data.overview.activeEmployees}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.overview.activeEmployees}</p>
               </div>
               <Users className="h-8 w-8 text-purple-600" />
             </div>
             <div className="mt-2 flex items-center">
-              <span className="text-sm text-gray-600">of {data.overview.totalEmployees} total</span>
+              <span className="text-sm text-gray-600">of {metrics.overview.totalEmployees} total</span>
             </div>
           </CardContent>
         </Card>
@@ -277,7 +277,7 @@ ${data.employeePerformance.map(emp =>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Avg Completion Time</p>
-                <p className="text-2xl font-bold text-gray-900">{data.overview.avgCompletionTime}h</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.overview.avgCompletionTime}h</p>
               </div>
               <Clock className="h-8 w-8 text-orange-600" />
             </div>
@@ -306,7 +306,7 @@ ${data.employeePerformance.map(emp =>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <AreaChart data={data.taskTrends}>
+                <AreaChart data={metrics.taskTrends}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
@@ -328,7 +328,7 @@ ${data.employeePerformance.map(emp =>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={data.employeePerformance}>
+                <BarChart data={metrics.employeePerformance}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
@@ -353,7 +353,7 @@ ${data.employeePerformance.map(emp =>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={data.tasksByStatus}
+                      data={metrics.tasksByStatus}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -362,7 +362,7 @@ ${data.employeePerformance.map(emp =>
                       fill="#8884d8"
                       dataKey="count"
                     >
-                      {data.tasksByStatus.map((entry, index) => (
+                      {metrics.tasksByStatus.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -378,7 +378,7 @@ ${data.employeePerformance.map(emp =>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {data.tasksByStatus.map((status, index) => (
+                  {metrics.tasksByStatus.map((status, index) => (
                     <div key={status.status} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div 
@@ -406,7 +406,7 @@ ${data.employeePerformance.map(emp =>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={data.locationAnalytics}>
+                <BarChart data={metrics.locationAnalytics}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="location" />
                   <YAxis />
@@ -427,7 +427,7 @@ ${data.employeePerformance.map(emp =>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={data.timeAnalytics}>
+                <LineChart data={metrics.timeAnalytics}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="hour" />
                   <YAxis />
