@@ -47,6 +47,11 @@ interface CachedPhoto {
   timestamp: number;
 }
 
+interface QueuedItem {
+    id: string;
+    [key: string]: any;
+}
+
 export const offlineService = {
   // Store offline actions in localStorage
   storeOfflineAction(action: OfflineTaskAction) {
@@ -290,20 +295,20 @@ export const offlineService = {
   },
 
   // Queue management
-  async getQueuedData(queueName: string): Promise<Record<string, unknown>[]> {
+  async getQueuedData(queueName: string): Promise<QueuedItem[]> {
     const stored = localStorage.getItem(`ontime_${queueName}`);
     return stored ? JSON.parse(stored) : [];
   },
 
   async addToQueue(queueName: string,  Record<string, unknown>) {
     const existing = await this.getQueuedData(queueName);
-    existing.push(data);
+    existing.push(data as QueuedItem);
     localStorage.setItem(`ontime_${queueName}`, JSON.stringify(existing));
   },
 
-  async removeFromQueue(queueName: string, id: string) {
+  async removeFromQueue(queueName: string, id: string): Promise<boolean> {
     const existing = await this.getQueuedData(queueName);
-    const filtered = existing.filter(item => (item as { id: string }).id !== id);
+    const filtered = existing.filter(item => item.id !== id);
     if (filtered.length === existing.length) return false; // Item not found
     
     localStorage.setItem(`ontime_${queueName}`, JSON.stringify(filtered));
