@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 interface LoginWithPinResponse {
@@ -19,7 +20,7 @@ export const authService = {
       });
 
       if (error) {
-        return {  null, error };
+        return { data: null, error };
       }
 
       const responseData = data as LoginWithPinResponse;
@@ -31,16 +32,16 @@ export const authService = {
         });
 
         if (sessionError) {
-          return {  null, error: sessionError };
+          return { data: null, error: sessionError };
         }
         
-        const {  { session } } = await supabase.auth.getSession();
-        return {  { session }, error: null };
+        const { data: { session } } = await supabase.auth.getSession();
+        return { data: { session }, error: null };
       }
 
-      return {  null, error: new Error(responseData?.message || "Invalid credentials") };
-    } catch (err: any) {
-      return {  null, error: err as Error };
+      return { data: null, error: new Error(responseData?.message || "Invalid credentials") };
+    } catch (error) {
+      return { data: null, error: error as Error };
     }
   },
 

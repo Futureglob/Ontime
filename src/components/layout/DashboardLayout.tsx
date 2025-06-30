@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+
+import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Bell, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "./Sidebar";
 import { authService } from "@/services/authService";
