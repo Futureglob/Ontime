@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -13,33 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ArrowLeft } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
-import { taskService, Task } from "@/services/taskService";
-import { Database } from "@/integrations/supabase/types";
-import { clientService, Client } from "@/services/clientService";
-import { useToast } from "@/hooks/use-toast";
-
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-
-const formSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters."),
-  description: z.string().optional(),
-  assignee_id: z.string().uuid().optional().or(z.literal("")),
-  due_date: z.date().optional(),
-  priority: z.string().optional(),
-  status: z.string().optional(),
-  client_id: z.string().uuid().optional().or(z.literal("")),
-});
-
-type FormData = z.infer<typeof formSchema>;
 
 interface TaskFormProps {
-  onSubmit: (formData: FormData) => Promise<void>;
+  onSubmit: (formData: any) => Promise<void>;
   onCancel: () => void;
 }
 

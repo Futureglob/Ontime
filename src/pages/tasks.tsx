@@ -1,8 +1,7 @@
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import TaskManagement from "@/components/tasks/TaskManagement";
+
 import { useAuth } from "@/contexts/SimpleAuthContext";
-import { useRouter } from "next/router";
-import { useEffect } from "react";
+import RoleBasedSidebar from "@/components/layout/RoleBasedSidebar";
+import TaskManagement from "@/components/tasks/TaskManagement";
 
 export default function TasksPage() {
   const { user } = useAuth();
