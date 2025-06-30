@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { createHash } from "crypto";
+import { rateLimit } from "@/lib/utils";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
@@ -9,6 +11,7 @@ type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 
 export const authService = {
   async signIn(email: string, password: string) {
+    await rateLimit(email); // Rate limit by email
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -38,34 +41,29 @@ export const authService = {
   },
 
   async signInWithPin(employeeId: string, pin: string) {
-    console.log("Attempting PIN sign-in for employee ID:", employeeId);
-
+    await rateLimit(employeeId); // Rate limit by employee ID
+    
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select(`*, organization:organizations(*)`)
       .eq("employee_id", employeeId)
       .eq("is_active", true);
 
-    if (profileError) {
-      console.error("Error fetching profile by PIN:", profileError);
-      throw new Error("Invalid credentials");
-    }
-
-    if (!profiles || profiles.length === 0) {
-      console.warn("No active profile found for employee ID:", employeeId);
+    if (profileError || !profiles?.length) {
       throw new Error("Invalid credentials");
     }
 
     const profile = profiles[0];
+    const hashedPin = createHash('sha256')
+      .update(`${pin}${profile.id}`) // Salt with user ID
+      .digest('hex');
     
-    const pinIsValid = profile.pin_hash === `pin_${pin}`;
+    const pinIsValid = profile.pin_hash === hashedPin;
 
     if (!pinIsValid) {
-        console.warn("Invalid PIN for employee ID:", employeeId);
-        throw new Error("Invalid credentials");
+      throw new Error("Invalid credentials");
     }
-    
-    console.log("PIN login successful for:", employeeId);
+
     return { user: null, profile: profile as Profile, isPinLogin: true };
   },
 
@@ -152,17 +150,22 @@ export const authService = {
 
   async generatePinForUser(userId: string) {
     const pin = await this.generatePin();
-    const pin_hash = `pin_${pin}`; 
+    const hashedPin = createHash('sha256')
+      .update(`${pin}${userId}`)
+      .digest('hex');
 
     const { data, error } = await supabase
       .from('profiles')
-      .update({ pin_hash })
+      .update({ 
+        pin_hash: hashedPin,
+        pin_updated_at: new Date().toISOString(),
+        pin_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days expiry
+      })
       .eq('id', userId)
       .select()
       .single();
 
     if (error) {
-      console.error(`Error setting PIN for user ${userId}:`, error);
       throw error;
     }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,53 +38,41 @@ const baseNavigation = [
 export default function Sidebar() {
   const router = useRouter();
   const { user, profile } = useAuth();
-  const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [navigation, setNavigation] = useState(baseNavigation);
   const [taskCount, setTaskCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
+  
+  // Memoize the current profile
+  const currentProfile = useMemo(() => profile || user?.user_metadata, [profile, user]);
 
+  // Memoize loadUserProfile to prevent unnecessary recreations
   const loadUserProfile = useCallback(async () => {
-    // Check for either user (email login) or profile (PIN login)
     const currentUserId = user?.id || profile?.id;
     
-    if (currentUserId) {
-      try {
-        let currentProfile = profile;
-        
-        // If we have a user but no profile, fetch it
-        if (user && !profile) {
-          currentProfile = await profileService.getProfile(user.id);
-        }
-        
-        setUserProfile(currentProfile);
-        
-        const superAdminStatus = await superAdminService.isSuperAdmin(currentUserId);
-        setIsSuperAdmin(superAdminStatus);
-        
-        // Load real task count
-        const tasks = await taskService.getTasksForUser(currentUserId);
-        setTaskCount(tasks.length);
-        
-        // Load notification count
-        const notifications = await notificationService.getUnreadNotifications();
-        setNotificationCount(notifications.length);
-      } catch (error) {
-        console.error("Error loading user data:", error);
-        setUserProfile(null);
-        setIsSuperAdmin(false);
-        setTaskCount(0);
-        setNotificationCount(0);
-      }
-    } else {
-      // Clear state when no user/profile
-      setUserProfile(null);
+    if (!currentUserId) {
+      setIsSuperAdmin(false);
+      setTaskCount(0);
+      setNotificationCount(0);
+      return;
+    }
+
+    try {
+      const [superAdminStatus, tasks, notifications] = await Promise.all([
+        superAdminService.isSuperAdmin(currentUserId),
+        taskService.getTasksForUser(currentUserId),
+        notificationService.getUnreadNotifications()
+      ]);
+
+      setIsSuperAdmin(superAdminStatus);
+      setTaskCount(tasks.length);
+      setNotificationCount(notifications.length);
+    } catch (error) {
+      console.error("Error loading user data:", error);
       setIsSuperAdmin(false);
       setTaskCount(0);
       setNotificationCount(0);
     }
-  }, [user, profile]);
+  }, [user?.id, profile?.id]);
 
   useEffect(() => {
     loadUserProfile();
@@ -111,31 +99,27 @@ export default function Sidebar() {
     }
   }, [isSuperAdmin]);
 
-  // Filter navigation based on user role
-  const filteredNavigation = navigation.filter(item => {
-    const currentProfile = userProfile || profile;
-    if (!currentProfile) return true; // Show all if no profile
+  // Memoize navigation items
+  const navigationItems = useMemo(() => {
+    if (!currentProfile) return baseNavigation;
     
-    const userRole = currentProfile.role;
-    
-    // Role-based navigation filtering
-    switch (userRole) {
-      case 'employee':
-        // Employees can only see basic functionality
-        return ['Dashboard', 'Tasks', 'Field Work', 'Messages', 'Profile'].includes(item.name);
-      case 'task_manager':
-        // Task managers can see most features except organization management
-        return !['Organization', 'Super Admin'].includes(item.name);
-      case 'org_admin':
-        // Org admins can see everything except Super Admin
-        return item.name !== 'Super Admin';
-      case 'super_admin':
-        // Super admins can see everything
-        return true;
-      default:
-        return true;
-    }
-  });
+    return baseNavigation.filter(item => {
+      const userRole = currentProfile.role;
+      
+      switch (userRole) {
+        case 'employee':
+          return ['Dashboard', 'Tasks', 'Field Work', 'Messages', 'Profile'].includes(item.name);
+        case 'task_manager':
+          return !['Organization', 'Super Admin'].includes(item.name);
+        case 'org_admin':
+          return item.name !== 'Super Admin';
+        case 'super_admin':
+          return true;
+        default:
+          return true;
+      }
+    });
+  }, [currentProfile]);
 
   const handleNavigation = (href: string) => {
     if (href === "/") {
@@ -181,7 +165,7 @@ export default function Sidebar() {
 
       <div className="flex-1 overflow-y-auto py-4">
         <nav className="space-y-1 px-3">
-          {filteredNavigation.map((item) => {
+          {navigationItems.map((item) => {
             const isActive = router.pathname === item.href || 
                            (item.href !== "/" && router.pathname.startsWith(item.href));
             
