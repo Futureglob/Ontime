@@ -12,6 +12,7 @@ import authService from "@/services/authService";
 import { Database } from "@/integrations/supabase/types";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
@@ -74,9 +75,18 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        const { user, profile } = await authService.getCurrentUser();
-        setUser(user);
-        setProfile(profile);
+        // SIMPLIFIED: Just check if user is authenticated, don't fetch profile yet
+        try {
+          const { data: { user }, error } = await supabase.auth.getUser();
+          if (error) {
+            console.warn("Auth check failed:", error);
+          } else {
+            setUser(user);
+            // Don't fetch profile here to avoid the infinite recursion issue
+          }
+        } catch (error) {
+          console.warn("Auth initialization failed:", error);
+        }
       } catch (error) {
         console.error("Auth initialization error:", error);
       } finally {
