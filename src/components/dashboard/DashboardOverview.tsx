@@ -47,7 +47,7 @@ export default function DashboardOverview() {
       if (currentProfile) {
         setLoading(true);
         try {
-          const tasks = await taskService.getTasksForUser(currentProfile.id);
+          const tasks = await taskService.getTasksForUser();
           
           const completedTasks = tasks.filter(t => t.status === 'completed').length;
           const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;

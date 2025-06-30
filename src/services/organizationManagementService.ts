@@ -194,13 +194,15 @@
         }
       },
 
-      async resetUserPin(userId: string): Promise<string> {
+      async resetUserPin(employeeId: string): Promise<string> {
+        if (!employeeId) {
+          throw new Error("Employee ID is required to reset a PIN.");
+        }
         try {
-          const { pin } = await authService.resetUserPin(userId);
-          return pin;
+          await authService.resetUserPin(employeeId);
         } catch (error) {
-          console.error("Error resetting PIN:", error);
-          throw error;
+          console.error("Error resetting user PIN:", error);
+          throw new Error("Failed to reset PIN for user.");
         }
       },
 
@@ -273,6 +275,37 @@
         } catch (error) {
           console.error("Error exporting organization ", error);
           throw error;
+        }
+      },
+
+      async signUpUser(email: string, password: string, organizationId: string): Promise<{ user: any; error: any }> {
+        try {
+          const { data: signUpData, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+              data: {
+                organization_id: organizationId,
+              },
+            },
+          });
+
+          if (error) {
+            throw error;
+          }
+
+          if (signUpData.error) {
+            throw signUpData.error;
+          }
+
+          if (signUpData.data.user) {
+            await authService.generatePinForUser(signUpData.data.user.id);
+          }
+
+          return { user: signUpData.data.user, error: null };
+        } catch (error) {
+          console.error("Error signing up user:", error);
+          return { user: null, error: error };
         }
       }
     };

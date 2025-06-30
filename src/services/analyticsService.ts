@@ -166,8 +166,8 @@ export const analyticsService = {
           const completed = userTasks.filter(t => t.status === "completed").length;
           const pending = userTasks.filter(t => t.status === "assigned").length;
           const overdue = userTasks.filter(t => {
-            if (!t.deadline) return false;
-            return new Date(t.deadline) < new Date() && t.status !== "completed";
+            if (!t.due_date) return false;
+            return new Date(t.due_date) < new Date() && t.status !== "completed";
           }).length;
 
           const total = userTasks.length;

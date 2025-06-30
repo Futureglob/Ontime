@@ -111,7 +111,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
   const getOtherParticipant = (conversationTask: Task & { assigned_to_profile?: { full_name: string; designation: string; avatar_url?: string }; assigned_by_profile?: { full_name: string; designation: string; avatar_url?: string } }) => {
     if (!user) return null;
     
-    if (user.id === conversationTask.assigned_to) {
+    if (user.id === conversationTask.assignee_id) {
       return conversationTask.assigned_by_profile;
     } else {
       return conversationTask.assigned_to_profile;
@@ -137,7 +137,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
 
   const getGroupedChats = () => {
     return filteredConversations.reduce((acc, chat) => {
-      const key = chat.task.assigned_to === user.id ? chat.task.assigned_by : chat.task.assigned_to;
+      const key = chat.task.assignee_id === user?.id ? chat.task.created_by : chat.task.assignee_id;
       if (key && !acc[key]) {
         acc[key] = {
           profile: getOtherParticipant(chat.task),

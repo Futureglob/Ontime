@@ -85,8 +85,8 @@ export default function Sidebar() {
 
     try {
       const [tasks, notifications] = await Promise.all([
-        taskService.getTasksForUser(currentProfile.id),
-        notificationService.getUnreadNotifications(currentProfile.id),
+        taskService.getTasksForUser(),
+        notificationService.getUnreadNotifications(),
       ]);
       setTaskCount(tasks.length);
       setNotificationCount(notifications.length);

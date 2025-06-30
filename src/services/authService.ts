@@ -15,14 +15,14 @@ export const authService = {
 
   async loginWithPin(employeeId: string, pin: string): Promise<AuthResponse> {
     try {
-      const { data, error } = await supabase.rpc("login_with_pin", {
+      const { data, error: rpcError } = await supabase.rpc("login_with_pin", {
         p_employee_id: employeeId.toUpperCase(),
         p_pin: pin,
       });
 
-      if (error) {
-        const authError = new AuthError((error as PostgrestError).message, parseInt((error as PostgrestError).code, 10) || 500);
-        return { data: { user: null, session: null }, error: authError };
+      if (rpcError) {
+        const authError = new AuthError((rpcError as PostgrestError).message, parseInt((rpcError as PostgrestError).code, 10) || 500);
+        return {  { user: null, session: null }, error: authError };
       }
 
       const responseData = data as LoginWithPinResponse;
@@ -56,7 +56,7 @@ export const authService = {
   },
 
   async signUp(email: string, password: string, options?: Record<string, unknown>): Promise<AuthResponse> {
-    return supabase.auth.signUp({ email, password, options });
+    return supabase.auth.signUp({ email, password, options: {  options } });
   },
 
   async generatePinForUser(userId: string): Promise<{ error: AuthError | null }> {
@@ -75,3 +75,4 @@ export const authService = {
     return { error: null };
   },
 };
+  

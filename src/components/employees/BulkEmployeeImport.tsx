@@ -174,8 +174,10 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
         }
 
         if (signUpData.data.user) {
-          await authService.generatePinForUser(signUpData.data.user.id);
-          createdCount++;
+          const pinResult = await authService.generatePinForUser(signUpData.data.user.id);
+          if(pinResult.error) {
+            throw new Error(`Failed to generate PIN: ${pinResult.error.message}`);
+          }
         } else {
           throw new Error("User not created");
         }
@@ -183,7 +185,7 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
         results.push({
           success: true,
           employee,
-          pin: signUpData.data.user.pin
+          pin: "Check admin panel"
         });
 
       } catch (error) {

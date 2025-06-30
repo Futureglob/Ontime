@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause, WifiOff, Briefcase, Calendar } from "lucide-react";
+import { MapPin, Camera, CheckCircle, XCircle, Play, Pause, WifiOff, Briefcase, Calendar } from "lucide-react";
 import { EnrichedTask } from "@/services/taskService";
 
 interface FieldTaskCardProps {
@@ -48,8 +48,8 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
   };
 
   const getUrgencyLevel = () => {
-    if (!task.deadline) return null;
-    const deadline = new Date(task.deadline);
+    if (!task.due_date) return null;
+    const deadline = new Date(task.due_date);
     const now = new Date();
     const timeDiff = deadline.getTime() - now.getTime();
     const hoursDiff = timeDiff / (1000 * 3600);
@@ -122,16 +122,6 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
     }
   };
 
-  const openInMaps = () => {
-    if (task.location_lat && task.location_lng) {
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${task.location_lat},${task.location_lng}`;
-      window.open(url, "_blank");
-    } else if (task.location) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(task.location)}`;
-      window.open(url, "_blank");
-    }
-  };
-
   const handleNavigate = () => {
     if (task.location) {
       const [lat, lng] = task.location.split(',').map(parseFloat);
@@ -195,7 +185,7 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
             </div>
           )}
           {task.location && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={handleNavigate}>
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span>{task.location}</span>
             </div>

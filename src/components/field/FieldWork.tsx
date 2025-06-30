@@ -33,7 +33,7 @@ export default function FieldWork() {
     if (!currentProfile) return;
     setLoading(true);
     try {
-      const fetchedTasks = await profileService.getTasksForUser(currentProfile.id);
+      const fetchedTasks = await taskService.getTasksForUser();
       setTasks(fetchedTasks.filter(t => t.task_type === 'field_work'));
     } catch (error) {
       console.error("Failed to load field tasks:", error);

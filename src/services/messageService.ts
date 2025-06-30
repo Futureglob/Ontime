@@ -103,10 +103,10 @@ export const messageService = {
   async getUnreadMessageCount(userId: string): Promise<number> {
     try {
       // Simplified approach - get tasks first, then count messages
-      const { data: userTasks } = await supabase
+      const {  userTasks } = await supabase
         .from("tasks")
         .select("id")
-        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
+        .or(`assignee_id.eq.${userId},created_by.eq.${userId}`);
 
       if (!userTasks || userTasks.length === 0) return 0;
 
@@ -130,31 +130,18 @@ export const messageService = {
   async getTaskConversations(userId: string) {
     try {
       // Get user's tasks with simplified query
-      const { data: userTasks } = await supabase
+      const {  userTasks } = await supabase
         .from("tasks")
-        .select("*")
-        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
+        .select("*, assigned_to_profile:profiles!tasks_assignee_id_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
+        .or(`assignee_id.eq.${userId},created_by.eq.${userId}`);
 
       if (!userTasks || userTasks.length === 0) return [];
-
-      // Get profiles for all users involved
-      const userIds = [...new Set([
-        ...userTasks.map(t => t.assigned_to),
-        ...userTasks.map(t => t.created_by)
-      ].filter(Boolean))];
-
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, designation")
-        .in("id", userIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       // Process each task to get conversation data
       const conversations = await Promise.all(
         userTasks.map(async (task) => {
           // Get last message for this task
-          const { data: lastMessage } = await supabase
+          const {  lastMessage } = await supabase
             .from("messages")
             .select("content, created_at, sender_id")
             .eq("task_id", task.id)
@@ -170,16 +157,9 @@ export const messageService = {
             .eq("is_read", false)
             .neq("sender_id", userId);
 
-          // Enrich task with profile data
-          const enrichedTask = {
-            ...task,
-            assigned_to_profile: task.assigned_to ? profileMap.get(task.assigned_to) : null,
-            created_by_profile: task.created_by ? profileMap.get(task.created_by) : null
-          };
-
           return {
             task_id: task.id,
-            task: enrichedTask,
+            task: task,
             lastMessage: lastMessage || undefined,
             unreadCount: unreadCount || 0,
           };
@@ -208,7 +188,7 @@ export const messageService = {
     return `Task Update: ${task.title}
 Status: ${task.status}
 Location: ${task.location || "Not specified"}
-Deadline: ${task.deadline ? new Date(task.deadline).toLocaleDateString() : "N/A"}`;
+Due Date: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : "N/A"}`;
   },
 
   generateWhatsAppLink(phoneNumber: string | undefined, message: string): string {

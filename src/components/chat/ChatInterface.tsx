@@ -161,7 +161,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
     try {
       const receiverId = user.id === task.created_by ? task.assignee_id : task.created_by;
       if (!receiverId) {
-        toast.error("Cannot determine message receiver.");
+        toast({ title: "Error", description: "Cannot determine message receiver.", variant: "destructive" });
         return;
       }
       await messageService.sendMessage(task.id, user.id, receiverId, newMessage.trim());
@@ -204,8 +204,8 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
   const getOtherParticipant = () => {
     if (!task || !user) return null;
     
-    if (user.id === task.assigned_to) {
-      return task.assigned_by_profile;
+    if (user.id === task.assignee_id) {
+      return task.created_by_profile;
     } else {
       return task.assigned_to_profile;
     }

@@ -36,7 +36,7 @@ export default function TaskManagement() {
   );
 
   const loadTasks = useCallback(async () => {
-    if (!currentProfile) return;
+    if (!currentProfile?.organization_id) return;
     setLoading(true);
     try {
       const tasksData = await taskService.getTasks(currentProfile.organization_id);
@@ -69,10 +69,10 @@ export default function TaskManagement() {
     setShowForm(true);
   };
 
-  const handleDeleteTask = async (taskToDelete: Task) => {
-    if (!confirm(`Are you sure you want to delete task "${taskToDelete.title}"?`)) return;
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm(`Are you sure you want to delete this task?`)) return;
     try {
-      await taskService.deleteTask(taskToDelete.id);
+      await taskService.deleteTask(taskId);
       loadTasks();
     } catch (error) {
       console.error("Failed to delete task:", error);
@@ -158,7 +158,7 @@ export default function TaskManagement() {
                 key={task.id}
                 task={task}
                 onEdit={handleEditTask}
-                onDelete={handleDeleteTask}
+                onDelete={() => handleDeleteTask(task.id)}
               />
             ))
           ) : (

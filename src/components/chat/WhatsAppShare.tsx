@@ -103,9 +103,9 @@ export default function WhatsAppShare({ task, customMessage }: WhatsAppShareProp
             <p className="text-xs text-muted-foreground">
               📍 {task.location || "Location not specified"}
             </p>
-            {task.deadline && (
+            {task.due_date && (
               <p className="text-xs text-muted-foreground">
-                ⏰ Due: {new Date(task.deadline).toLocaleDateString()}
+                ⏰ Due: {new Date(task.due_date).toLocaleDateString()}
               </p>
             )}
           </div>
