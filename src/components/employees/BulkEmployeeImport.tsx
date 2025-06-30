@@ -1,5 +1,12 @@
         
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +24,9 @@ import {
   FileText
 } from "lucide-react";
 import authService from "@/services/authService";
+import { organizationManagementService } from "@/services/organizationManagementService";
+import { useToast } from "@/hooks/use-toast";
+import { UserRole } from "@/types";
 
 interface BulkEmployeeImportProps {
   organizationId: string;

@@ -7,7 +7,7 @@ import {
   ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
+import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/router";
 import { UserRole, Profile } from "@/types";
 import { authService } from "@/services/authService";
