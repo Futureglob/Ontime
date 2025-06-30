@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +11,19 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+interface TaskFormData {
+  title: string;
+  description: string;
+  priority: string;
+  dueDate: string;
+  assigneeId: string;
+  location: string;
+  clientId: string;
+  taskType: string;
+}
+
 interface TaskFormProps {
-  onSubmit: (formData: any) => Promise<void>;
+  onSubmit: (formData: TaskFormData) => Promise<void>;
   onCancel: () => void;
 }
 

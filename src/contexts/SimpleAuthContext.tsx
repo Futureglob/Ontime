@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode } from "react";
 
 interface User {
@@ -11,7 +10,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -27,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     organization_id: "org1"
   });
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string) => {
     // Mock login - in real app this would call Supabase
     const mockUser: User = {
       id: "1",
