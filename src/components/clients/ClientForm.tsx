@@ -1,5 +1,4 @@
-
-    import { useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
     import { zodResolver } from "@hookform/resolvers/zod";
     import * as z from "zod";
     import { Button } from "@/components/ui/button";
@@ -60,13 +59,14 @@
             await clientService.updateClient(client.id, updateData);
             toast({ title: "Success", description: "Client updated successfully." });
           } else {
-            const insertData: ClientInsert = { ...values, organization_id: currentProfile.organization_id };
+            const insertData: ClientInsert = { ...values, name: values.name, organization_id: currentProfile.organization_id };
             await clientService.createClient(insertData);
             toast({ title: "Success", description: "Client created successfully." });
           }
           onSuccess();
-        } catch (error) {
-          toast({ title: "Error", description: "Could not save client.", variant: "destructive" });
+        } catch (err) {
+          const error = err as Error;
+          toast({ title: "Error", description: error.message || "Could not save client.", variant: "destructive" });
         }
       }
 

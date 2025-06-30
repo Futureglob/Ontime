@@ -1,5 +1,4 @@
-
-    import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
     import { useAuth } from "@/contexts/AuthContext";
     import { clientService, Client } from "@/services/clientService";
     import { Button } from "@/components/ui/button";
@@ -29,10 +28,11 @@
               currentProfile.organization_id
             );
             setClients(fetchedClients);
-          } catch (error) {
+          } catch (err) {
+            const error = err as Error;
             toast({
               title: "Error fetching clients",
-              description: "Could not retrieve client list.",
+              description: error.message || "Could not retrieve client list.",
               variant: "destructive",
             });
           }
