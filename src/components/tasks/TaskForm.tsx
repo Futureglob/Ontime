@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,34 +20,35 @@ import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { taskService, Task, TaskInsert, TaskUpdate } from "@/services/taskService";
-import { profileService } from "@/services/profileService";
+import { taskService, Task } from "@/services/taskService";
 import { Database } from "@/integrations/supabase/types";
 import { clientService, Client } from "@/services/clientService";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/hooks/use-toast";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
   description: z.string().optional(),
-  assignee_id: z.string().optional(),
-  due_date: z.string().optional(),
+  assignee_id: z.string().uuid().optional().or(z.literal("")),
+  due_date: z.date().optional(),
   priority: z.string().optional(),
   status: z.string().optional(),
-  client_id: z.string().optional(),
+  client_id: z.string().uuid().optional().or(z.literal("")),
 });
 
 interface TaskFormProps {
   task?: Task | null;
   users: Profile[];
   onSuccess: () => void;
+  onCancel: () => void;
 }
 
-export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
+export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormProps) {
   const { currentProfile } = useAuth();
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,12 +56,14 @@ export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
       title: task?.title || "",
       description: task?.description || "",
       assignee_id: task?.assignee_id || "",
-      due_date: task?.due_date ? task.due_date.split('T')[0] : "",
+      due_date: task?.due_date ? new Date(task.due_date) : undefined,
       priority: task?.priority || "medium",
       status: task?.status || "pending",
       client_id: task?.client_id || "",
     },
   });
+
+  const { register, handleSubmit, control, formState: { errors } } = form;
 
   useEffect(() => {
     async function fetchClients() {
@@ -68,7 +72,7 @@ export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
           const clientList = await clientService.getClientsByOrg(currentProfile.organization_id);
           setClients(clientList);
         } catch (error) {
-          toast({ title: "Error", description: "Could not fetch clients." });
+          toast({ title: "Error", description: "Could not fetch clients.", variant: "destructive" });
         }
       }
     }
@@ -77,14 +81,19 @@ export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!currentProfile) return;
+    if (!currentProfile?.organization_id) {
+        toast({ title: "Error", description: "Cannot create task without an organization.", variant: "destructive" });
+        return;
+    };
     setLoading(true);
 
     const taskData = {
       ...values,
-      due_date: values.due_date ? new Date(values.due_date).toISOString() : null,
+      due_date: values.due_date ? values.due_date.toISOString() : undefined,
       organization_id: currentProfile.organization_id,
       created_by: currentProfile.id,
+      assignee_id: values.assignee_id || null,
+      client_id: values.client_id || null,
     };
 
     try {
@@ -92,12 +101,13 @@ export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
         await taskService.updateTask(task.id, taskData);
         toast({ title: "Success", description: "Task updated successfully." });
       } else {
-        await taskService.createTask(taskData);
+        await taskService.createTask(taskData as any);
         toast({ title: "Success", description: "Task created successfully." });
       }
       onSuccess();
     } catch (error) {
-      console.error("Failed to save task:", error);
+      const err = error as Error;
+      toast({ title: "Error", description: err.message || "Failed to save task.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -150,7 +160,7 @@ export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
             <div className="space-y-2">
               <label>Assign To</label>
               <Controller
-                name="assigned_to"
+                name="assignee_id"
                 control={control}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -158,9 +168,10 @@ export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
                       <SelectValue placeholder="Select a user" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="">Unassigned</SelectItem>
                       {Array.isArray(users) && users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.full_name}
+                          {user.full_name || user.id}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -169,11 +180,34 @@ export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
               />
             </div>
           </div>
-
-          <div className="space-y-2">
-              <label>Deadline</label>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label>Client</label>
               <Controller
-                name="deadline"
+                name="client_id"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Client</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <label>Due Date</label>
+              <Controller
+                name="due_date"
                 control={control}
                 render={({ field }) => (
                   <Popover>
@@ -201,6 +235,7 @@ export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
                 )}
               />
             </div>
+          </div>
 
           <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={onCancel}>

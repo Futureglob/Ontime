@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="flex items-center gap-2">
                   <div className="hidden sm:block text-right">
                     <p className="text-sm font-medium text-gray-900">
-                      {currentProfile?.full_name || currentProfile?.email}
+                      {currentProfile?.full_name || "User"}
                     </p>
                     <p className="text-xs text-gray-500">Online</p>
                   </div>
