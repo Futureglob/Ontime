@@ -61,7 +61,7 @@ export const notificationService = {
     await this.showNotification("New Task Assigned", {
       body: `${assignedBy} assigned you: ${taskTitle}`,
       tag: "task-assigned",
-      data: { type: "task_assigned", taskTitle },
+       { type: "task_assigned", taskTitle },
     });
   },
 
@@ -69,7 +69,7 @@ export const notificationService = {
     await this.showNotification("Task Status Updated", {
       body: `${updatedBy} updated "${taskTitle}" to ${status.replace("_", " ")}`,
       tag: "task-status",
-      data: { type: "task_status", taskTitle, status },
+       { type: "task_status", taskTitle, status },
     });
   },
 
@@ -77,7 +77,7 @@ export const notificationService = {
     await this.showNotification("New Message", {
       body: `${senderName}: ${message}`,
       tag: "new-message",
-      data: { type: "message", senderName, taskTitle },
+       { type: "message", senderName, taskTitle },
     });
   },
 
@@ -85,7 +85,7 @@ export const notificationService = {
     await this.showNotification("Data Synced", {
       body: `${itemCount} items synced successfully`,
       tag: "offline-sync",
-      data: { type: "sync", itemCount },
+       { type: "sync", itemCount },
     });
   },
 
@@ -94,7 +94,7 @@ export const notificationService = {
       body: `"${taskTitle}" is due ${deadline}`,
       tag: "task-reminder",
       requireInteraction: true,
-      data: { type: "reminder", taskTitle, deadline },
+       { type: "reminder", taskTitle, deadline },
     });
   },
 
@@ -108,7 +108,7 @@ export const notificationService = {
     }
   },
 
-  handleNotificationClick(data: Record<string, any>): void {
+  handleNotificationClick( Record<string, any>): void {
     if (typeof window === "undefined") return;
     switch (data?.type) {
       case "task_assigned":

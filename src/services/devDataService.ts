@@ -6,7 +6,7 @@
       async setupTestEmployees() {
         try {
           // Get the first organization to assign employees to
-          const {  orgs, error: orgError } = await supabase
+          const { data: orgs, error: orgError } = await supabase
             .from("organizations")
             .select("id")
             .limit(1);
