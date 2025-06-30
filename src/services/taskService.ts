@@ -19,8 +19,8 @@ export const taskService = {
         .from("tasks")
         .select(`
           *,
-          created_by_profile:profiles!tasks_created_by_fkey(*),
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+          created_by_profile:profiles!created_by(*),
+          assigned_to_profile:profiles!assigned_to(*)
         `)
         .order("created_at", { ascending: false });
 
@@ -42,8 +42,8 @@ export const taskService = {
         .from("tasks")
         .select(`
           *,
-          created_by_profile:profiles!tasks_created_by_fkey(*),
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+          created_by_profile:profiles!created_by(*),
+          assigned_to_profile:profiles!assigned_to(*)
         `)
         .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
         .order("created_at", { ascending: false });
@@ -66,8 +66,8 @@ export const taskService = {
         .from("tasks")
         .select(`
           *,
-          created_by_profile:profiles!tasks_created_by_fkey(*),
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+          created_by_profile:profiles!created_by(*),
+          assigned_to_profile:profiles!assigned_to(*)
         `)
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false });
@@ -90,8 +90,8 @@ export const taskService = {
         .from("tasks")
         .select(`
           *,
-          created_by_profile:profiles!tasks_created_by_fkey(*),
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+          created_by_profile:profiles!created_by(*),
+          assigned_to_profile:profiles!assigned_to(*)
         `)
         .eq("id", id)
         .single();
