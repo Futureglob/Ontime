@@ -20,7 +20,12 @@ export const authService = {
     });
 
     if (error) {
-      return {  { user: null, session: null }, error: error as unknown as AuthError };
+      const authError: AuthError = {
+        name: 'RpcError',
+        message: error.message,
+        status: parseInt(error.code, 10) || 500,
+      };
+      return {  { user: null, session: null }, error: authError };
     }
 
     const responseData = data as LoginWithPinResponse;
@@ -30,17 +35,16 @@ export const authService = {
         access_token: responseData.access_token,
         refresh_token: responseData.refresh_token,
       });
-
-      if (sessionResponse.error) {
-        return {  { user: null, session: null }, error: sessionResponse.error };
-      }
       
-      const getSessionResponse = await supabase.auth.getSession();
-      
-      return {  { session: getSessionResponse.data.session, user: getSessionResponse.data.session?.user ?? null }, error: getSessionResponse.error };
+      return sessionResponse;
     }
 
-    return {  { user: null, session: null }, error: new Error(responseData?.message || "Invalid credentials") as AuthError };
+    const authError: AuthError = {
+        name: 'InvalidCredentials',
+        message: responseData?.message || "Invalid credentials or PIN",
+        status: 401,
+    };
+    return {  { user: null, session: null }, error: authError };
   },
 
   async resetPassword(email: string) {

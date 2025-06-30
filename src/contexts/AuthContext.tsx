@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,12 +40,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const getSessionData = async () => {
       setLoading(true);
-      const sessionData = await supabase.auth.getSession();
-      if (sessionData.error) {
-        console.error("Error getting session:", sessionData.error);
+      const {  { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error getting session:", error);
       }
-      setSession(sessionData.data.session);
-      const currentUser = sessionData.data.session?.user ?? null;
+      setSession(session);
+      const currentUser = session?.user ?? null;
       setUser(currentUser);
       await fetchProfile(currentUser);
       setLoading(false);

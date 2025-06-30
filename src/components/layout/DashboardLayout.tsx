@@ -36,8 +36,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     try {
       await authService.logout();
       router.push('/');
-    } catch (e) {
-      console.error('Logout failed:', e);
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
   };
 
