@@ -1,4 +1,3 @@
-
 import { taskService } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
 import { notificationService } from "@/services/notificationService";
@@ -159,6 +158,17 @@ export const offlineService = {
       }
     }
     
+    // Sync task status updates
+    const taskUpdates = await this.getQueuedData('taskUpdates');
+    for (const update of taskUpdates) {
+      try {
+        await taskService.updateTask(update.id, update.data);
+        await this.removeFromQueue('taskUpdates', update.id);
+      } catch (error) {
+        console.error('Failed to sync task update:', error);
+      }
+    }
+    
     // Clear successfully synced data
     if (failedActions.length === 0) {
       this.clearOfflineActions();
@@ -275,6 +285,27 @@ export const offlineService = {
       });
       return false;
     }
+  },
+
+  // Queue management
+  async getQueuedData(queueName: string): Promise<any[]> {
+    const stored = localStorage.getItem(`ontime_${queueName}`);
+    return stored ? JSON.parse(stored) : [];
+  },
+
+  async addToQueue(queueName: string, data: any) {
+    const existing = await this.getQueuedData(queueName);
+    existing.push(data);
+    localStorage.setItem(`ontime_${queueName}`, JSON.stringify(existing));
+  },
+
+  async removeFromQueue(queueName: string, id: string) {
+    const existing = await this.getQueuedData(queueName);
+    const filtered = existing.filter(item => item.id !== id);
+    if (filtered.length === existing.length) return false; // Item not found
+    
+    localStorage.setItem(`ontime_${queueName}`, JSON.stringify(filtered));
+    return true;
   }
 };
 

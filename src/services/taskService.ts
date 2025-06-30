@@ -32,12 +32,12 @@ export const taskService = {
 
   // Simplified for now
   async getTasksForUser(): Promise<SimpleTask[]> {
-    const {  authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData.user) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       console.error("User not found", authError);
       return [];
     }
-    const userId = authData.user.id;
+    const userId = user.id;
 
     const { data, error } = await supabase
       .from("tasks")
@@ -129,12 +129,12 @@ export const taskService = {
   },
 
   async getTaskCountForUser(): Promise<number> {
-    const {  authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData.user) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       console.error("User not found", authError);
       return 0;
     }
-    const userId = authData.user.id;
+    const userId = user.id;
 
     const { count, error } = await supabase
       .from("tasks")

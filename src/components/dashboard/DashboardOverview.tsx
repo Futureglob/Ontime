@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +50,6 @@ export default function DashboardOverview() {
         setLoading(true);
         try {
           const tasks = await taskService.getTasksForUser();
-          const userCount = await superAdminService.getUserCount();
           
           const completedTasks = tasks.filter(t => t.status === 'completed').length;
           const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
@@ -61,7 +60,7 @@ export default function DashboardOverview() {
             completedTasks,
             pendingTasks,
             overdueTasks,
-            teamMembers: userCount,
+            teamMembers: 0, // Placeholder
             unreadMessages: 0, // Placeholder
           });
 
