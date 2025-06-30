@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authService } from "@/services/authService";
 
 export default function SuperAdminPage() {
-  const { currentProfile, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
 
   const handleLogin = async (password: string) => {
     const email = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
@@ -23,11 +23,19 @@ export default function SuperAdminPage() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (!currentProfile || currentProfile.role !== "super_admin") {
+  if (!user) {
     return <SuperAdminLogin onLogin={handleLogin} />;
   }
 
@@ -39,7 +47,7 @@ export default function SuperAdminPage() {
             Super Admin Dashboard
           </h1>
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
           >
             Logout

@@ -14,13 +14,12 @@ import {
 } from "lucide-react";
 import Image from "next/image"; // Import next/image
 import { useAuth } from "@/contexts/AuthContext";
-import { messageService } from "@/services/messageService"; // Removed MessageWithSender as it's not directly used here
+import { messageService } from "@/services/messageService";
 import { realtimeService } from "@/services/realtimeService";
 import { notificationService } from "@/services/notificationService";
 import { Task } from "@/types/database";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-// import WhatsAppShare from "./WhatsAppShare"; // Removed unused WhatsAppShare import
-import { toast } from "@/components/ui/toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatMessage {
   id: string;
@@ -38,6 +37,8 @@ interface ChatMessage {
   };
 }
 
+type MessageWithSender = ChatMessage;
+
 interface ChatInterfaceProps {
   task?: Task & {
     assigned_to_profile?: { full_name: string; designation: string; avatar_url?: string };
@@ -48,6 +49,7 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -159,6 +161,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !user || !task) return;
     try {
+      setSending(true);
       const receiverId = user.id === task.created_by ? task.assignee_id : task.created_by;
       if (!receiverId) {
         toast({ title: "Error", description: "Cannot determine message receiver.", variant: "destructive" });
@@ -168,7 +171,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
-      alert("Failed to send message. Please try again.");
+      toast({ title: "Error", description: "Failed to send message. Please try again.", variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -205,7 +208,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
     if (!task || !user) return null;
     
     if (user.id === task.assignee_id) {
-      return task.created_by_profile;
+      return task.assigned_by_profile;
     } else {
       return task.assigned_to_profile;
     }

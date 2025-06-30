@@ -5,18 +5,18 @@ import OrgAdminDashboard from "@/components/orgadmin/OrgAdminDashboard";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
 export default function OrgAdminPage() {
-  const { currentProfile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
-      if (!currentProfile || currentProfile.role !== "org_admin") {
+      if (!user) {
         router.push("/");
       }
     }
-  }, [currentProfile, loading, router]);
+  }, [user, loading, router]);
 
-  if (loading || !currentProfile) {
+  if (loading || !user) {
     return <div>Loading...</div>;
   }
 
