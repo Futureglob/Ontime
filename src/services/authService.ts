@@ -1,56 +1,55 @@
 
-    import { supabase } from "@/integrations/supabase/client";
-    import { AuthTokenResponsePassword, AuthResponse, AuthError } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthTokenResponsePassword, AuthResponse, AuthError } from "@supabase/supabase-js";
 
-    interface LoginWithPinResponse {
-      access_token?: string;
-      refresh_token?: string;
-      message?: string;
+interface LoginWithPinResponse {
+  access_token?: string;
+  refresh_token?: string;
+  message?: string;
+}
+
+export const authService = {
+  async login(email: string, password: string): Promise<AuthTokenResponsePassword> {
+    return supabase.auth.signInWithPassword({ email, password });
+  },
+
+  async loginWithPin(employeeId: string, pin: string): Promise<AuthResponse> {
+    const { data, error } = await supabase.rpc("login_with_pin", {
+      p_employee_id: employeeId.toUpperCase(),
+      p_pin: pin,
+    });
+
+    if (error) {
+      const authError = new AuthError(error.message, parseInt(error.code, 10) || 500);
+      return { data: { user: null, session: null }, error: authError };
     }
 
-    export const authService = {
-      async login(email: string, password: string): Promise<AuthTokenResponsePassword> {
-        return supabase.auth.signInWithPassword({ email, password });
-      },
+    const responseData = data as LoginWithPinResponse;
 
-      async loginWithPin(employeeId: string, pin: string): Promise<AuthResponse> {
-        const { data, error } = await supabase.rpc("login_with_pin", {
-          p_employee_id: employeeId.toUpperCase(),
-          p_pin: pin,
-        });
+    if (responseData && responseData.access_token && responseData.refresh_token) {
+      const sessionResponse = await supabase.auth.setSession({
+        access_token: responseData.access_token,
+        refresh_token: responseData.refresh_token,
+      });
 
-        if (error) {
-          const authError = new AuthError(error.message, parseInt(error.code, 10) || 500);
-          return { data: { user: null, session: null }, error: authError };
-        }
+      return sessionResponse;
+    }
 
-        const responseData = data as LoginWithPinResponse;
+    const authError = new AuthError(responseData?.message || "Invalid credentials or PIN", 401);
+    return { data: { user: null, session: null }, error: authError };
+  },
 
-        if (responseData && responseData.access_token && responseData.refresh_token) {
-          const sessionResponse = await supabase.auth.setSession({
-            access_token: responseData.access_token,
-            refresh_token: responseData.refresh_token,
-          });
+  async resetPassword(email: string) {
+    return supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+  },
 
-          return sessionResponse;
-        }
+  async logout() {
+    return supabase.auth.signOut();
+  },
 
-        const authError = new AuthError(responseData?.message || "Invalid credentials or PIN", 401);
-        return {  { user: null, session: null }, error: authError };
-      },
-
-      async resetPassword(email: string) {
-        return supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/reset-password`,
-        });
-      },
-
-      async logout() {
-        return supabase.auth.signOut();
-      },
-
-      async signUp(email: string, password: string, options?: Record<string, unknown>): Promise<AuthResponse> {
-        return supabase.auth.signUp({ email, password, options });
-      },
-    };
-  
+  async signUp(email: string, password: string, options?: Record<string, unknown>): Promise<AuthResponse> {
+    return supabase.auth.signUp({ email, password, options });
+  },
+};
