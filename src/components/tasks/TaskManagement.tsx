@@ -89,11 +89,17 @@ export default function TaskManagement() {
     });
   }, [tasks, searchTerm, statusFilter]);
 
+  const handleSuccess = () => {
+    setSelectedTask(null);
+    setIsFormOpen(false);
+    loadTasks();
+  };
+
   if (isFormOpen) {
     return (
       <TaskForm
         task={selectedTask}
-        onSuccess={handleFormSuccess}
+        onSuccess={handleSuccess}
         onCancel={() => {
           setIsFormOpen(false);
           setSelectedTask(null);
