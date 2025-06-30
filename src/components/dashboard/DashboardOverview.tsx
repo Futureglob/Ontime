@@ -29,7 +29,7 @@ interface DashboardStats {
 }
 
 export default function DashboardOverview() {
-  const { profile } = useAuth();
+  const { currentProfile } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     totalTasks: 0,
@@ -44,10 +44,10 @@ export default function DashboardOverview() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (profile) {
+      if (currentProfile) {
         setLoading(true);
         try {
-          const tasks = await taskService.getTasksForUser();
+          const tasks = await taskService.getTasksForUser(currentProfile.id);
           
           const completedTasks = tasks.filter(t => t.status === 'completed').length;
           const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
@@ -58,13 +58,13 @@ export default function DashboardOverview() {
             completedTasks,
             pendingTasks,
             overdueTasks,
-            teamMembers: 0, // Placeholder
-            unreadMessages: 0, // Placeholder
+            teamMembers: 0,
+            unreadMessages: 0,
           });
 
           setRecentTasks(tasks.slice(0, 5));
         } catch (error) {
-          console.error("Failed to fetch dashboard ", error);
+          console.error("Failed to fetch dashboard data:", error);
         } finally {
           setLoading(false);
         }
@@ -72,7 +72,7 @@ export default function DashboardOverview() {
     };
 
     fetchData();
-  }, [profile]);
+  }, [currentProfile]);
 
   const getCompletionPercentage = () => {
     if (stats.totalTasks === 0) return 0;
@@ -106,7 +106,7 @@ export default function DashboardOverview() {
     }
   };
 
-  const canCreateTasks = profile?.role && ['task_manager', 'org_admin', 'super_admin'].includes(profile.role);
+  const canCreateTasks = currentProfile?.role && ['task_manager', 'org_admin', 'super_admin'].includes(currentProfile.role);
 
   if (loading) {
     return (
@@ -135,7 +135,7 @@ export default function DashboardOverview() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {profile?.full_name || 'User'}!
+            Welcome back, {currentProfile?.full_name || 'User'}!
           </h1>
           <p className="text-gray-600 mt-1">
             Here's what's happening with your tasks today.
@@ -309,7 +309,7 @@ export default function DashboardOverview() {
                 )}
               </Button>
               
-              {(profile?.role === 'org_admin' || profile?.role === 'super_admin') && (
+              {(currentProfile?.role === 'org_admin' || currentProfile?.role === 'super_admin') && (
                 <Button
                   variant="outline"
                   className="h-20 flex flex-col items-center justify-center gap-2"
