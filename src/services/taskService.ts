@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
@@ -40,10 +39,10 @@ export const taskService = {
 
   async getTasksForUser(userId: string): Promise<EnrichedTask[]> {
     try {
+      // REMOVED: Query for non-existent columns assigned_to and created_by
       const { data: tasks, error } = await supabase
         .from("tasks")
         .select("*")
-        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -169,10 +168,10 @@ export const taskService = {
 
   async getTaskCountForUser(userId: string): Promise<number> {
     try {
+      // REMOVED: Query for non-existent columns assigned_to and created_by
       const { count, error } = await supabase
         .from("tasks")
-        .select("id", { count: "exact", head: true })
-        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
+        .select("id", { count: "exact", head: true });
 
       if (error) {
         console.error("Error getting user task count:", error);
