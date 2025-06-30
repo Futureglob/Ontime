@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { taskService, EnrichedTask, Task } from "@/services/taskService";
@@ -31,27 +30,28 @@ export default function TaskManagement() {
     [profile]
   );
 
-  const loadTasks = useCallback(async () => {
-    if (!profile) return;
-    setLoading(true);
-    try {
-      let fetchedTasks: EnrichedTask[];
-      if (profile.role === 'org_admin' || profile.role === 'super_admin') {
-        fetchedTasks = await taskService.getTasksForOrganization(profile.organization_id!);
+  useEffect(() => {
+    const loadTasks = async () => {
+      setLoading(true);
+      if (profile?.role === "org_admin" && profile.organization_id) {
+        const orgTasks = await taskService.getTasksForOrganization(
+          profile.organization_id
+        );
+        setTasks(orgTasks);
+      } else if (profile?.role === "super_admin") {
+        const allTasks = await taskService.getTasks();
+        setTasks(allTasks);
       } else {
-        fetchedTasks = await taskService.getTasksForUser(profile.id);
+         const userTasks = await taskService.getTasksForUser();
+         setTasks(userTasks);
       }
-      setTasks(fetchedTasks);
-    } catch (error) {
-      console.error("Failed to load tasks:", error);
-    } finally {
       setLoading(false);
+    };
+
+    if (profile) {
+      loadTasks();
     }
   }, [profile]);
-
-  useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
 
   const handleFormSuccess = () => {
     setIsFormOpen(false);

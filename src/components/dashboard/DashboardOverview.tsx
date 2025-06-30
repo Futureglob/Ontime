@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ import { useRouter } from "next/router";
 import { taskService, EnrichedTask } from "@/services/taskService";
 import { notificationService } from "@/services/notificationService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { superAdminService } from "@/services/superAdminService";
 
 interface DashboardStats {
   totalTasks: number;
@@ -44,44 +44,41 @@ export default function DashboardOverview() {
   const [recentTasks, setRecentTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadDashboardData = useCallback(async () => {
-    if (!profile) return;
-
-    try {
-      setLoading(true);
-      
-      const [tasks, notifications] = await Promise.all([
-        taskService.getTasksForUser(profile.id),
-        notificationService.getUnreadNotifications(),
-      ]);
-      
-      const completedTasks = tasks.filter(t => t.status === 'completed').length;
-      const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
-      const overdueTasks = tasks.filter(t => {
-        if (!t.due_date) return false;
-        return new Date(t.due_date) < new Date() && t.status !== 'completed';
-      }).length;
-
-      setStats({
-        totalTasks: tasks.length,
-        completedTasks,
-        pendingTasks,
-        overdueTasks,
-        teamMembers: 5, // Mock data for now
-        unreadMessages: notifications.length,
-      });
-
-      setRecentTasks(tasks.slice(0, 5));
-    } catch (error) {
-      console.error('Error loading dashboard ', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [profile]);
-
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+    const fetchData = async () => {
+      if (profile) {
+        const [
+          tasksData,
+          taskCountData,
+          userCountData,
+          orgCountData,
+        ] = await Promise.all([
+          taskService.getTasksForUser(),
+          taskService.getTaskCountForUser(),
+          superAdminService.getUserCount(),
+          superAdminService.getOrganizationCount(),
+        ]);
+        
+        const { tasks } = tasksData;
+        const { totalTasks, completedTasks, pendingTasks, overdueTasks } = taskCountData;
+        const { userCount } = userCountData;
+        const { orgCount } = orgCountData;
+        
+        setStats({
+          totalTasks,
+          completedTasks,
+          pendingTasks,
+          overdueTasks,
+          teamMembers: userCount,
+          unreadMessages: 0,
+        });
+
+        setRecentTasks(tasks.slice(0, 5));
+      }
+    };
+
+    fetchData();
+  }, [profile]);
 
   const getCompletionPercentage = () => {
     if (stats.totalTasks === 0) return 0;

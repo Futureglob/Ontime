@@ -102,10 +102,20 @@ export default function Sidebar() {
   }, [user?.id, profile?.id]);
 
   useEffect(() => {
-    if (profile) {
-        loadData();
-    }
-  }, [profile, loadData]);
+    const fetchCounts = async () => {
+      if (user) {
+        if (profile?.role === "org_admin" && profile.organization_id) {
+          const orgTasks = await taskService.getTasksForOrganization(profile.organization_id);
+          setTaskCount(orgTasks.length);
+        } else {
+          const allTasks = await taskService.getTasksForUser();
+          setTaskCount(allTasks.length);
+        }
+      }
+    };
+
+    fetchCounts();
+  }, [profile, user]);
 
   const handleNavigation = (href: string) => {
     router.push(href);

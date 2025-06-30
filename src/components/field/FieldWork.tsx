@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { taskService, EnrichedTask } from "@/services/taskService";
@@ -38,8 +37,14 @@ export default function FieldWork() {
   }, [profile]);
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    const fetchTasks = async () => {
+      setLoading(true);
+      const fetchedTasks = await taskService.getTasksForUser();
+      setTasks(fetchedTasks);
+      setLoading(false);
+    };
+    fetchTasks();
+  }, []);
 
   const handleTakePhoto = (task: EnrichedTask) => {
     setSelectedTask(task);

@@ -12,117 +12,82 @@ export type EnrichedTask = Task & {
   assigned_to_profile: Profile | null;
 };
 
+// A simplified task type until relationships are fixed
+export type SimpleTask = Omit<Task, "created_by" | "assigned_to">;
+
+
 export const taskService = {
-  async getTasks(): Promise<EnrichedTask[]> {
-    try {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .order("created_at", { ascending: false });
+  // Simplified to fetch tasks without joins to prevent crashes
+  async getTasks(): Promise<SimpleTask[]> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching tasks:", error);
-        return [];
-      }
-
-      return (data || []).map(task => ({
-        ...task,
-        created_by_profile: null,
-        assigned_to_profile: null
-      })) as EnrichedTask[];
-    } catch (error) {
-      console.error("Error in getTasks:", error);
+    if (error) {
+      console.error("Error fetching tasks:", error.message);
       return [];
     }
+    return data || [];
   },
 
-  async getTasksForUser(): Promise<EnrichedTask[]> {
-    try {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .order("created_at", { ascending: false });
+  // Simplified for now
+  async getTasksForUser(): Promise<SimpleTask[]> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching user tasks:", error);
-        return [];
-      }
-
-      return (data || []).map(task => ({
-        ...task,
-        created_by_profile: null,
-        assigned_to_profile: null
-      })) as EnrichedTask[];
-    } catch (error) {
-      console.error("Error in getTasksForUser:", error);
+    if (error) {
+      console.error("Error fetching user tasks:", error.message);
       return [];
     }
+    return data || [];
   },
 
-  async getTasksForOrganization(organizationId: string): Promise<EnrichedTask[]> {
-    try {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false });
+  async getTasksForOrganization(organizationId: string): Promise<SimpleTask[]> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching org tasks:", error);
-        return [];
-      }
-
-      return (data || []).map(task => ({
-        ...task,
-        created_by_profile: null,
-        assigned_to_profile: null
-      })) as EnrichedTask[];
-    } catch (error) {
-      console.error("Error in getTasksForOrganization:", error);
+    if (error) {
+      console.error("Error fetching org tasks:", error.message);
       return [];
     }
+    return data || [];
   },
 
-  async getTaskById(id: string): Promise<EnrichedTask | null> {
-    try {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("id", id)
-        .single();
+  async getTaskById(id: string): Promise<SimpleTask | null> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-      if (error) {
-        console.error("Error fetching task by id:", error);
-        return null;
-      }
-
-      if (!data) {
-        return null;
-      }
-
-      return {
-        ...data,
-        created_by_profile: null,
-        assigned_to_profile: null
-      } as EnrichedTask;
-    } catch (error) {
-      console.error("Error in getTaskById:", error);
+    if (error) {
+      console.error("Error fetching task by id:", error.message);
       return null;
     }
+    return data;
   },
 
-  async createTask(task: TaskInsert): Promise<Task> {
+  async createTask(task: TaskInsert): Promise<Task | null> {
     const { data, error } = await supabase
       .from("tasks")
       .insert(task)
       .select()
       .single();
 
-    if (error) throw error;
-    return data as Task;
+    if (error) {
+      console.error("Error creating task:", error.message);
+      return null;
+    }
+    return data;
   },
 
-  async updateTask(id: string, updates: TaskUpdate): Promise<Task> {
+  async updateTask(id: string, updates: TaskUpdate): Promise<Task | null> {
     const { data, error } = await supabase
       .from("tasks")
       .update(updates)
@@ -130,59 +95,41 @@ export const taskService = {
       .select()
       .single();
 
-    if (error) throw error;
-    return data as Task;
-  },
-
-  async updateTaskStatus(id: string, status: string): Promise<Task> {
-    return this.updateTask(id, { 
-      status, 
-      completed_at: status === 'completed' ? new Date().toISOString() : null 
-    });
+    if (error) {
+      console.error("Error updating task:", error.message);
+      return null;
+    }
+    return data;
   },
 
   async deleteTask(id: string): Promise<void> {
-    const { error } = await supabase
-      .from("tasks")
-      .delete()
-      .eq("id", id);
-
-    if (error) throw error;
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (error) {
+      console.error("Error deleting task:", error.message);
+    }
   },
 
   async getTaskCount(): Promise<number> {
-    try {
-      const { count, error } = await supabase
-        .from("tasks")
-        .select("id", { count: "exact", head: true });
+    const { count, error } = await supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true });
 
-      if (error) {
-        console.error("Error getting task count:", error);
-        return 0;
-      }
-
-      return count || 0;
-    } catch (error) {
-      console.error("Error in getTaskCount:", error);
+    if (error) {
+      console.error("Error getting task count:", error.message);
       return 0;
     }
+    return count || 0;
   },
 
   async getTaskCountForUser(): Promise<number> {
-    try {
-      const { count, error } = await supabase
-        .from("tasks")
-        .select("id", { count: "exact", head: true });
+     const { count, error } = await supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true });
 
-      if (error) {
-        console.error("Error getting user task count:", error);
-        return 0;
-      }
-
-      return count || 0;
-    } catch (error) {
-      console.error("Error in getTaskCountForUser:", error);
+    if (error) {
+      console.error("Error getting user task count:", error.message);
       return 0;
     }
+    return count || 0;
   },
 };
