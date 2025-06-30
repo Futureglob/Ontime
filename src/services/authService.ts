@@ -47,6 +47,9 @@ export const authService = {
   },
 
   async resetPassword(email: string) {
+    if (typeof window === "undefined") {
+      return { data: null, error: new Error("This function can only be run on the client.") };
+    }
     return supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });
