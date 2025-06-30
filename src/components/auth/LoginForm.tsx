@@ -1,29 +1,35 @@
+
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Mail, Lock, User, KeyRound } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import authService from "@/services/authService";
+import { authService } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/router";
+import { devDataService } from "@/services/devDataService";
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const pinSchema = z.object({
-  employeeId: z.string().min(1),
-  pin: z.string().min(6).max(6),
+  employeeId: z.string().min(1, "Employee ID is required"),
+  pin: z.string().length(6, "PIN must be 6 digits"),
 });
 
 export default function LoginForm() {
   const { toast } = useToast();
   const router = useRouter();
-  const [isPinLogin, setIsPinLogin] = useState(false);
+  const [activeTab, setActiveTab] = useState("email");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -41,45 +47,23 @@ export default function LoginForm() {
     },
   });
 
-  const [activeTab, setActiveTab] = useState("email");
-  
-  const [emailFormData, setEmailFormData] = useState({
-    email: "",
-    password: ""
-  });
-
-  const [pinFormData, setPinFormData] = useState({
-    employeeId: "",
-    pin: ""
-  });
-
-  // Setup test data on component mount (development only)
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
       devDataService.setupTestEmployees();
     }
   }, []);
 
-  const handlePinInputChange = (value: string) => {
-    // Only allow numeric input and limit to 6 digits
-    const numericValue = value.replace(/\D/g, "").slice(0, 6);
-    setPinFormData(prev => ({
-      ...prev,
-      pin: numericValue
-    }));
-  };
-
   const handleForgotPin = () => {
-    if (!pinFormData.employeeId) {
-      setError("Please enter your Employee ID first");
+    const employeeId = pinForm.getValues("employeeId");
+    if (!employeeId) {
+      pinForm.setError("employeeId", { message: "Please enter your Employee ID first" });
       return;
     }
-    
-    // This will be handled by the admin
-    alert(`PIN reset request for Employee ID: ${pinFormData.employeeId}\n\nYour request has been sent to the administrator. You will receive your new PIN orally from your supervisor.`);
+    alert(`PIN reset request for Employee ID: ${employeeId}\n\nYour request has been sent to the administrator. You will receive your new PIN orally from your supervisor.`);
   };
 
   async function onSubmit(values: z.infer<typeof loginSchema>) {
+    setLoading(true);
     try {
       const { error } = await authService.login(values.email, values.password);
       if (error) {
@@ -101,10 +85,13 @@ export default function LoginForm() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   }
 
   async function onPinSubmit(values: z.infer<typeof pinSchema>) {
+    setLoading(true);
     try {
       const { error } = await authService.loginWithPin(values.employeeId, values.pin);
       if (error) {
@@ -126,6 +113,8 @@ export default function LoginForm() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -133,7 +122,6 @@ export default function LoginForm() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          {/* Temporarily removed logo to fix page loading issue */}
           <div className="flex items-center justify-center gap-3 mt-6">
             <h2 className="text-3xl font-extrabold text-sky-900">
               OnTime - Sign in
@@ -164,35 +152,30 @@ export default function LoginForm() {
               <TabsContent value="email">
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div>
-                    <label htmlFor="email" className="text-sm font-medium text-sky-800">Email</label>
+                    <label htmlFor="email-login" className="text-sm font-medium text-sky-800">Email</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
                       <Input
-                        id="email"
-                        name="email"
+                        id="email-login"
                         type="email"
-                        value={emailFormData.email}
-                        onChange={(e) => setEmailFormData(prev => ({ ...prev, email: e.target.value }))}
                         placeholder="Enter your email"
                         className="pl-10 border-sky-200 focus:border-sky-400"
-                        required
+                        {...form.register("email")}
                       />
                     </div>
+                    {form.formState.errors.email && <p className="text-sm text-red-500 mt-1">{form.formState.errors.email.message}</p>}
                   </div>
 
                   <div>
-                    <label htmlFor="password" className="text-sm font-medium text-sky-800">Password</label>
+                    <label htmlFor="password-login" className="text-sm font-medium text-sky-800">Password</label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
                       <Input
-                        id="password"
-                        name="password"
+                        id="password-login"
                         type={showPassword ? "text" : "password"}
-                        value={emailFormData.password}
-                        onChange={(e) => setEmailFormData(prev => ({ ...prev, password: e.target.value }))}
                         placeholder="Enter your password"
                         className="pl-10 pr-10 border-sky-200 focus:border-sky-400"
-                        required
+                        {...form.register("password")}
                       />
                       <Button
                         type="button"
@@ -208,6 +191,7 @@ export default function LoginForm() {
                         )}
                       </Button>
                     </div>
+                    {form.formState.errors.password && <p className="text-sm text-red-500 mt-1">{form.formState.errors.password.message}</p>}
                   </div>
 
                   <Button type="submit" disabled={loading} className="w-full light-blue-button">
@@ -222,7 +206,13 @@ export default function LoginForm() {
                       onClick={() => {
                         const email = prompt("Enter your email for password reset:");
                         if (email) {
-                          alert("Password reset functionality will be implemented with Supabase integration");
+                          authService.resetPassword(email).then(({ error }) => {
+                            if (error) {
+                              toast({ title: "Error", description: error.message, variant: "destructive" });
+                            } else {
+                              toast({ title: "Success", description: "Password reset email sent." });
+                            }
+                          });
                         }
                       }}
                     >
@@ -240,15 +230,13 @@ export default function LoginForm() {
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
                       <Input
                         id="employeeId"
-                        name="employeeId"
                         type="text"
-                        value={pinFormData.employeeId}
-                        onChange={(e) => setPinFormData(prev => ({ ...prev, employeeId: e.target.value.toUpperCase() }))}
                         placeholder="Enter your Employee ID"
                         className="pl-10 border-sky-200 focus:border-sky-400 uppercase"
-                        required
+                        {...pinForm.register("employeeId")}
                       />
                     </div>
+                    {pinForm.formState.errors.employeeId && <p className="text-sm text-red-500 mt-1">{pinForm.formState.errors.employeeId.message}</p>}
                   </div>
 
                   <div>
@@ -257,16 +245,13 @@ export default function LoginForm() {
                       <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
                       <Input
                         id="pin"
-                        name="pin"
                         type={showPin ? "text" : "password"}
-                        value={pinFormData.pin}
-                        onChange={(e) => handlePinInputChange(e.target.value)}
                         placeholder="Enter your 6-digit PIN"
                         className="pl-10 pr-10 border-sky-200 focus:border-sky-400 text-center text-lg tracking-widest"
                         maxLength={6}
                         inputMode="numeric"
                         pattern="[0-9]*"
-                        required
+                        {...pinForm.register("pin")}
                       />
                       <Button
                         type="button"
@@ -282,6 +267,7 @@ export default function LoginForm() {
                         )}
                       </Button>
                     </div>
+                    {pinForm.formState.errors.pin && <p className="text-sm text-red-500 mt-1">{pinForm.formState.errors.pin.message}</p>}
                     <p className="text-xs text-sky-600 mt-1">Enter the 6-digit PIN provided by your administrator</p>
                   </div>
 
