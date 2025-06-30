@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
 
 export const authService = {
-  async signIn(email, password) {
+  async signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -11,7 +11,7 @@ export const authService = {
     return data;
   },
 
-  async signUp(email, password, fullName, role) {
+  async signUp(email: string, password: string, fullName: string, role: UserRole) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -31,7 +31,7 @@ export const authService = {
     if (error) throw error;
   },
 
-  async getUserRole(userId) {
+  async getUserRole(userId: string): Promise<UserRole | null> {
     if (!userId) return null;
     try {
       const { data, error } = await supabase
@@ -52,13 +52,11 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    const {
-       { user },
-    } = await supabase.auth.getUser();
+    const {  { user } } = await supabase.auth.getUser();
     return user;
   },
 
-  async switchRole(userId, newRole) {
+  async switchRole(userId: string, newRole: UserRole) {
     const { data, error } = await supabase
       .from("profiles")
       .update({ role: newRole })

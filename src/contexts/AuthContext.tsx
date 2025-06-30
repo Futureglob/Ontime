@@ -30,9 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const getInitialSession = async () => {
-      const {
-         { session },
-      } = await supabase.auth.getSession();
+      const {  { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
 
@@ -45,9 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     getInitialSession();
 
-    const {
-       { subscription },
-    } = supabase.auth.onAuthStateChange(
+    const {  { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         setSession(session);
         setUser(session?.user ?? null);
