@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
-import { taskService, EnrichedTask } from "@/services/taskService";
+import { taskService, Task } from "@/services/taskService";
 import { notificationService } from "@/services/notificationService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { superAdminService } from "@/services/superAdminService";
@@ -41,39 +41,36 @@ export default function DashboardOverview() {
     teamMembers: 0,
     unreadMessages: 0,
   });
-  const [recentTasks, setRecentTasks] = useState<EnrichedTask[]>([]);
+  const [recentTasks, setRecentTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       if (profile) {
-        const [
-          tasksData,
-          taskCountData,
-          userCountData,
-          orgCountData,
-        ] = await Promise.all([
-          taskService.getTasksForUser(),
-          taskService.getTaskCountForUser(),
-          superAdminService.getUserCount(),
-          superAdminService.getOrganizationCount(),
-        ]);
-        
-        const { tasks } = tasksData;
-        const { totalTasks, completedTasks, pendingTasks, overdueTasks } = taskCountData;
-        const { userCount } = userCountData;
-        const { orgCount } = orgCountData;
-        
-        setStats({
-          totalTasks,
-          completedTasks,
-          pendingTasks,
-          overdueTasks,
-          teamMembers: userCount,
-          unreadMessages: 0,
-        });
+        setLoading(true);
+        try {
+          const tasks = await taskService.getTasksForUser();
+          const userCount = await superAdminService.getUserCount();
+          
+          const completedTasks = tasks.filter(t => t.status === 'completed').length;
+          const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
+          const overdueTasks = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date()).length;
 
-        setRecentTasks(tasks.slice(0, 5));
+          setStats({
+            totalTasks: tasks.length,
+            completedTasks,
+            pendingTasks,
+            overdueTasks,
+            teamMembers: userCount,
+            unreadMessages: 0, // Placeholder
+          });
+
+          setRecentTasks(tasks.slice(0, 5));
+        } catch (error) {
+          console.error("Failed to fetch dashboard ", error);
+        } finally {
+          setLoading(false);
+        }
       }
     };
 

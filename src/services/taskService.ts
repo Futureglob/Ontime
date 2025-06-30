@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
@@ -8,12 +7,12 @@ export type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 export type EnrichedTask = Task & {
-  created_by_profile: Profile | null;
-  assigned_to_profile: Profile | null;
+  created_by_profile?: Profile | null;
+  assigned_to_profile?: Profile | null;
 };
 
 // A simplified task type until relationships are fixed
-export type SimpleTask = Omit<Task, "created_by" | "assigned_to">;
+export type SimpleTask = Task;
 
 
 export const taskService = {
@@ -33,9 +32,17 @@ export const taskService = {
 
   // Simplified for now
   async getTasksForUser(): Promise<SimpleTask[]> {
+    const {  authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      console.error("User not found", authError);
+      return [];
+    }
+    const userId = authData.user.id;
+
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
+      .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -122,9 +129,17 @@ export const taskService = {
   },
 
   async getTaskCountForUser(): Promise<number> {
-     const { count, error } = await supabase
+    const {  authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      console.error("User not found", authError);
+      return 0;
+    }
+    const userId = authData.user.id;
+
+    const { count, error } = await supabase
       .from("tasks")
-      .select("id", { count: "exact", head: true });
+      .select("id", { count: "exact", head: true })
+      .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
 
     if (error) {
       console.error("Error getting user task count:", error.message);

@@ -89,7 +89,7 @@ export default function Sidebar() {
 
     try {
       const [tasks, notifications] = await Promise.all([
-        taskService.getTasksForUser(currentUserId),
+        taskService.getTasksForUser(),
         notificationService.getUnreadNotifications(),
       ]);
       setTaskCount(tasks.length);
@@ -102,20 +102,8 @@ export default function Sidebar() {
   }, [user?.id, profile?.id]);
 
   useEffect(() => {
-    const fetchCounts = async () => {
-      if (user) {
-        if (profile?.role === "org_admin" && profile.organization_id) {
-          const orgTasks = await taskService.getTasksForOrganization(profile.organization_id);
-          setTaskCount(orgTasks.length);
-        } else {
-          const allTasks = await taskService.getTasksForUser();
-          setTaskCount(allTasks.length);
-        }
-      }
-    };
-
-    fetchCounts();
-  }, [profile, user]);
+    loadData();
+  }, [loadData]);
 
   const handleNavigation = (href: string) => {
     router.push(href);

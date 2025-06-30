@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { taskService, EnrichedTask } from "@/services/taskService";
+import { taskService, Task } from "@/services/taskService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,18 +16,18 @@ import PhotoCapture from "./PhotoCapture";
 
 export default function FieldWork() {
   const { profile } = useAuth();
-  const [tasks, setTasks] = useState<EnrichedTask[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isPhotoCaptureOpen, setIsPhotoCaptureOpen] = useState(false);
 
   const loadTasks = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
     try {
-      const fetchedTasks = await taskService.getTasksForUser(profile.id);
+      const fetchedTasks = await taskService.getTasksForUser();
       setTasks(fetchedTasks.filter(t => t.task_type === 'field_work'));
     } catch (error) {
       console.error("Failed to load field tasks:", error);
@@ -37,16 +37,10 @@ export default function FieldWork() {
   }, [profile]);
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      setLoading(true);
-      const fetchedTasks = await taskService.getTasksForUser();
-      setTasks(fetchedTasks);
-      setLoading(false);
-    };
-    fetchTasks();
-  }, []);
+    loadTasks();
+  }, [loadTasks]);
 
-  const handleTakePhoto = (task: EnrichedTask) => {
+  const handleTakePhoto = (task: Task) => {
     setSelectedTask(task);
     setIsPhotoCaptureOpen(true);
   };

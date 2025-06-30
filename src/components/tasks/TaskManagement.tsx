@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { taskService, EnrichedTask, Task } from "@/services/taskService";
+import { taskService, Task } from "@/services/taskService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Search } from "lucide-react";
@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TaskManagement() {
   const { profile } = useAuth();
-  const [tasks, setTasks] = useState<EnrichedTask[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -30,28 +30,33 @@ export default function TaskManagement() {
     [profile]
   );
 
-  useEffect(() => {
-    const loadTasks = async () => {
-      setLoading(true);
-      if (profile?.role === "org_admin" && profile.organization_id) {
+  const loadTasks = useCallback(async () => {
+    if (!profile) return;
+    setLoading(true);
+    try {
+      if (profile.role === "org_admin" && profile.organization_id) {
         const orgTasks = await taskService.getTasksForOrganization(
           profile.organization_id
         );
         setTasks(orgTasks);
-      } else if (profile?.role === "super_admin") {
+      } else if (profile.role === "super_admin") {
         const allTasks = await taskService.getTasks();
         setTasks(allTasks);
       } else {
-         const userTasks = await taskService.getTasksForUser();
-         setTasks(userTasks);
+        const userTasks = await taskService.getTasksForUser();
+        setTasks(userTasks);
       }
+    } catch (error) {
+      console.error("Failed to load tasks:", error);
+      setTasks([]);
+    } finally {
       setLoading(false);
-    };
-
-    if (profile) {
-      loadTasks();
     }
   }, [profile]);
+
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
 
   const handleFormSuccess = () => {
     setIsFormOpen(false);
