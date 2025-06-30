@@ -21,7 +21,7 @@ export const authService = {
       });
 
       if (error) {
-        return {  { user: null, session: null }, error };
+        return { data: { user: null, session: null }, error };
       }
 
       const responseData = data as LoginWithPinResponse;
@@ -33,16 +33,16 @@ export const authService = {
         });
 
         if (sessionError) {
-          return {  { user: null, session: null }, error: sessionError };
+          return { data: { user: null, session: null }, error: sessionError };
         }
         
-        const {  { session } } = await supabase.auth.getSession();
-        return {  { session, user: session?.user || null }, error: null };
+        const { data: { session } } = await supabase.auth.getSession();
+        return { data: { session, user: session?.user || null }, error: null };
       }
 
-      return {  { user: null, session: null }, error: new Error(responseData?.message || "Invalid credentials") };
+      return { data: { user: null, session: null }, error: new Error(responseData?.message || "Invalid credentials") };
     } catch (error) {
-      return {  { user: null, session: null }, error: error as Error };
+      return { data: { user: null, session: null }, error: error as Error };
     }
   },
 
