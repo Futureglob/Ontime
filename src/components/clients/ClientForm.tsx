@@ -1,177 +1,164 @@
-import { useForm } from "react-hook-form";
-    import { zodResolver } from "@hookform/resolvers/zod";
-    import * as z from "zod";
-    import { Button } from "@/components/ui/button";
-    import { Input } from "@/components/ui/input";
-    import {
-      Form,
-      FormControl,
-      FormField,
-      FormItem,
-      FormLabel,
-      FormMessage,
-    } from "@/components/ui/form";
-    import { clientService, Client, ClientInsert, ClientUpdate } from "@/services/clientService";
-    import { useAuth } from "@/contexts/AuthContext";
-    import { useToast } from "@/hooks/use-toast";
 
-    const formSchema = z.object({
-      name: z.string().min(2, "Name must be at least 2 characters."),
-      contact_person: z.string().optional(),
-      phone: z.string().optional(),
-      place: z.string().optional(),
-      emirate: z.string().optional(),
-      latitude: z.coerce.number().optional(),
-      longitude: z.coerce.number().optional(),
-    });
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-    interface ClientFormProps {
-      client?: Client | null;
-      onSuccess: () => void;
-      onCancel: () => void;
-    }
+interface ClientFormProps {
+  onSubmit: (client: ClientData) => void;
+  onCancel: () => void;
+}
 
-    export default function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
-      const { currentProfile } = useAuth();
-      const { toast } = useToast();
-      const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-          name: client?.name || "",
-          contact_person: client?.contact_person || "",
-          phone: client?.phone || "",
-          place: client?.place || "",
-          emirate: client?.emirate || "",
-          latitude: client?.latitude || undefined,
-          longitude: client?.longitude || undefined,
+interface ClientData {
+  name: string;
+  contactPerson: string;
+  place: string;
+  emirate: string;
+  phoneNumber: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+const emirates = [
+  "Abu Dhabi",
+  "Dubai", 
+  "Sharjah",
+  "Ajman",
+  "Umm Al Quwain",
+  "Ras Al Khaimah",
+  "Fujairah"
+];
+
+export default function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
+  const [formData, setFormData] = useState<ClientData>({
+    name: "",
+    contactPerson: "",
+    place: "",
+    emirate: "",
+    phoneNumber: "",
+    latitude: undefined,
+    longitude: undefined
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  const handleLocationFetch = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData(prev => ({
+            ...prev,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          }));
         },
-      });
-
-      async function onSubmit(values: z.infer<typeof formSchema>) {
-        if (!currentProfile?.organization_id) {
-          toast({ title: "Error", description: "No organization found.", variant: "destructive" });
-          return;
+        (error) => {
+          console.error("Error getting location:", error);
         }
-
-        try {
-          if (client) {
-            const updateData: ClientUpdate = { ...values, id: client.id };
-            await clientService.updateClient(client.id, updateData);
-            toast({ title: "Success", description: "Client updated successfully." });
-          } else {
-            const insertData: ClientInsert = { ...values, name: values.name, organization_id: currentProfile.organization_id };
-            await clientService.createClient(insertData);
-            toast({ title: "Success", description: "Client created successfully." });
-          }
-          onSuccess();
-        } catch (err) {
-          const error = err as Error;
-          toast({ title: "Error", description: error.message || "Could not save client.", variant: "destructive" });
-        }
-      }
-
-      return (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Client Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Client Co." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="contact_person"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contact Person</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="+971..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="place"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Place</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Business Bay" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="emirate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Emirate</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Dubai" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex gap-4">
-              <FormField
-                control={form.control}
-                name="latitude"
-                render={({ field }) => (
-                  <FormItem className="w-full">
-                    <FormLabel>Latitude</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="25.1972" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="longitude"
-                render={({ field }) => (
-                  <FormItem className="w-full">
-                    <FormLabel>Longitude</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="55.2744" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-              <Button type="submit">Save Client</Button>
-            </div>
-          </form>
-        </Form>
       );
     }
-  
+  };
+
+  return (
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>Add New Client</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Client Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="contactPerson">Contact Person *</Label>
+              <Input
+                id="contactPerson"
+                value={formData.contactPerson}
+                onChange={(e) => setFormData(prev => ({ ...prev, contactPerson: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="place">Place *</Label>
+              <Input
+                id="place"
+                value={formData.place}
+                onChange={(e) => setFormData(prev => ({ ...prev, place: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="emirate">Emirate *</Label>
+              <Select value={formData.emirate} onValueChange={(value) => setFormData(prev => ({ ...prev, emirate: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Emirate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {emirates.map((emirate) => (
+                    <SelectItem key={emirate} value={emirate}>
+                      {emirate}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="phoneNumber">Phone Number *</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleLocationFetch}
+                className="w-full"
+              >
+                Get Current Location
+              </Button>
+            </div>
+          </div>
+          
+          {formData.latitude && formData.longitude && (
+            <div className="p-3 bg-green-50 rounded-lg">
+              <p className="text-sm text-green-700">
+                Location captured: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+              </p>
+            </div>
+          )}
+          
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" className="flex-1">
+              Add Client
+            </Button>
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
