@@ -22,7 +22,7 @@ export const authService = {
 
       if (rpcError) {
         const authError = new AuthError((rpcError as PostgrestError).message, parseInt((rpcError as PostgrestError).code, 10) || 500);
-        return {  { user: null, session: null }, error: authError };
+        return { data: { user: null, session: null }, error: authError };
       }
 
       const responseData = data as LoginWithPinResponse;
@@ -37,11 +37,10 @@ export const authService = {
       }
 
       const authError = new AuthError(responseData?.message || "Invalid credentials or PIN", 401);
-      return {  { user: null, session: null }, error: authError };
+      return { data: { user: null, session: null }, error: authError };
     } catch (e) {
-      const error = e as Error;
-      const authError = new AuthError(error.message || "Login failed", 500);
-      return {  { user: null, session: null }, error: authError };
+      const authError = new AuthError((e as Error).message || "Login failed", 500);
+      return { data: { user: null, session: null }, error: authError };
     }
   },
 
@@ -56,7 +55,7 @@ export const authService = {
   },
 
   async signUp(email: string, password: string, options?: Record<string, unknown>): Promise<AuthResponse> {
-    return supabase.auth.signUp({ email, password, options: {  options } });
+    return supabase.auth.signUp({ email, password, options });
   },
 
   async generatePinForUser(userId: string): Promise<{ error: AuthError | null }> {
@@ -75,4 +74,3 @@ export const authService = {
     return { error: null };
   },
 };
-  
