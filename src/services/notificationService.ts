@@ -12,7 +12,7 @@ export interface NotificationOptions {
   icon?: string;
   badge?: string;
   tag?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   actions?: NotificationAction[];
   silent?: boolean;
   requireInteraction?: boolean;
@@ -61,7 +61,7 @@ export const notificationService = {
     await this.showNotification("New Task Assigned", {
       body: `${assignedBy} assigned you: ${taskTitle}`,
       tag: "task-assigned",
-       { type: "task_assigned", taskTitle },
+      data: { type: "task_assigned", taskTitle },
     });
   },
 
@@ -69,7 +69,7 @@ export const notificationService = {
     await this.showNotification("Task Status Updated", {
       body: `${updatedBy} updated "${taskTitle}" to ${status.replace("_", " ")}`,
       tag: "task-status",
-       { type: "task_status", taskTitle, status },
+      data: { type: "task_status", taskTitle, status },
     });
   },
 
@@ -77,7 +77,7 @@ export const notificationService = {
     await this.showNotification("New Message", {
       body: `${senderName}: ${message}`,
       tag: "new-message",
-       { type: "message", senderName, taskTitle },
+      data: { type: "message", senderName, taskTitle },
     });
   },
 
@@ -85,7 +85,7 @@ export const notificationService = {
     await this.showNotification("Data Synced", {
       body: `${itemCount} items synced successfully`,
       tag: "offline-sync",
-       { type: "sync", itemCount },
+      data: { type: "sync", itemCount },
     });
   },
 
@@ -94,7 +94,7 @@ export const notificationService = {
       body: `"${taskTitle}" is due ${deadline}`,
       tag: "task-reminder",
       requireInteraction: true,
-       { type: "reminder", taskTitle, deadline },
+      data: { type: "reminder", taskTitle, deadline },
     });
   },
 
@@ -108,7 +108,7 @@ export const notificationService = {
     }
   },
 
-  handleNotificationClick( Record<string, any>): void {
+  handleNotificationClick(data: Record<string, unknown>): void {
     if (typeof window === "undefined") return;
     switch (data?.type) {
       case "task_assigned":
@@ -136,7 +136,7 @@ export const notificationService = {
     }
   },
 
-  async getUnreadNotifications(): Promise<any[]> {
+  async getUnreadNotifications(): Promise<unknown[]> {
     // Mock implementation
     return [];
   },
