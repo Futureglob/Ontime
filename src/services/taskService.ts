@@ -15,7 +15,7 @@ export type EnrichedTask = Task & {
 export const taskService = {
   async getTasks(): Promise<EnrichedTask[]> {
     try {
-      const {  tasks, error } = await supabase
+      const { data, error } = await supabase
         .from("tasks")
         .select("*")
         .order("created_at", { ascending: false });
@@ -25,7 +25,7 @@ export const taskService = {
         return [];
       }
 
-      return (tasks || []).map(task => ({
+      return (data || []).map(task => ({
         ...task,
         created_by_profile: null,
         assigned_to_profile: null
@@ -36,9 +36,9 @@ export const taskService = {
     }
   },
 
-  async getTasksForUser(_userId: string): Promise<EnrichedTask[]> {
+  async getTasksForUser(): Promise<EnrichedTask[]> {
     try {
-      const {  tasks, error } = await supabase
+      const { data, error } = await supabase
         .from("tasks")
         .select("*")
         .order("created_at", { ascending: false });
@@ -48,7 +48,7 @@ export const taskService = {
         return [];
       }
 
-      return (tasks || []).map(task => ({
+      return (data || []).map(task => ({
         ...task,
         created_by_profile: null,
         assigned_to_profile: null
@@ -61,7 +61,7 @@ export const taskService = {
 
   async getTasksForOrganization(organizationId: string): Promise<EnrichedTask[]> {
     try {
-      const {  tasks, error } = await supabase
+      const { data, error } = await supabase
         .from("tasks")
         .select("*")
         .eq("organization_id", organizationId)
@@ -72,7 +72,7 @@ export const taskService = {
         return [];
       }
 
-      return (tasks || []).map(task => ({
+      return (data || []).map(task => ({
         ...task,
         created_by_profile: null,
         assigned_to_profile: null
@@ -85,7 +85,7 @@ export const taskService = {
 
   async getTaskById(id: string): Promise<EnrichedTask | null> {
     try {
-      const {  task, error } = await supabase
+      const { data, error } = await supabase
         .from("tasks")
         .select("*")
         .eq("id", id)
@@ -96,12 +96,12 @@ export const taskService = {
         return null;
       }
 
-      if (!task) {
+      if (!data) {
         return null;
       }
 
       return {
-        ...task,
+        ...data,
         created_by_profile: null,
         assigned_to_profile: null
       } as EnrichedTask;
@@ -168,7 +168,7 @@ export const taskService = {
     }
   },
 
-  async getTaskCountForUser(_userId: string): Promise<number> {
+  async getTaskCountForUser(): Promise<number> {
     try {
       const { count, error } = await supabase
         .from("tasks")
