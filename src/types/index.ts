@@ -126,3 +126,16 @@ export interface Profile {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface Client {
+  id: string;
+  name: string;
+  email?: string;
+  phone: string;
+  address?: string;
+  organization_id: string;
+  contact_person?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}

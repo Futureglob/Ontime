@@ -45,39 +45,44 @@ export default function Sidebar() {
   const isSuperAdmin = useMemo(() => currentProfile?.role === "super_admin", [currentProfile]);
 
   const navigationItems = useMemo(() => {
-    let nav = [...baseNavigation];
-
-    if (currentProfile) {
-      switch (currentProfile.role) {
-        case "employee":
-          nav = nav.filter((item) =>
-            ["Dashboard", "Tasks", "Field Work", "Messages", "Profile"].includes(item.name)
-          );
-          break;
-        case "task_manager":
-          nav = nav.filter((item) => !["Organization", "Super Admin"].includes(item.name));
-          break;
-        case "org_admin":
-          nav = nav.filter((item) => item.name !== "Super Admin");
-          break;
-        case "super_admin":
-          // super_admin sees all base items
-          break;
-        default:
-          nav = nav.filter((item) => ["Dashboard", "Tasks", "Profile"].includes(item.name));
-          break;
-      }
-    } else {
-        // Not authenticated, show minimal navigation
-        return [];
+    if (!currentProfile) {
+      // Not authenticated, show minimal navigation
+      return [];
     }
 
-    if (isSuperAdmin && !nav.find((item) => item.name === "Super Admin")) {
-      nav.push(superAdminNav);
+    let nav = [...baseNavigation];
+
+    switch (currentProfile.role) {
+      case "employee":
+        // Employees can only see basic functionality
+        nav = nav.filter((item) =>
+          ["Dashboard", "Tasks", "Field Work", "Messages", "Profile"].includes(item.name)
+        );
+        break;
+      case "task_manager":
+        // Task managers can see most features except organization management and super admin
+        nav = nav.filter((item) => 
+          !["Organization", "Super Admin"].includes(item.name)
+        );
+        break;
+      case "org_admin":
+        // Org admins can see everything except super admin
+        nav = nav.filter((item) => item.name !== "Super Admin");
+        break;
+      case "super_admin":
+        // Super admins see all base items plus super admin panel
+        if (!nav.find((item) => item.name === "Super Admin")) {
+          nav.push(superAdminNav);
+        }
+        break;
+      default:
+        // Default fallback for unknown roles
+        nav = nav.filter((item) => ["Dashboard", "Tasks", "Profile"].includes(item.name));
+        break;
     }
     
     return nav;
-  }, [currentProfile, isSuperAdmin]);
+  }, [currentProfile]);
 
   const loadData = useCallback(async () => {
     const currentUserId = user?.id || profile?.id;
