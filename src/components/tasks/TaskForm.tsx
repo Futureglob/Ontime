@@ -22,84 +22,78 @@ import { useAuth } from "@/contexts/AuthContext";
 import { taskService, Task, TaskInsert, TaskUpdate } from "@/services/taskService";
 import { profileService } from "@/services/profileService";
 import { Database } from "@/integrations/supabase/types";
+import { clientService, Client } from "@/services/clientService";
+import { useToast } from "@/contexts/ToastContext";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-const taskSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+const formSchema = z.object({
+  title: z.string().min(2, "Title must be at least 2 characters."),
   description: z.string().optional(),
-  status: z.string().min(1, "Status is required"),
-  assigned_to: z.string().optional(),
-  deadline: z.date().optional(),
+  assignee_id: z.string().optional(),
+  due_date: z.string().optional(),
+  priority: z.string().optional(),
+  status: z.string().optional(),
+  client_id: z.string().optional(),
 });
 
 interface TaskFormProps {
   task?: Task | null;
+  users: Profile[];
   onSuccess: () => void;
-  onCancel: () => void;
 }
 
-export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
-  const { profile } = useAuth();
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function TaskForm({ task, users, onSuccess }: TaskFormProps) {
+  const { currentProfile } = useAuth();
+  const { toast } = useToast();
+  const [clients, setClients] = useState<Client[]>([]);
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors },
-  } = useForm<z.infer<typeof taskSchema>>({
-    resolver: zodResolver(taskSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: task?.title || "",
       description: task?.description || "",
+      assignee_id: task?.assignee_id || "",
+      due_date: task?.due_date ? task.due_date.split('T')[0] : "",
+      priority: task?.priority || "medium",
       status: task?.status || "pending",
-      assigned_to: task?.assigned_to || "",
-      deadline: task?.deadline ? new Date(task.deadline) : undefined,
+      client_id: task?.client_id || "",
     },
   });
 
-  const loadUsers = useCallback(async () => {
-    if (profile?.organization_id) {
-      try {
-        const orgUsers = await profileService.getOrganizationProfiles(profile.organization_id);
-        setUsers(orgUsers || []);
-      } catch (error) {
-        console.error("Failed to load users:", error);
-        setUsers([]);
+  useEffect(() => {
+    async function fetchClients() {
+      if (currentProfile?.organization_id) {
+        try {
+          const clientList = await clientService.getClientsByOrg(currentProfile.organization_id);
+          setClients(clientList);
+        } catch (error) {
+          toast({ title: "Error", description: "Could not fetch clients." });
+        }
       }
     }
-  }, [profile?.organization_id]);
+    fetchClients();
+  }, [currentProfile?.organization_id, toast]);
 
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
 
-  const onSubmit = async (values: z.infer<typeof taskSchema>) => {
-    if (!profile) return;
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!currentProfile) return;
     setLoading(true);
 
-    try {
-      const data = {
-        ...values,
-        deadline: values.deadline ? values.deadline.toISOString() : null,
-      };
+    const taskData = {
+      ...values,
+      due_date: values.due_date ? new Date(values.due_date).toISOString() : null,
+      organization_id: currentProfile.organization_id,
+      created_by: currentProfile.id,
+    };
 
+    try {
       if (task) {
-        await taskService.updateTask(task.id, data as TaskUpdate);
+        await taskService.updateTask(task.id, taskData);
+        toast({ title: "Success", description: "Task updated successfully." });
       } else {
-        const insertData: TaskInsert = {
-          title: values.title,
-          description: values.description,
-          status: values.status,
-          assigned_to: values.assigned_to || null,
-          deadline: values.deadline ? values.deadline.toISOString() : null,
-          created_by: profile.id,
-          organization_id: profile.organization_id,
-          task_type: "general",
-        };
-        await taskService.createTask(insertData);
+        await taskService.createTask(taskData);
+        toast({ title: "Success", description: "Task created successfully." });
       }
       onSuccess();
     } catch (error) {
