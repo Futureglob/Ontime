@@ -77,7 +77,7 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 export default function CompleteAnalyticsDashboard() {
   const { currentProfile } = useAuth();
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("30d");
   const [refreshing, setRefreshing] = useState(false);

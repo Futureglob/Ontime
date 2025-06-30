@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Task } from "@/services/taskService";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, User, Calendar } from "lucide-react";
 
 interface TaskCardProps {
   task: Task;

@@ -1,17 +1,7 @@
-import { useState, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
-import { toast } from "sonner";
-import EmployeeManagement from "@/components/employees/EmployeeManagement";
-import TaskManagement from "@/components/tasks/TaskManagement";
-import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
-import OrganizationSettings from "@/components/organization/OrganizationSettings";
-import RealTimeMessaging from "@/components/messaging/RealTimeMessaging";
-import Sidebar from "@/components/layout/Sidebar";
-import { organizationService } from "@/services/organizationService";
-import { Organization } from "@/types";
 
 export default function OrgAdminDashboard() {
   const { currentProfile, logout } = useAuth();

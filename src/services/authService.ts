@@ -44,7 +44,7 @@ export const authService = {
         message: responseData?.message || "Invalid credentials or PIN",
         status: 401,
     };
-    return {  { user: null, session: null }, error: authError };
+    return { data: { user: null, session: null }, error: authError };
   },
 
   async resetPassword(email: string) {

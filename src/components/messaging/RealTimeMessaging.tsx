@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
@@ -10,13 +9,11 @@ import {
   Clock, 
   CheckCircle2,
   Users,
-  Search,
   Phone,
   Video
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { messageService, MessageWithSender } from "@/services/messageService";
-import { profileService } from "@/services/profileService";
 import { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -34,11 +31,14 @@ export default function RealTimeMessaging({ taskId }: RealTimeMessagingProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadMessages = useCallback(async (taskId: string) => {
+    setLoading(true);
     try {
       const taskMessages = await messageService.getTaskMessages(taskId);
       setMessages(taskMessages);
     } catch (error) {
       console.error("Error loading messages:", error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 

@@ -103,6 +103,14 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  if (loading) {
+    return (
+        <div className="flex items-center justify-center p-10">
+            <p>Loading dashboard data...</p>
+        </div>
+    );
+  }
+
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
