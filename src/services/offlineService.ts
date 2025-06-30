@@ -1,4 +1,4 @@
-import { Task, PhotoType, TaskStatus } from "@/types/database";
+
 import { taskService } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
 import { notificationService } from "@/services/notificationService";
@@ -12,7 +12,7 @@ interface TaskUpdatePayload {
 }
 
 interface PhotoUploadMetadata {
-  type: PhotoType;
+  type: "check_in" | "progress" | "completion";
   location?: { lat: number; lng: number };
   timestamp: string;
   notes?: string;
@@ -71,14 +71,14 @@ export const offlineService = {
   },
 
   // Cache task data for offline access
-  cacheTaskData(tasks: any[]) {
+  cacheTaskData(tasks: Record<string, unknown>[]) {
     localStorage.setItem('ontime_cached_tasks', JSON.stringify({
       tasks,
       timestamp: Date.now()
     }));
   },
 
-  getCachedTaskData(): any[] | null {
+  getCachedTaskData(): Record<string, unknown>[] | null {
     const cached = localStorage.getItem('ontime_cached_tasks');
     if (!cached) return null;
     
@@ -211,7 +211,12 @@ export const offlineService = {
           await photoService.uploadTaskPhoto(
             photoPayload.taskId,
             file,
-            photoPayload.meta
+            {
+              type: photoPayload.meta.type,
+              location: photoPayload.meta.location,
+              timestamp: photoPayload.meta.timestamp,
+              notes: photoPayload.meta.notes
+            }
           );
         }
         break;
@@ -236,7 +241,12 @@ export const offlineService = {
       await photoService.uploadTaskPhoto(
         photoData.taskId,
         file,
-        photoData.meta
+        {
+          type: photoData.meta.type,
+          location: photoData.meta.location,
+          timestamp: photoData.meta.timestamp,
+          notes: photoData.meta.notes
+        }
       );
     }
   },

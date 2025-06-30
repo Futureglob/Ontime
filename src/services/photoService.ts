@@ -1,6 +1,18 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { TaskPhoto, PhotoType } from "@/types/database";
+
+export type PhotoType = "check_in" | "progress" | "completion";
+
+export interface TaskPhoto {
+  id: string;
+  task_id: string | null;
+  photo_url: string;
+  photo_type: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  taken_at: string | null;
+  uploaded_at: string | null;
+}
 
 interface UploadMetadata {
   type: PhotoType;
