@@ -1,5 +1,4 @@
 import { pwaService } from "./pwaService";
-import type { Notification as NotificationType } from "@/types";
 
 export interface NotificationAction {
   action: string;
@@ -81,7 +80,7 @@ export const notificationService = {
         { action: "view", title: "View Task" },
         { action: "dismiss", title: "Dismiss" }
       ],
-      data: { type: "task_assigned", taskTitle }
+       { type: "task_assigned", taskTitle }
     });
   },
 
@@ -91,7 +90,7 @@ export const notificationService = {
       body: `${updatedBy} updated "${taskTitle}" to ${status.replace("_", " ")}`,
       tag: "task-status",
       icon: "/icons/icon-192x192.svg",
-      data: { type: "task_status", taskTitle, status }
+       { type: "task_status", taskTitle, status }
     });
   },
 
@@ -105,7 +104,7 @@ export const notificationService = {
         { action: "reply", title: "Reply" },
         { action: "view", title: "View Chat" }
       ],
-      data: { type: "message", senderName, taskTitle }
+       { type: "message", senderName, taskTitle }
     });
   },
 
@@ -115,7 +114,7 @@ export const notificationService = {
       body: `${itemCount} items synced successfully`,
       tag: "offline-sync",
       icon: "/icons/icon-192x192.svg",
-      data: { type: "sync", itemCount }
+       { type: "sync", itemCount }
     });
   },
 
@@ -130,7 +129,7 @@ export const notificationService = {
         { action: "view", title: "View Task" },
         { action: "snooze", title: "Remind Later" }
       ],
-      data: { type: "reminder", taskTitle, deadline }
+       { type: "reminder", taskTitle, deadline }
     });
   },
 
@@ -162,7 +161,7 @@ export const notificationService = {
   },
 
   // Handle notification clicks
-  handleNotificationClick(data: Record<string, unknown>): void {
+  handleNotificationClick( Record<string, unknown>): void {
     if (typeof window === "undefined") return;
     switch (data?.type) {
       case "task_assigned":
@@ -194,7 +193,7 @@ export const notificationService = {
   },
 
   // Get unread notifications from a database (placeholder)
-  async getUnreadNotifications(): Promise<any[]> {
+  async getUnreadNotifications(): Promise<unknown[]> {
     // Mock implementation - replace with actual Supabase query
     try {
       // For now, return empty array to prevent errors
@@ -209,21 +208,6 @@ export const notificationService = {
   async markAsRead(notificationId: string): Promise<void> {
     // Mock implementation
     console.log("Marking notification as read:", notificationId);
-  },
-
-  showNotification(title: string, options?: { body?: string; tag?: string }): void {
-    if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(title, options);
-    } else {
-      console.log("Notification:", title, options?.body);
-    }
-  },
-
-  async requestPermission(): Promise<NotificationPermission> {
-    if ("Notification" in window) {
-      return await Notification.requestPermission();
-    }
-    return "denied";
   }
 };
 
