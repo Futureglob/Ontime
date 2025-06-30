@@ -1,24 +1,22 @@
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  LayoutDashboard, 
-  CheckSquare, 
-  Users, 
-  MapPin, 
-  MessageSquare, 
-  BarChart3, 
-  Settings, 
+import {
+  LayoutDashboard,
+  CheckSquare,
+  Users,
+  MapPin,
+  MessageSquare,
+  BarChart3,
+  Settings,
   Building2,
   User,
   ShieldCheck,
-  Bell // Added for notifications
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { profileService } from "@/services/profileService";
-import { Profile } from "@/types/database";
-import { superAdminService } from "@/services/superAdminService";
 import { taskService } from "@/services/taskService";
 import { notificationService } from "@/services/notificationService";
 import Image from "next/image";
@@ -35,98 +33,83 @@ const baseNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+const superAdminNav = { name: "Super Admin", href: "/superadmin", icon: ShieldCheck };
+
 export default function Sidebar() {
   const router = useRouter();
   const { user, profile } = useAuth();
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [taskCount, setTaskCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
-  
-  // Memoize the current profile
-  const currentProfile = useMemo(() => profile || user?.user_metadata, [profile, user]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  // Memoize loadUserProfile to prevent unnecessary recreations
-  const loadUserProfile = useCallback(async () => {
-    const currentUserId = user?.id || profile?.id;
+  const currentProfile = useMemo(() => profile, [profile]);
+  const isSuperAdmin = useMemo(() => currentProfile?.role === "super_admin", [currentProfile]);
+
+  const navigationItems = useMemo(() => {
+    let nav = [...baseNavigation];
+
+    if (currentProfile) {
+      switch (currentProfile.role) {
+        case "employee":
+          nav = nav.filter((item) =>
+            ["Dashboard", "Tasks", "Field Work", "Messages", "Profile"].includes(item.name)
+          );
+          break;
+        case "task_manager":
+          nav = nav.filter((item) => !["Organization", "Super Admin"].includes(item.name));
+          break;
+        case "org_admin":
+          nav = nav.filter((item) => item.name !== "Super Admin");
+          break;
+        case "super_admin":
+          // super_admin sees all base items
+          break;
+        default:
+          nav = nav.filter((item) => ["Dashboard", "Tasks", "Profile"].includes(item.name));
+          break;
+      }
+    } else {
+        // Not authenticated, show minimal navigation
+        return [];
+    }
+
+    if (isSuperAdmin && !nav.find((item) => item.name === "Super Admin")) {
+      nav.push(superAdminNav);
+    }
     
+    return nav;
+  }, [currentProfile, isSuperAdmin]);
+
+  const loadData = useCallback(async () => {
+    const currentUserId = user?.id || profile?.id;
     if (!currentUserId) {
-      setIsSuperAdmin(false);
       setTaskCount(0);
       setNotificationCount(0);
       return;
     }
 
     try {
-      const [superAdminStatus, tasks, notifications] = await Promise.all([
-        superAdminService.isSuperAdmin(currentUserId),
+      const [tasks, notifications] = await Promise.all([
         taskService.getTasksForUser(currentUserId),
-        notificationService.getUnreadNotifications()
+        notificationService.getUnreadNotifications(currentUserId),
       ]);
-
-      setIsSuperAdmin(superAdminStatus);
       setTaskCount(tasks.length);
       setNotificationCount(notifications.length);
     } catch (error) {
-      console.error("Error loading user data:", error);
-      setIsSuperAdmin(false);
+      console.error("Error loading sidebar ", error);
       setTaskCount(0);
       setNotificationCount(0);
     }
   }, [user?.id, profile?.id]);
 
   useEffect(() => {
-    loadUserProfile();
-  }, [loadUserProfile]);
-
-  useEffect(() => {
-    if (isSuperAdmin) {
-      const adminNav = { name: "Super Admin", href: "/superadmin", icon: ShieldCheck };
-      // Add Super Admin link if not already present
-      if (!baseNavigation.find(item => item.name === "Super Admin")) {
-        setNavigation([...baseNavigation, adminNav]);
-      } else {
-        // Ensure it's there if baseNavigation somehow got modified elsewhere (defensive)
-        const currentNav = [...baseNavigation];
-        const existingIndex = currentNav.findIndex(item => item.name === "Super Admin");
-        if (existingIndex === -1) {
-            currentNav.push(adminNav);
-        }
-        setNavigation(currentNav);
-      }
-    } else {
-      // Remove Super Admin link if present and user is not super admin
-      setNavigation(baseNavigation.filter(item => item.name !== "Super Admin"));
+    if (profile) {
+        loadData();
     }
-  }, [isSuperAdmin]);
-
-  // Memoize navigation items
-  const navigationItems = useMemo(() => {
-    if (!currentProfile) return baseNavigation;
-    
-    return baseNavigation.filter(item => {
-      const userRole = currentProfile.role;
-      
-      switch (userRole) {
-        case 'employee':
-          return ['Dashboard', 'Tasks', 'Field Work', 'Messages', 'Profile'].includes(item.name);
-        case 'task_manager':
-          return !['Organization', 'Super Admin'].includes(item.name);
-        case 'org_admin':
-          return item.name !== 'Super Admin';
-        case 'super_admin':
-          return true;
-        default:
-          return true;
-      }
-    });
-  }, [currentProfile]);
+  }, [profile, loadData]);
 
   const handleNavigation = (href: string) => {
-    if (href === "/") {
-      router.push("/");
-    } else {
-      router.push(href);
-    }
+    router.push(href);
   };
 
   return (
@@ -142,7 +125,6 @@ export default function Sidebar() {
           />
         </div>
         
-        {/* Notification Bell */}
         <div className="relative">
           <Button
             variant="ghost"
@@ -189,7 +171,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {(userProfile || profile) && (
+      {profile && (
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">
@@ -197,10 +179,10 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {(userProfile || profile)?.full_name || "User"}
+                {profile.full_name || "User"}
               </p>
               <p className="text-xs text-gray-500 capitalize">
-                {(userProfile || profile)?.role?.replace('_', ' ') || "Employee"}
+                {profile.role?.replace("_", " ") || "Employee"}
               </p>
             </div>
           </div>

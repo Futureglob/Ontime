@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { createHash } from "crypto";
-import { rateLimit } from "@/lib/utils";
+import { rateLimit, hashPin } from "@/lib/utils";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
   organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
@@ -54,9 +54,7 @@ export const authService = {
     }
 
     const profile = profiles[0];
-    const hashedPin = createHash('sha256')
-      .update(`${pin}${profile.id}`) // Salt with user ID
-      .digest('hex');
+    const hashedPin = hashPin(pin, profile.id);
     
     const pinIsValid = profile.pin_hash === hashedPin;
 
@@ -150,9 +148,7 @@ export const authService = {
 
   async generatePinForUser(userId: string) {
     const pin = await this.generatePin();
-    const hashedPin = createHash('sha256')
-      .update(`${pin}${userId}`)
-      .digest('hex');
+    const hashedPin = hashPin(pin, userId);
 
     const { data, error } = await supabase
       .from('profiles')
