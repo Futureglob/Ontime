@@ -69,7 +69,7 @@ export const taskService = {
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, assigned_to_profile:profiles!tasks_assigned_to_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
+        .select("*, assigned_to_profile:profiles!assigned_to(*), created_by_profile:profiles!created_by(*)")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -88,7 +88,7 @@ export const taskService = {
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, assigned_to_profile:profiles!tasks_assigned_to_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
+        .select("*, assigned_to_profile:profiles!assigned_to(*), created_by_profile:profiles!created_by(*)")
         .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
         .order("created_at", { ascending: false });
 
@@ -108,7 +108,7 @@ export const taskService = {
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, assigned_to_profile:profiles!tasks_assigned_to_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
+        .select("*, assigned_to_profile:profiles!assigned_to(*), created_by_profile:profiles!created_by(*)")
         .eq('organization_id', organizationId)
         .order("created_at", { ascending: false });
 
@@ -128,7 +128,7 @@ export const taskService = {
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, assigned_to_profile:profiles!tasks_assigned_to_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
+        .select("*, assigned_to_profile:profiles!assigned_to(*), created_by_profile:profiles!created_by(*)")
         .eq("id", id)
         .single();
 

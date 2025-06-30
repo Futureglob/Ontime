@@ -1,240 +1,243 @@
-import { useState } from "react";
+
+import { useState, useEffect, useCallback } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, MapPin } from "lucide-react";
+import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
-import { taskService } from "@/services/taskService";
-import { profileService } from "@/services/profileService";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { CreateTaskRequest, Profile } from "@/types/database";
+import { taskService, Task, TaskInsert, TaskUpdate } from "@/services/taskService";
+import { profileService } from "@/services/profileService";
+import { Database } from "@/integrations/supabase/types";
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+
+const taskSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  status: z.string().min(1, "Status is required"),
+  priority: z.string().min(1, "Priority is required"),
+  assigned_to: z.string().optional(),
+  due_date: z.date().optional(),
+});
 
 interface TaskFormProps {
-  onClose: () => void;
-  onTaskCreated: () => void;
-  employees: Profile[];
+  task?: Task | null;
+  onSuccess: () => void;
+  onCancel: () => void;
 }
 
-export default function TaskForm({ onClose, onTaskCreated, employees }: TaskFormProps) {
-  const { user } = useAuth();
+export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
+  const { profile } = useAuth();
+  const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
-  const [deadline, setDeadline] = useState<Date>();
-  const [formData, setFormData] = useState<CreateTaskRequest>({
-    title: "",
-    description: "",
-    task_type: "",
-    location: "",
-    location_lat: undefined,
-    location_lng: undefined,
-    client_info: "",
-    deadline: undefined,
-    assigned_to: undefined
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<z.infer<typeof taskSchema>>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: {
+      title: task?.title || "",
+      description: task?.description || "",
+      status: task?.status || "pending",
+      priority: task?.priority || "medium",
+      assigned_to: task?.assigned_to || "",
+      due_date: task?.due_date ? new Date(task.due_date) : undefined,
+    },
   });
 
-  const taskTypes = [
-    "Installation",
-    "Maintenance",
-    "Repair",
-    "Inspection",
-    "Delivery",
-    "Survey",
-    "Consultation",
-    "Training",
-    "Other"
-  ];
-
-  const handleInputChange = (field: keyof CreateTaskRequest, value: string | number | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleLocationSearch = async () => {
-    if (!formData.location) return;
-    
-    try {
-      const response = await fetch(
-        `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(formData.location)}&key=YOUR_API_KEY&limit=1`
-      );
-      const data = await response.json();
-      
-      if (data.results && data.results.length > 0) {
-        const result = data.results[0];
-        setFormData(prev => ({
-          ...prev,
-          location_lat: result.geometry.lat,
-          location_lng: result.geometry.lng
-        }));
+  const loadUsers = useCallback(async () => {
+    if (profile?.organization_id) {
+      try {
+        const orgUsers = await profileService.getProfilesByOrganization(profile.organization_id);
+        setUsers(orgUsers);
+      } catch (error) {
+        console.error("Failed to load users:", error);
       }
-    } catch (error) {
-      console.error("Error geocoding location:", error);
     }
-  };
+  }, [profile?.organization_id]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.title || !formData.task_type) {
-      alert("Please fill in required fields");
-      return;
-    }
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const onSubmit = async (values: z.infer<typeof taskSchema>) => {
+    if (!profile) return;
+    setLoading(true);
 
     try {
-      setLoading(true);
-      const profile = await profileService.getProfile(user!.id);
-      
-      const taskData: CreateTaskRequest = {
-        ...formData,
-        deadline: deadline ? deadline.toISOString() : undefined
-      };
-
-      await taskService.createTask(taskData, user!.id, profile.organization_id!);
-      onTaskCreated();
+      if (task) {
+        const updateData: TaskUpdate = {
+          ...values,
+          due_date: values.due_date ? values.due_date.toISOString() : null,
+        };
+        await taskService.updateTask(task.id, updateData);
+      } else {
+        const insertData: TaskInsert = {
+          ...values,
+          due_date: values.due_date ? values.due_date.toISOString() : null,
+          created_by: profile.id,
+          organization_id: profile.organization_id,
+        };
+        await taskService.createTask(insertData);
+      }
+      onSuccess();
     } catch (error) {
-      console.error("Error creating task:", error);
-      alert("Failed to create task. Please try again.");
+      console.error("Failed to save task:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
-          <DialogDescription>
-            Fill in the details below to create a new task for your team.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium">Task Title *</label>
-              <Input
-                value={formData.title}
-                onChange={(e) => handleInputChange("title", e.target.value)}
-                placeholder="Enter task title"
-                required
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onCancel}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <CardTitle>{task ? "Edit Task" : "Create New Task"}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="title">Title</label>
+            <Input id="title" {...register("title")} />
+            {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="description">Description</label>
+            <Textarea id="description" {...register("description")} />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label>Status</label>
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               />
             </div>
-
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium">Description</label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                placeholder="Describe the task details..."
-                rows={3}
+            <div className="space-y-2">
+              <label>Priority</label>
+              <Controller
+                name="priority"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Task Type *</label>
-              <Select value={formData.task_type} onValueChange={(value) => handleInputChange("task_type", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select task type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {taskTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Assign to Employee</label>
-              <Select value={formData.assigned_to || ""} onValueChange={(value) => handleInputChange("assigned_to", value === "unassigned" ? undefined : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.full_name} ({employee.employee_id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium">Location</label>
-              <div className="flex gap-2">
-                <Input
-                  value={formData.location}
-                  onChange={(e) => handleInputChange("location", e.target.value)}
-                  placeholder="Enter location address"
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleLocationSearch}
-                  className="px-3"
-                >
-                  <MapPin className="h-4 w-4" />
-                </Button>
-              </div>
-              {formData.location_lat && formData.location_lng && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Coordinates: {formData.location_lat.toFixed(6)}, {formData.location_lng.toFixed(6)}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Client Information</label>
-              <Input
-                value={formData.client_info}
-                onChange={(e) => handleInputChange("client_info", e.target.value)}
-                placeholder="Client name or details"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Deadline</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {deadline ? format(deadline, "PPP") : "Select deadline"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={deadline}
-                    onSelect={setDeadline}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Creating..." : "Create Task"}
-            </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label>Assign To</label>
+              <Controller
+                name="assigned_to"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users && users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <label>Due Date</label>
+              <Controller
+                name="due_date"
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4">
+            <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : "Save Task"}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 }
