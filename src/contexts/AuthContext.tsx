@@ -1,167 +1,94 @@
-
 import {
   createContext,
   useContext,
-  useState,
   useEffect,
+  useState,
   ReactNode,
-  useMemo,
-  useCallback,
 } from "react";
-import { User as SupabaseUser } from "@supabase/supabase-js";
-import authService, { Profile } from "@/services/authService";
-import { useRouter } from "next/router";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
+import { useRouter } from "next/router";
+import { UserRole } from "@/types";
+import { authService } from "@/services/authService";
 
 interface AuthContextType {
-  user: SupabaseUser | null;
-  profile: Profile | null;
+  user: User | null;
+  session: Session | null;
+  userRole: UserRole | null;
   loading: boolean;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithPin: (employeeId: string, pin: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export default function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isPinLogin, setIsPinLogin] = useState(false);
   const router = useRouter();
 
-  const fetchProfile = useCallback(async (user: SupabaseUser) => {
-    try {
-      const userProfile = await authService.getUserProfile(user.id);
-      setProfile(userProfile);
-    } catch (error) {
-      console.error("Failed to fetch profile on auth change:", error);
-      setProfile(null);
-    }
-  }, []);
-
   useEffect(() => {
-    const {  { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setLoading(true);
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
+    const getInitialSession = async () => {
+      const {
+         { session },
+      } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
 
-        if (currentUser) {
-          await fetchProfile(currentUser);
+      if (session?.user) {
+        const role = await authService.getUserRole(session.user.id);
+        setUserRole(role);
+      }
+      setLoading(false);
+    };
+
+    getInitialSession();
+
+    const {
+       { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          const role = await authService.getUserRole(session.user.id);
+          setUserRole(role);
         } else {
-          setProfile(null);
+          setUserRole(null);
         }
         setLoading(false);
       }
     );
 
-    const initialAuthCheck = async () => {
-      setLoading(true);
-      const {  { session } } = await supabase.auth.getSession();
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchProfile(currentUser);
-      }
-      setLoading(false);
-    };
-    
-    initialAuthCheck();
-
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
-
-  const isAuthenticated = useMemo(() => {
-    return !!(user || profile) && !loading;
-  }, [user, profile, loading]);
-
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      const result = await authService.signIn(email, password);
-      if (result && result.user) {
-        setUser(result.user);
-        setProfile(result.profile);
-        setIsPinLogin(false);
-        sessionStorage.removeItem("pin_login_profile");
-        sessionStorage.removeItem("is_pin_login");
-        console.log("Regular login successful:", result.user.email);
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
   }, []);
 
-  const loginWithPin = useCallback(async (employeeId: string, pin: string) => {
-    try {
-      setLoading(true);
-      const result = await authService.signInWithPin(employeeId, pin);
-      if (result && result.profile) {
-        setUser(null);
-        setProfile(result.profile);
-        setIsPinLogin(true);
-        sessionStorage.setItem("pin_login_profile", JSON.stringify(result.profile));
-        sessionStorage.setItem("is_pin_login", "true");
-        console.log("PIN login successful, profile set:", result.profile);
-      }
-    } catch (error) {
-      console.error("PIN login error:", error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const signOut = async () => {
+    await authService.signOut();
+    setUser(null);
+    setSession(null);
+    setUserRole(null);
+    router.push("/");
+  };
 
-  const signOut = useCallback(async () => {
-    try {
-      if (!isPinLogin) {
-        await authService.signOut();
-      }
-      sessionStorage.removeItem("pin_login_profile");
-      sessionStorage.removeItem("is_pin_login");
-      setUser(null);
-      setProfile(null);
-      setIsPinLogin(false);
-      router.push("/").catch(console.error);
-      toast.success("Successfully signed out!");
-    } catch (error) {
-      console.error("Sign out error:", error);
-      toast.error("Failed to sign out. Please try again.");
-      throw error;
-    }
-  }, [isPinLogin, router]);
+  const value = {
+    user,
+    session,
+    userRole,
+    loading,
+    signOut,
+  };
 
-  const value = useMemo(
-    () => ({
-      user,
-      profile,
-      loading,
-      isAuthenticated,
-      login,
-      loginWithPin,
-      signOut,
-    }),
-    [user, profile, loading, isAuthenticated, login, loginWithPin, signOut]
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
 
-  return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
+};
