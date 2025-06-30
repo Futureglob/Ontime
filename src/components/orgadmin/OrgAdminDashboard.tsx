@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,10 +9,24 @@ import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
 import OrganizationSettings from "@/components/organization/OrganizationSettings";
 import RealTimeMessaging from "@/components/messaging/RealTimeMessaging";
 import Sidebar from "@/components/layout/Sidebar";
+import { organizationService } from "@/services/organizationService";
+import { Organization } from "@/types";
 
 export default function OrgAdminDashboard() {
   const { profile, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [organization, setOrganization] = useState<Organization | null>(null);
+
+  useEffect(() => {
+    if (profile?.organization_id) {
+      organizationService.getOrganizationById(profile.organization_id)
+        .then(setOrganization)
+        .catch(err => {
+          console.error("Failed to fetch organization", err);
+          toast.error("Failed to load organization data.");
+        });
+    }
+  }, [profile]);
 
   const handleLogout = async () => {
     try {
@@ -43,11 +56,11 @@ export default function OrgAdminDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {profile.organization?.name || "Organization"} Dashboard
+            {organization?.name || "Organization"} Dashboard
           </h1>
           <div className="flex items-center space-x-4">
             <span className="font-medium">
-              Welcome, {profile.full_name} ({profile.organization?.name})
+              Welcome, {profile.full_name} ({organization?.name || ""})
             </span>
             <Button onClick={handleLogout} variant="outline">
               Logout

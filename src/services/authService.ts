@@ -17,7 +17,7 @@ export const authService = {
       email,
       password,
       options: {
-           meta,
+           data: meta,
       },
     });
     if (error) throw error;
