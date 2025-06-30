@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+    import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/types";
 import { AuthResponse, Session, User } from "@supabase/supabase-js";
 
@@ -18,7 +18,7 @@ export const authService = {
       email,
       password,
       options: {
-          meta,
+           meta,
       },
     });
     if (error) throw error;
@@ -144,3 +144,4 @@ export const authService = {
     throw new Error("PIN login is not fully implemented. Please contact an administrator.");
   }
 };
+  
