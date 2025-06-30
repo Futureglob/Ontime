@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -163,10 +162,12 @@ export default function LoginForm() {
               <TabsContent value="email">
                 <form onSubmit={handleEmailSubmit} className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-sky-800">Email</label>
+                    <label htmlFor="email" className="text-sm font-medium text-sky-800">Email</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
                       <Input
+                        id="email"
+                        name="email"
                         type="email"
                         value={emailFormData.email}
                         onChange={(e) => setEmailFormData(prev => ({ ...prev, email: e.target.value }))}
@@ -178,10 +179,12 @@ export default function LoginForm() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-sky-800">Password</label>
+                    <label htmlFor="password" className="text-sm font-medium text-sky-800">Password</label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
                       <Input
+                        id="password"
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         value={emailFormData.password}
                         onChange={(e) => setEmailFormData(prev => ({ ...prev, password: e.target.value }))}
@@ -230,10 +233,12 @@ export default function LoginForm() {
               <TabsContent value="pin">
                 <form onSubmit={handlePinSubmit} className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-sky-800">Employee ID</label>
+                    <label htmlFor="employeeId" className="text-sm font-medium text-sky-800">Employee ID</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
                       <Input
+                        id="employeeId"
+                        name="employeeId"
                         type="text"
                         value={pinFormData.employeeId}
                         onChange={(e) => setPinFormData(prev => ({ ...prev, employeeId: e.target.value.toUpperCase() }))}
@@ -245,10 +250,12 @@ export default function LoginForm() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-sky-800">PIN</label>
+                    <label htmlFor="pin" className="text-sm font-medium text-sky-800">PIN</label>
                     <div className="relative">
                       <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400 h-4 w-4" />
                       <Input
+                        id="pin"
+                        name="pin"
                         type={showPin ? "text" : "password"}
                         value={pinFormData.pin}
                         onChange={(e) => handlePinInputChange(e.target.value)}
