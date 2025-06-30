@@ -29,27 +29,36 @@ export async function rateLimit(key: string, limit = 5, windowMs = 15 * 60 * 100
   }
 }
 
-// Browser-compatible hash function using Web Crypto API
-export async function hashPin(pin: string, salt: string): Promise<string> {
-  if (typeof window === "undefined") {
-    // Server-side fallback using a simple hash
-    return btoa(`${pin}${salt}`).replace(/[^a-zA-Z0-9]/g, "").substring(0, 32);
-  }
+// Consistent hash function for both browser and Node.js environments
+async function consistentBase64Hash(pin: string, salt: string): Promise<string> {
+  const combined = `${pin}${salt}`;
+  let base64String: string;
 
-  try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(`${pin}${salt}`);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-  } catch (error) {
-    console.error("Error hashing pin:", error);
-    // Fallback to simple encoding
-    return btoa(`${pin}${salt}`).replace(/[^a-zA-Z0-9]/g, "").substring(0, 32);
+  if (typeof window !== "undefined" && typeof window.btoa === "function") {
+    // Browser environment
+    base64String = window.btoa(combined);
+  } else {
+    // Node.js environment
+    base64String = Buffer.from(combined).toString("base64");
   }
+  
+  return base64String.replace(/[^a-zA-Z0-9]/g, "").substring(0, 32);
 }
 
-// Synchronous version for backward compatibility (less secure)
+
+export async function hashPin(pin: string, salt: string): Promise<string> {
+    return consistentBase64Hash(pin, salt);
+}
+
 export function hashPinSync(pin: string, salt: string): string {
-  return btoa(`${pin}${salt}`).replace(/[^a-zA-Z0-9]/g, "").substring(0, 32);
+  const combined = `${pin}${salt}`;
+  let base64String: string;
+
+  if (typeof window !== "undefined" && typeof window.btoa === "function") {
+    base64String = window.btoa(combined);
+  } else {
+    base64String = Buffer.from(combined).toString("base64");
+  }
+  
+  return base64String.replace(/[^a-zA-Z0-9]/g, "").substring(0, 32);
 }

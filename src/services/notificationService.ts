@@ -57,7 +57,7 @@ export const notificationService = {
     await this.showNotification("New Task Assigned", {
       body: `${assignedBy} assigned you: ${taskTitle}`,
       tag: "task-assigned",
-      data: { type: "task_assigned", taskTitle },
+       { type: "task_assigned", taskTitle },
     });
   },
 
