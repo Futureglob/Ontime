@@ -16,7 +16,7 @@ export const authService = {
       const { data, error } = await supabase.rpc('login_with_pin', { 
         p_employee_id: employeeId.toUpperCase(), 
         p_pin: pin 
-      }) as { data: LoginWithPinResponse | null; error: any };
+      }) as { data: LoginWithPinResponse | null; error: Error | null };
 
       if (error) {
         return { data: null, error };

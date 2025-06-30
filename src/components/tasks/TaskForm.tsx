@@ -79,37 +79,28 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
     fetchClients();
   }, [currentProfile?.organization_id, toast]);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!currentProfile?.organization_id) {
-        toast({ title: "Error", description: "Cannot create task without an organization.", variant: "destructive" });
-        return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentProfile) return;
+
     setLoading(true);
-
-    const taskData: TaskInsert = {
-      title: values.title,
-      description: values.description,
-      due_date: values.due_date ? values.due_date.toISOString() : undefined,
-      priority: values.priority,
-      status: values.status,
-      organization_id: currentProfile.organization_id,
-      created_by: currentProfile.id,
-      assignee_id: values.assignee_id || null,
-      client_id: values.client_id || null,
-    };
-
     try {
+      const taskData = {
+        ...formData,
+        organization_id: currentProfile.organization_id,
+        created_by: currentProfile.id,
+        assignee_id: formData.assignee_id || currentProfile.id,
+      };
+
       if (task) {
         await taskService.updateTask(task.id, taskData);
-        toast({ title: "Success", description: "Task updated successfully." });
       } else {
         await taskService.createTask(taskData);
-        toast({ title: "Success", description: "Task created successfully." });
       }
+      
       onSuccess();
-    } catch (err) {
-      const error = err as Error;
-      toast({ title: "Error", description: error.message || "Failed to save task.", variant: "destructive" });
+    } catch (error) {
+      console.error('Failed to save task:', error);
     } finally {
       setLoading(false);
     }
@@ -126,7 +117,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label htmlFor="title">Title</label>
             <Input id="title" {...register("title")} />
