@@ -1,10 +1,9 @@
-
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import Sidebar from "./Sidebar";
+import Sidebar from "@/components/layout/Sidebar";
 import { authService } from "@/services/authService";
 
 interface DashboardLayoutProps {

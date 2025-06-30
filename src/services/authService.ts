@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { AuthTokenResponsePassword } from "@supabase/supabase-js";
+import { AuthTokenResponsePassword, AuthResponse } from "@supabase/supabase-js";
 
 interface LoginWithPinResponse {
   access_token?: string;
@@ -13,7 +13,7 @@ export const authService = {
     return supabase.auth.signInWithPassword({ email, password });
   },
 
-  async loginWithPin(employeeId: string, pin: string) {
+  async loginWithPin(employeeId: string, pin: string): Promise<AuthResponse> {
     try {
       const { data, error } = await supabase.rpc('login_with_pin', { 
         p_employee_id: employeeId.toUpperCase(), 
@@ -21,7 +21,7 @@ export const authService = {
       });
 
       if (error) {
-        return {  null, error };
+        return {  { user: null, session: null }, error };
       }
 
       const responseData = data as LoginWithPinResponse;
@@ -33,16 +33,16 @@ export const authService = {
         });
 
         if (sessionError) {
-          return {  null, error: sessionError };
+          return {  { user: null, session: null }, error: sessionError };
         }
         
         const {  { session } } = await supabase.auth.getSession();
-        return {  { session }, error: null };
+        return {  { session, user: session?.user || null }, error: null };
       }
 
-      return {  null, error: new Error(responseData?.message || "Invalid credentials") };
+      return {  { user: null, session: null }, error: new Error(responseData?.message || "Invalid credentials") };
     } catch (error) {
-      return {  null, error: error as Error };
+      return {  { user: null, session: null }, error: error as Error };
     }
   },
 
@@ -56,7 +56,7 @@ export const authService = {
     return supabase.auth.signOut();
   },
 
-  async signUp(email: string, password: string, options?: Record<string, unknown>) {
+  async signUp(email: string, password: string, options?: Record<string, unknown>): Promise<AuthResponse> {
     return supabase.auth.signUp({ email, password, options });
   },
 };

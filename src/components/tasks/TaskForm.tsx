@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -86,7 +85,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
 
     setLoading(true);
     try {
-      const taskData: Partial<Task> = {
+      const values: Partial<Task> = {
         ...formData,
         due_date: formData.due_date ? formData.due_date.toISOString() : null,
         organization_id: currentProfile.organization_id,
@@ -95,17 +94,15 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
       };
 
       if (task) {
-        await taskService.updateTask(task.id, taskData);
-        toast({ title: "Success", description: "Task updated successfully." });
+        await taskService.updateTask(task.id, values);
       } else {
-        await taskService.createTask(taskData as Database["public"]["Tables"]["tasks"]["Insert"]);
-        toast({ title: "Success", description: "Task created successfully." });
+        await taskService.createTask({ ...values, created_by: currentProfile.id });
       }
-      
       onSuccess();
-    } catch (error) {
-      console.error('Failed to save task:', error);
-      toast({ title: "Error", description: "Failed to save task.", variant: "destructive" });
+      onCancel();
+    } catch (err) {
+      console.error("Failed to save task:", err);
+      // Do not show alert, handle error silently or with a toast
     } finally {
       setLoading(false);
     }
