@@ -56,7 +56,7 @@ export default function RealTimeMessaging() {
             created_at: new Date().toISOString(),
             organization_id: profile.organization_id || "",
             assigned_to: user.id,
-            assigned_by: "manager-1",
+            created_by: "manager-1",
             location: "Building A",
             task_type: "maintenance"
           },

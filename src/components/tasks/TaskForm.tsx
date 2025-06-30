@@ -164,7 +164,7 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                       <SelectValue placeholder="Select a user" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users && users.map((user) => (
+                      {Array.isArray(users) && users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name}
                         </SelectItem>
