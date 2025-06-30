@@ -3,34 +3,10 @@ import { useRouter } from "next/router";
 import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
 import SuperAdminDashboard from "@/components/superadmin/SuperAdminDashboard";
 import { useAuth } from "@/contexts/SimpleAuthContext";
-import { authService } from "@/services/authService";
 import RoleBasedSidebar from "@/components/layout/RoleBasedSidebar";
 
 export default function SuperAdminPage() {
   const { user } = useAuth();
-
-  const handleLogin = async (password: string) => {
-    const email = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
-    if (!email) {
-      console.error("Super admin email not configured");
-      return;
-    }
-    try {
-      const { error } = await authService.login(email, password);
-      if (error) throw error;
-    } catch (error) {
-      console.error("Super admin login failed", error);
-      alert("Login failed. Please check credentials.");
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
-  };
 
   if (!user || user.role !== "super_admin") {
     return (
