@@ -120,5 +120,11 @@ export interface Profile {
   full_name: string;
   role: UserRole;
   organization_id?: string;
+  employee_id?: string;
+  designation?: string;
+  mobile_number?: string;
   pin?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }

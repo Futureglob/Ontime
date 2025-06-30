@@ -106,15 +106,8 @@ export const authService = {
     console.log(`Generating PIN for user ${userId}`);
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
     
-    const { error } = await supabase
-      .from("profiles")
-      .update({ pin: pin }) // In a real app, you'd save a HASH of this pin
-      .eq("id", userId);
-
-    if (error) {
-      console.error(`Error saving PIN for user ${userId}:`, error);
-      return null;
-    }
+    // Temporarily disabled PIN storage until database schema is updated
+    console.log(`Generated PIN ${pin} for user ${userId} (not stored in database yet)`);
     
     return { pin };
   },

@@ -19,7 +19,7 @@ export default function OrgAdminDashboard() {
 
   useEffect(() => {
     if (profile?.organization_id) {
-      organizationService.getOrganizationById(profile.organization_id)
+      organizationService.getOrganization(profile.organization_id)
         .then(setOrganization)
         .catch(err => {
           console.error("Failed to fetch organization", err);
