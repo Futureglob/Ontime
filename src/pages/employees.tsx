@@ -1,44 +1,27 @@
-
-import { useAuth } from "@/contexts/AuthContext";
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/SimpleAuthContext";
+import RoleBasedSidebar from "@/components/layout/RoleBasedSidebar";
 import EmployeeManagement from "@/components/employees/EmployeeManagement";
-import { useRouter } from "next/router";
-import { useEffect } from "react";
 
 export default function EmployeesPage() {
-  const { currentProfile, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    if (!loading && !currentProfile) {
-      router.push("/");
-    }
-  }, [loading, currentProfile, router]);
-
-  if (loading || !currentProfile) {
+  if (!user || !["super_admin", "org_admin", "task_manager"].includes(user.role)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        Loading...
-      </div>
-    );
-  }
-
-  if (currentProfile.role !== "org_admin" && currentProfile.role !== "task_manager") {
-    return (
-      <DashboardLayout>
-        <div className="p-6">
-          <h1 className="text-2xl font-bold">Access Denied</h1>
-          <p>You do not have permission to view this page.</p>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p>You don't have permission to access this page</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-6">
+    <div className="flex min-h-screen bg-gray-100">
+      <RoleBasedSidebar />
+      <div className="flex-1">
         <EmployeeManagement />
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

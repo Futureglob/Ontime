@@ -39,214 +39,140 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface TaskFormProps {
-  task?: Task | null;
-  users: Profile[];
-  onSuccess: () => void;
+  onSubmit: (formData: FormData) => Promise<void>;
   onCancel: () => void;
 }
 
-export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormProps) {
-  const { currentProfile } = useAuth();
-  const { toast } = useToast();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: task?.title || "",
-      description: task?.description || "",
-      assignee_id: task?.assignee_id || "",
-      due_date: task?.due_date ? new Date(task.due_date) : undefined,
-      priority: task?.priority || "medium",
-      status: task?.status || "pending",
-      client_id: task?.client_id || "",
-    },
+export default function TaskForm({ onSubmit, onCancel }: TaskFormProps) {
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    priority: "medium",
+    dueDate: "",
+    assigneeId: "",
+    location: "",
+    clientId: "",
+    taskType: "maintenance"
   });
 
-  const { register, control, handleSubmit, formState: { errors } } = form;
+  const [clients] = useState([
+    { id: "1", name: "ABC Construction" },
+    { id: "2", name: "XYZ Trading" },
+    { id: "3", name: "Tech Solutions LLC" }
+  ]);
 
-  useEffect(() => {
-    async function fetchClients() {
-      if (currentProfile?.organization_id) {
-        try {
-          const clientList = await clientService.getClientsByOrg(currentProfile.organization_id);
-          setClients(clientList);
-        } catch (error) {
-          console.error("Could not fetch clients:", error);
-          toast({ title: "Error", description: "Could not fetch clients.", variant: "destructive" });
-        }
-      }
-    }
-    fetchClients();
-  }, [currentProfile?.organization_id, toast]);
-
-  const onSubmit = async (formData: FormData) => {
-    if (!currentProfile?.organization_id) return;
-
-    setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      if (task) {
-        const values: Partial<Task> = {
-          ...formData,
-          due_date: formData.due_date ? formData.due_date.toISOString() : null,
-          assignee_id: formData.assignee_id || undefined,
-          client_id: formData.client_id || undefined,
-        };
-        await taskService.updateTask(task.id, values);
-      } else {
-        const values: Database["public"]["Tables"]["tasks"]["Insert"] = {
-          ...formData,
-          title: formData.title,
-          due_date: formData.due_date ? formData.due_date.toISOString() : undefined,
-          organization_id: currentProfile.organization_id,
-          created_by: currentProfile.id,
-          assignee_id: formData.assignee_id || undefined,
-          client_id: formData.client_id || undefined,
-          status: formData.status || 'pending',
-          priority: formData.priority || 'medium',
-        };
-        await taskService.createTask(values);
-      }
-      onSuccess();
-      onCancel();
+      await onSubmit(formData);
     } catch (error) {
-      console.error("Failed to save task:", error);
-    } finally {
-      setLoading(false);
+      console.error("Error submitting task:", error);
     }
   };
 
   return (
-    <Card>
+    <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onCancel}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <CardTitle>{task ? "Edit Task" : "Create New Task"}</CardTitle>
-        </div>
+        <CardTitle>Create New Task</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="title">Title</label>
-            <Input id="title" {...register("title")} />
-            {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="description">Description</label>
-            <Textarea id="description" {...register("description")} />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label>Status</label>
-              <Controller
-                name="status"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="title">Task Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                required
               />
             </div>
-            <div className="space-y-2">
-              <label>Assign To</label>
-              <Controller
-                name="assignee_id"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a user" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
-                      {Array.isArray(users) && users.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.full_name || user.id}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+            
+            <div>
+              <Label htmlFor="priority">Priority</Label>
+              <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="clientId">Client *</Label>
+              <Select value={formData.clientId} onValueChange={(value) => setFormData(prev => ({ ...prev, clientId: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="dueDate">Due Date</Label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
               />
+            </div>
+            
+            <div>
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Task location"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="taskType">Task Type</Label>
+              <Select value={formData.taskType} onValueChange={(value) => setFormData(prev => ({ ...prev, taskType: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="installation">Installation</SelectItem>
+                  <SelectItem value="inspection">Inspection</SelectItem>
+                  <SelectItem value="repair">Repair</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label>Client</label>
-              <Controller
-                name="client_id"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No Client</SelectItem>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-            <div className="space-y-2">
-              <label>Due Date</label>
-              <Controller
-                name="due_date"
-                control={control}
-                render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
-              />
-            </div>
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <textarea
+              id="description"
+              className="w-full p-2 border rounded-md"
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Task description..."
+            />
           </div>
-
-          <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
+          
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" className="flex-1">
+              Create Task
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Task"}
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+              Cancel
             </Button>
           </div>
         </form>

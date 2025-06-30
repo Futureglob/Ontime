@@ -1,28 +1,29 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import TaskManagement from "@/components/tasks/TaskManagement";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 
 export default function TasksPage() {
-  const { currentProfile, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    if (!loading && !currentProfile) {
-      router.push("/");
-    }
-  }, [loading, currentProfile, router]);
-
-  if (loading || !currentProfile) {
-    return <div>Loading...</div>;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p>Please log in to continue</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-6">
+    <div className="flex min-h-screen bg-gray-100">
+      <RoleBasedSidebar />
+      <div className="flex-1">
         <TaskManagement />
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
