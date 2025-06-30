@@ -15,36 +15,23 @@ export type EnrichedTask = Task & {
 export const taskService = {
   async getTasks(): Promise<EnrichedTask[]> {
     try {
+      // Simple query without relationships to avoid foreign key errors
       const { data: tasks, error } = await supabase
         .from("tasks")
-        .select(`
-          *,
-          created_by_profile:profiles!tasks_created_by_fkey(*),
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching tasks:", error);
-        // Fallback to simple query without relationships
-        const { data: simpleTasks, error: simpleError } = await supabase
-          .from("tasks")
-          .select("*")
-          .order("created_at", { ascending: false });
-        
-        if (simpleError) {
-          console.error("Error fetching simple tasks:", simpleError);
-          return [];
-        }
-        
-        return (simpleTasks || []).map(task => ({
-          ...task,
-          created_by_profile: null,
-          assigned_to_profile: null
-        })) as EnrichedTask[];
+        return [];
       }
 
-      return (tasks || []) as EnrichedTask[];
+      // Return tasks with null profiles for now
+      return (tasks || []).map(task => ({
+        ...task,
+        created_by_profile: null,
+        assigned_to_profile: null
+      })) as EnrichedTask[];
     } catch (error) {
       console.error("Error in getTasks:", error);
       return [];
@@ -55,36 +42,20 @@ export const taskService = {
     try {
       const { data: tasks, error } = await supabase
         .from("tasks")
-        .select(`
-          *,
-          created_by_profile:profiles!tasks_created_by_fkey(*),
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
-        `)
+        .select("*")
         .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching user tasks:", error);
-        // Fallback to simple query
-        const { data: simpleTasks, error: simpleError } = await supabase
-          .from("tasks")
-          .select("*")
-          .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
-          .order("created_at", { ascending: false });
-        
-        if (simpleError) {
-          console.error("Error fetching simple user tasks:", simpleError);
-          return [];
-        }
-        
-        return (simpleTasks || []).map(task => ({
-          ...task,
-          created_by_profile: null,
-          assigned_to_profile: null
-        })) as EnrichedTask[];
+        return [];
       }
 
-      return (tasks || []) as EnrichedTask[];
+      return (tasks || []).map(task => ({
+        ...task,
+        created_by_profile: null,
+        assigned_to_profile: null
+      })) as EnrichedTask[];
     } catch (error) {
       console.error("Error in getTasksForUser:", error);
       return [];
@@ -95,36 +66,20 @@ export const taskService = {
     try {
       const { data: tasks, error } = await supabase
         .from("tasks")
-        .select(`
-          *,
-          created_by_profile:profiles!tasks_created_by_fkey(*),
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
-        `)
+        .select("*")
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching org tasks:", error);
-        // Fallback to simple query
-        const { data: simpleTasks, error: simpleError } = await supabase
-          .from("tasks")
-          .select("*")
-          .eq("organization_id", organizationId)
-          .order("created_at", { ascending: false });
-        
-        if (simpleError) {
-          console.error("Error fetching simple org tasks:", simpleError);
-          return [];
-        }
-        
-        return (simpleTasks || []).map(task => ({
-          ...task,
-          created_by_profile: null,
-          assigned_to_profile: null
-        })) as EnrichedTask[];
+        return [];
       }
 
-      return (tasks || []) as EnrichedTask[];
+      return (tasks || []).map(task => ({
+        ...task,
+        created_by_profile: null,
+        assigned_to_profile: null
+      })) as EnrichedTask[];
     } catch (error) {
       console.error("Error in getTasksForOrganization:", error);
       return [];
@@ -135,36 +90,20 @@ export const taskService = {
     try {
       const { data: task, error } = await supabase
         .from("tasks")
-        .select(`
-          *,
-          created_by_profile:profiles!tasks_created_by_fkey(*),
-          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
-        `)
+        .select("*")
         .eq("id", id)
         .single();
 
       if (error) {
         console.error("Error fetching task by id:", error);
-        // Fallback to simple query
-        const { data: simpleTask, error: simpleError } = await supabase
-          .from("tasks")
-          .select("*")
-          .eq("id", id)
-          .single();
-        
-        if (simpleError) {
-          console.error("Error fetching simple task by id:", simpleError);
-          return null;
-        }
-        
-        return {
-          ...simpleTask,
-          created_by_profile: null,
-          assigned_to_profile: null
-        } as EnrichedTask;
+        return null;
       }
 
-      return task as EnrichedTask;
+      return {
+        ...task,
+        created_by_profile: null,
+        assigned_to_profile: null
+      } as EnrichedTask;
     } catch (error) {
       console.error("Error in getTaskById:", error);
       return null;
