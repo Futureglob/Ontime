@@ -57,8 +57,8 @@ export default function SuperAdminDashboard() {
       const orgsData = await superAdminService.getOrganizations(); 
       const adminsData = await superAdminService.getSuperAdmins();
       const systemStatsData = await superAdminService.getSystemStats(); 
-      
-      setOrganizations(orgsData as any);
+        
+      setOrganizations(orgsData);
       setSuperAdmins(adminsData);
       setStats({
         ...systemStatsData, 
