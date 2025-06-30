@@ -16,29 +16,31 @@ export const authService = {
       const { data, error } = await supabase.rpc('login_with_pin', { 
         p_employee_id: employeeId.toUpperCase(), 
         p_pin: pin 
-      }) as { data: LoginWithPinResponse | null; error: Error | null };
+      });
 
       if (error) {
-        return { data: null, error };
+        return {  null, error };
       }
 
-      if (data && data.access_token && data.refresh_token) {
+      const responseData = data as LoginWithPinResponse;
+
+      if (responseData && responseData.access_token && responseData.refresh_token) {
         const { error: sessionError } = await supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
+          access_token: responseData.access_token,
+          refresh_token: responseData.refresh_token,
         });
 
         if (sessionError) {
-          return { data: null, error: sessionError };
+          return {  null, error: sessionError };
         }
         
-        const { data: { session } } = await supabase.auth.getSession();
-        return { data: { session }, error: null };
+        const {  { session } } = await supabase.auth.getSession();
+        return {  { session }, error: null };
       }
 
-      return { data: null, error: new Error(data?.message || "Invalid credentials") };
-    } catch (err) {
-      return { data: null, error: err as Error };
+      return {  null, error: new Error(responseData?.message || "Invalid credentials") };
+    } catch (err: any) {
+      return {  null, error: err as Error };
     }
   },
 

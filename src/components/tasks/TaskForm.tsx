@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +26,6 @@ import { clientService, Client } from "@/services/clientService";
 import { useToast } from "@/hooks/use-toast";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
@@ -36,6 +36,8 @@ const formSchema = z.object({
   status: z.string().optional(),
   client_id: z.string().uuid().optional().or(z.literal("")),
 });
+
+type FormData = z.infer<typeof formSchema>;
 
 interface TaskFormProps {
   task?: Task | null;
@@ -50,7 +52,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: task?.title || "",
@@ -63,7 +65,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
     },
   });
 
-  const { register, handleSubmit, control, formState: { errors } } = form;
+  const { register, control, handleSubmit, formState: { errors } } = form;
 
   useEffect(() => {
     async function fetchClients() {
@@ -71,7 +73,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
         try {
           const clientList = await clientService.getClientsByOrg(currentProfile.organization_id);
           setClients(clientList);
-        } catch (err) {
+        } catch (error) {
           toast({ title: "Error", description: "Could not fetch clients.", variant: "destructive" });
         }
       }
@@ -79,14 +81,14 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
     fetchClients();
   }, [currentProfile?.organization_id, toast]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (formData: FormData) => {
     if (!currentProfile) return;
 
     setLoading(true);
     try {
-      const taskData = {
+      const taskData: Partial<Task> = {
         ...formData,
+        due_date: formData.due_date ? formData.due_date.toISOString() : null,
         organization_id: currentProfile.organization_id,
         created_by: currentProfile.id,
         assignee_id: formData.assignee_id || currentProfile.id,
@@ -94,13 +96,16 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
 
       if (task) {
         await taskService.updateTask(task.id, taskData);
+        toast({ title: "Success", description: "Task updated successfully." });
       } else {
-        await taskService.createTask(taskData);
+        await taskService.createTask(taskData as Database["public"]["Tables"]["tasks"]["Insert"]);
+        toast({ title: "Success", description: "Task created successfully." });
       }
       
       onSuccess();
     } catch (error) {
       console.error('Failed to save task:', error);
+      toast({ title: "Error", description: "Failed to save task.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -117,7 +122,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
             <label htmlFor="title">Title</label>
             <Input id="title" {...register("title")} />

@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import Sidebar from "./Sidebar";
-import messageService from "@/services/messageService";
+import { authService } from "@/services/authService";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
