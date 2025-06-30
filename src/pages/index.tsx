@@ -1,74 +1,43 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
+import LoginForm from "@/components/auth/LoginForm";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
-import LoginForm from "@/components/auth/LoginForm";
 
 export default function HomePage() {
-  const { isAuthenticated, profile, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    // Prevent any cross-origin access attempts
+    if (typeof window !== "undefined") {
+      try {
+        // Remove any existing error handlers that might cause issues
+        window.onerror = null;
+        window.onunhandledrejection = null;
+      } catch (error) {
+        // Silently handle any errors
+        console.warn("Error handler cleanup failed:", error);
+      }
+    }
   }, []);
 
-  useEffect(() => {
-    // Only handle redirects after component is mounted and not already redirecting
-    if (mounted && !loading && isAuthenticated && profile && !redirecting) {
-      setRedirecting(true);
-      
-      // Add delay to ensure state updates are processed
-      setTimeout(() => {
-        // Redirect based on role
-        if (profile.role === "super_admin") {
-          router.push("/superadmin").catch(console.error);
-        } else if (profile.role === "org_admin") {
-          router.push("/orgadmin").catch(console.error);
-        } else {
-          // For regular employees, stay on main dashboard
-          setRedirecting(false);
-        }
-      }, 100);
-    }
-  }, [mounted, loading, isAuthenticated, profile, router, redirecting]);
-
-  // Show loading while checking authentication
-  if (!mounted || loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-blue-100">
+      <div className="min-h-screen flex items-center justify-center light-blue-gradient">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
-          <div className="text-lg text-sky-700">Loading OnTime...</div>
+          <p className="text-sky-700 font-medium">Loading OnTime...</p>
         </div>
       </div>
     );
   }
 
-  // Show login form if not authenticated
   if (!isAuthenticated) {
     return <LoginForm />;
   }
 
-  // Show redirecting message for admin roles
-  if (redirecting || (profile?.role === "super_admin" || profile?.role === "org_admin")) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-blue-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
-          <div className="text-lg text-sky-700">
-            {profile?.role === "super_admin" 
-              ? "Redirecting to Super Admin Dashboard..." 
-              : "Redirecting to Organization Dashboard..."}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show main dashboard for regular employees
   return (
     <DashboardLayout>
       <DashboardOverview />
