@@ -1,8 +1,10 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/types";
+import { AuthResponse, Session, User, SignUpWithPasswordCredentials } from "@supabase/supabase-js";
 
 export const authService = {
-  async signIn(email: string, password: string) {
+  async signIn(email: string, password: string): Promise<AuthResponse["data"]> {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -11,19 +13,20 @@ export const authService = {
     return data;
   },
 
-  async signUp(email: string, password: string, metadata: Record<string, any>) {
-    const { data, error } = await supabase.auth.signUp({
+  async signUp(email: string, password: string, meta: Record<string, unknown>): Promise<AuthResponse["data"]> {
+    const options: SignUpWithPasswordCredentials = {
       email,
       password,
       options: {
-        metadata,
+         meta,
       },
-    });
+    };
+    const { data, error } = await supabase.auth.signUp(options);
     if (error) throw error;
     return data;
   },
 
-  async signOut() {
+  async signOut(): Promise<void> {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
@@ -49,6 +52,28 @@ export const authService = {
       return null;
     }
   },
+  
+  async getProfileByEmployeeId(employeeId: string): Promise<Profile | null> {
+    if (!employeeId) return null;
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("employee_id", employeeId)
+        .single();
+
+      if (error) {
+        if (error.code !== "PGRST116") {
+          console.error(`Error fetching profile for employee ID ${employeeId}:`, error);
+        }
+        return null;
+      }
+      return data as Profile;
+    } catch (error) {
+      console.error(`Exception fetching profile for employee ID ${employeeId}:`, error);
+      return null;
+    }
+  },
 
   async getUserRole(userId: string): Promise<UserRole | null> {
     if (!userId) return null;
@@ -61,8 +86,8 @@ export const authService = {
     }
   },
 
-  async getCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser();
+  async getCurrentUser(): Promise<User | null> {
+    const {  { user } } = await supabase.auth.getUser();
     return user;
   },
 
@@ -81,7 +106,7 @@ export const authService = {
 
   async generatePinForUser(userId: string): Promise<{ pin: string } | null> {
     console.log(`Generating PIN for user ${userId}`);
-    const pin = Math.floor(1000 + Math.random() * 9000).toString();
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
     
     const { error } = await supabase
       .from("profiles")
@@ -101,26 +126,22 @@ export const authService = {
     return this.generatePinForUser(userId);
   },
 
-  async signInWithPin(userId: string, pin: string): Promise<any> {
-    console.log(`Signing in with PIN for user ${userId}`);
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("id, pin")
-      .eq("id", userId)
-      .single();
+  async signInWithPin(employeeId: string, pin: string): Promise<AuthResponse["data"]> {
+    const profile = await this.getProfileByEmployeeId(employeeId);
 
-    if (error || !profile) {
-      throw new Error("User not found or PIN not set up.");
+    if (!profile) {
+      throw new Error("Invalid Employee ID or PIN.");
     }
 
-    if (profile.pin === pin) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Authentication session not found. Cannot complete PIN sign-in.");
-      }
-      return { session };
-    } else {
-      throw new Error("Invalid PIN");
+    if (profile.pin !== pin) {
+      // In a real app, you would compare a hash of the pin
+      throw new Error("Invalid Employee ID or PIN.");
     }
+
+    // This is a workaround. Since we can't get the user's password,
+    // we can't use signInWithPassword. A proper implementation would use
+    // a custom auth flow with a serverless function.
+    // For now, we will throw an error to indicate this feature is not fully implemented.
+    throw new Error("PIN login is not fully implemented. Please contact an administrator.");
   }
 };

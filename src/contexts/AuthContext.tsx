@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useContext,
@@ -6,7 +7,7 @@ import {
   ReactNode,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from "@supabase/supabase-js";
+import { Session, User, AuthResponse } from "@supabase/supabase-js";
 import { useRouter } from "next/router";
 import { UserRole, Profile } from "@/types";
 import { authService } from "@/services/authService";
@@ -19,8 +20,8 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   signOut: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<any>;
-  signInWithPin: (pin: string) => Promise<any>;
+  signIn: (email: string, password: string) => Promise<AuthResponse["data"]>;
+  loginWithPin: (employeeId: string, pin: string) => Promise<AuthResponse["data"]>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const getInitialSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      const {  { session: initialSession } } = await supabase.auth.getSession();
       setSession(initialSession);
       const currentUser = initialSession?.user ?? null;
       setUser(currentUser);
@@ -56,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     getInitialSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const {  { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
         setSession(newSession);
         const currentUser = newSession?.user ?? null;
@@ -90,9 +91,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return authService.signIn(email, password);
   };
 
-  const signInWithPin = async (pin: string) => {
-    if (!profile?.id) throw new Error("User profile not available for PIN sign-in.");
-    return authService.signInWithPin(profile.id, pin);
+  const loginWithPin = async (employeeId: string, pin: string) => {
+    return authService.signInWithPin(employeeId, pin);
   };
 
   const value = {
@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAuthenticated: !!user,
     signOut,
     signIn,
-    signInWithPin,
+    loginWithPin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

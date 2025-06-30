@@ -119,6 +119,6 @@ export interface Profile {
   id: string;
   full_name: string;
   role: UserRole;
-  org_id?: string;
+  organization_id?: string;
   pin?: string;
 }

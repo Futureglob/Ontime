@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import devDataService from "@/services/devDataService";
 
 export default function LoginForm() {
   const router = useRouter();
-  const { login, loginWithPin } = useAuth();
+  const { signIn, loginWithPin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPin, setShowPin] = useState(false);
@@ -46,7 +47,7 @@ export default function LoginForm() {
 
     try {
       setLoading(true);
-      await login(emailFormData.email, emailFormData.password);
+      await signIn(emailFormData.email, emailFormData.password);
       router.push("/");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -87,7 +88,7 @@ export default function LoginForm() {
       if (err instanceof Error) {
         if (err.message.includes("account_locked")) {
           setError("Account is temporarily locked due to multiple failed attempts. Please contact your administrator.");
-        } else if (err.message.includes("invalid_pin")) {
+        } else if (err.message.includes("Invalid Employee ID or PIN")) {
           setError("Invalid Employee ID or PIN. Please check your credentials and try again.");
         } else if (err.message.includes("pin_expired")) {
           setError("Your PIN has expired. Please contact your administrator for a new PIN.");

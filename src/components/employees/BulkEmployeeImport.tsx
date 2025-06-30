@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,8 @@ import {
   AlertTriangle,
   FileText
 } from "lucide-react";
-import authService from "@/services/authService";
+import { authService } from "@/services/authService";
+import { UserRole } from "@/types";
 
 interface BulkEmployeeImportProps {
   organizationId: string;
@@ -152,23 +154,23 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           continue;
         }
 
-        const newProfile = await authService.signUp(
+        const {  newProfile, error: signUpError } = await authService.signUp(
           // Since email is optional, we create a placeholder email and the user can update it later.
-          `${employee.employee_id.toUpperCase()}@${organizationId}.ontime`, 
+          employee.email || `${employee.employee_id.toUpperCase()}@${organizationId}.ontime`, 
           crypto.randomUUID(), // Generate a random password
           {
             full_name: employee.full_name,
             employee_id: employee.employee_id.toUpperCase(),
             designation: employee.designation,
             mobile_number: employee.mobile_number,
-            role: employee.role,
+            role: employee.role as UserRole,
             organization_id: organizationId,
             is_active: true
           }
         );
         
-        if (!newProfile.user) {
-          throw new Error("Failed to create user profile.");
+        if (signUpError || !newProfile?.user) {
+          throw signUpError || new Error("Failed to create user profile.");
         }
 
         const pinResult = await authService.generatePinForUser(newProfile.user.id);
@@ -195,6 +197,7 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
 
     setImportResults(results);
     setStep("results");
+    onImportComplete();
   };
 
   const downloadResults = () => {
@@ -222,7 +225,6 @@ ${successfulImports.map(result =>
   };
 
   const handleComplete = () => {
-    onImportComplete();
     onClose();
   };
 
@@ -318,7 +320,7 @@ ${successfulImports.map(result =>
               <Button variant="outline" onClick={() => setStep("upload")}>
                 Back
               </Button>
-              <Button onClick={importEmployees} disabled={employees.length === 0}>
+              <Button onClick={importEmployees} disabled={employees.length === 0 || employees.some(e => validateEmployeeData(e))}>
                 Import {employees.length} Employees
               </Button>
             </div>
@@ -368,7 +370,7 @@ ${successfulImports.map(result =>
             </div>
 
             {importResults.filter(r => !r.success).length > 0 && (
-              <Alert>
+              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   Some employees could not be imported. Check the details below.
