@@ -79,10 +79,11 @@ export default function LoginForm() {
         });
         router.push('/');
       }
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         title: "An Error Occurred",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -107,10 +108,11 @@ export default function LoginForm() {
         });
         router.push('/');
       }
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         title: "An Error Occurred",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
     } finally {
