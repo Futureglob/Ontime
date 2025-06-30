@@ -58,9 +58,7 @@ export const authService = {
     const profile = profiles[0];
     const hashedPin = await hashPin(pin, profile.id);
     
-    const pinIsValid = profile.pin_hash === hashedPin;
-
-    if (!pinIsValid) {
+    if (profile.pin_hash !== hashedPin) {
       throw new Error("Invalid credentials");
     }
 
