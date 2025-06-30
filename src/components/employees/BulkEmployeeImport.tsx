@@ -1,12 +1,5 @@
-        
+
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,9 +17,6 @@ import {
   FileText
 } from "lucide-react";
 import authService from "@/services/authService";
-import { organizationManagementService } from "@/services/organizationManagementService";
-import { useToast } from "@/hooks/use-toast";
-import { UserRole } from "@/types";
 
 interface BulkEmployeeImportProps {
   organizationId: string;
@@ -182,12 +172,15 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           throw new Error("Failed to create user profile.");
         }
 
-        const { pin } = await authService.generatePinForUser(newProfile.user.id);
+        const pinResult = await authService.generatePinForUser(newProfile.user.id);
+        if (!pinResult) {
+          throw new Error("Failed to generate PIN.");
+        }
         
         results.push({
           success: true,
           employee,
-          pin
+          pin: pinResult.pin
         });
 
       } catch (error) {
@@ -452,4 +445,3 @@ ${successfulImports.map(result =>
     </div>
   );
 }
-      

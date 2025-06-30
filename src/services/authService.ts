@@ -12,15 +12,12 @@ export const authService = {
     return data;
   },
 
-  async signUp(email: string, password: string, fullName: string, role: UserRole) {
+  async signUp(email: string, password: string, meta Record<string, any>) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-         {
-          full_name: fullName,
-          role: role,
-        },
+         metadata,
       },
     });
     if (error) throw error;
@@ -93,7 +90,7 @@ export const authService = {
   async generatePinForUser(userId: string): Promise<{ pin: string } | null> {
     console.log(`Generating PIN for user ${userId}`);
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
-    // In a real app, you'd save a hash of this to the user's profile
+    // In a real app, you"d save a hash of this to the user"s profile
     return { pin };
   },
 
@@ -105,16 +102,16 @@ export const authService = {
   async signInWithPin(userId: string, pin: string): Promise<any> {
     console.log(`Signing in with PIN for user ${userId}`);
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, pin')
-      .eq('id', userId)
+      .from("profiles")
+      .select("id, pin")
+      .eq("id", userId)
       .single();
 
     if (error || !data) {
       throw new Error("User not found or PIN not set up.");
     }
 
-    // In a real app, you'd compare a hash, not the plain text PIN
+    // In a real app, you"d compare a hash, not the plain text PIN
     if (data.pin === pin) {
       const {  { session } } = await supabase.auth.getSession();
       return { session };
