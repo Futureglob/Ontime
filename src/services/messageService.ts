@@ -81,10 +81,10 @@ export const messageService = {
   async getUnreadMessageCount(userId: string): Promise<number> {
     try {
       // Simplified approach - get tasks first, then count messages
-      const { data: userTasks } = await supabase
+      const {  userTasks } = await supabase
         .from("tasks")
         .select("id")
-        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
 
       if (!userTasks || userTasks.length === 0) return 0;
 
@@ -108,20 +108,20 @@ export const messageService = {
   async getTaskConversations(userId: string) {
     try {
       // Get user's tasks with simplified query
-      const { data: userTasks } = await supabase
+      const {  userTasks } = await supabase
         .from("tasks")
         .select("*")
-        .or(`assigned_to.eq.${userId},assigned_by.eq.${userId}`);
+        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
 
       if (!userTasks || userTasks.length === 0) return [];
 
       // Get profiles for all users involved
       const userIds = [...new Set([
         ...userTasks.map(t => t.assigned_to),
-        ...userTasks.map(t => t.assigned_by)
+        ...userTasks.map(t => t.created_by)
       ].filter(Boolean))];
 
-      const { data: profiles } = await supabase
+      const {  profiles } = await supabase
         .from("profiles")
         .select("id, full_name, designation")
         .in("id", userIds);
@@ -152,7 +152,7 @@ export const messageService = {
           const enrichedTask = {
             ...task,
             assigned_to_profile: task.assigned_to ? profileMap.get(task.assigned_to) : null,
-            assigned_by_profile: task.assigned_by ? profileMap.get(task.assigned_by) : null
+            created_by_profile: task.created_by ? profileMap.get(task.created_by) : null
           };
 
           return {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -91,9 +90,14 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
         await taskService.updateTask(task.id, data as TaskUpdate);
       } else {
         const insertData: TaskInsert = {
-          ...data,
+          title: values.title,
+          description: values.description,
+          status: values.status,
+          assigned_to: values.assigned_to || null,
+          deadline: values.deadline ? values.deadline.toISOString() : null,
           created_by: profile.id,
           organization_id: profile.organization_id,
+          task_type: "general",
         };
         await taskService.createTask(insertData);
       }
@@ -160,7 +164,7 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                       <SelectValue placeholder="Select a user" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.map((user) => (
+                      {users && users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name}
                         </SelectItem>
