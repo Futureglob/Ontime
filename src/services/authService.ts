@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { AuthTokenResponsePassword, AuthResponse, AuthError } from "@supabase/supabase-js";
 
@@ -14,18 +13,18 @@ export const authService = {
   },
 
   async loginWithPin(employeeId: string, pin: string): Promise<AuthResponse> {
-    const { data, error } = await supabase.rpc("login_with_pin", {
+    const { data, error } = await (supabase.rpc as any)("login_with_pin", {
       p_employee_id: employeeId.toUpperCase(),
       p_pin: pin,
     });
 
     if (error) {
-      const authError: AuthError = {
+      const authError = {
         name: "RpcError",
         message: error.message,
         status: parseInt(error.code, 10) || 500,
-      };
-      return { data: { user: null, session: null }, error: authError };
+      } as AuthError;
+      return {  { user: null, session: null }, error: authError };
     }
 
     const responseData = data as LoginWithPinResponse;
@@ -39,12 +38,12 @@ export const authService = {
       return sessionResponse;
     }
 
-    const authError: AuthError = {
+    const authError = {
       name: "InvalidCredentials",
       message: responseData?.message || "Invalid credentials or PIN",
       status: 401,
-    };
-    return { data: { user: null, session: null }, error: authError };
+    } as AuthError;
+    return {  { user: null, session: null }, error: authError };
   },
 
   async resetPassword(email: string) {

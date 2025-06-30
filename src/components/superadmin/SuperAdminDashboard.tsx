@@ -21,7 +21,6 @@ import SystemSettingsModal from "./SystemSettingsModal";
 import OrganizationDetailsModal from "./OrganizationDetailsModal";
 import { toast } from "sonner";
 import AnalyticsDashboard from "../analytics/AnalyticsDashboard";
-import { Organization } from "@/types";
 
 interface DashboardDisplayStats extends SystemStats {
   activeSuperAdmins: number;
@@ -29,7 +28,7 @@ interface DashboardDisplayStats extends SystemStats {
 
 export default function SuperAdminDashboard() {
   const { currentProfile, logout } = useAuth();
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationForSuperAdminView[]>([]);
   const [loading, setLoading] = useState(true);
   const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
   const [stats, setStats] = useState<DashboardDisplayStats>({
@@ -59,7 +58,7 @@ export default function SuperAdminDashboard() {
       const adminsData = await superAdminService.getSuperAdmins();
       const systemStatsData = await superAdminService.getSystemStats(); 
       
-      setOrganizations(orgsData);
+      setOrganizations(orgsData as any);
       setSuperAdmins(adminsData);
       setStats({
         ...systemStatsData, 

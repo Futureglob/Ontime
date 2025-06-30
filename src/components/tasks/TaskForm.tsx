@@ -82,22 +82,31 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
   }, [currentProfile?.organization_id, toast]);
 
   const onSubmit = async (formData: FormData) => {
-    if (!currentProfile) return;
+    if (!currentProfile?.organization_id) return;
 
     setLoading(true);
     try {
-      const values: Partial<Task> = {
-        ...formData,
-        due_date: formData.due_date ? formData.due_date.toISOString() : null,
-        organization_id: currentProfile.organization_id,
-        created_by: currentProfile.id,
-        assignee_id: formData.assignee_id || currentProfile.id,
-      };
-
       if (task) {
+        const values: Partial<Task> = {
+          ...formData,
+          due_date: formData.due_date ? formData.due_date.toISOString() : null,
+          assignee_id: formData.assignee_id || undefined,
+          client_id: formData.client_id || undefined,
+        };
         await taskService.updateTask(task.id, values);
       } else {
-        await taskService.createTask({ ...values, created_by: currentProfile.id });
+        const values: Database["public"]["Tables"]["tasks"]["Insert"] = {
+          ...formData,
+          title: formData.title,
+          due_date: formData.due_date ? formData.due_date.toISOString() : undefined,
+          organization_id: currentProfile.organization_id,
+          created_by: currentProfile.id,
+          assignee_id: formData.assignee_id || undefined,
+          client_id: formData.client_id || undefined,
+          status: formData.status || 'pending',
+          priority: formData.priority || 'medium',
+        };
+        await taskService.createTask(values);
       }
       onSuccess();
       onCancel();

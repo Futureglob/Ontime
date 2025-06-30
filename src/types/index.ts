@@ -1,5 +1,22 @@
+import { Database } from "@/integrations/supabase/types";
+
 export type UserRole = "org_admin" | "task_manager" | "employee" | "super_admin";
 
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type Organization = Database["public"]["Tables"]["organizations"]["Row"];
+export type Client = Database["public"]["Tables"]["clients"]["Row"];
+export type TaskPhoto = Database["public"]["Tables"]["task_photos"]["Row"];
+export type Message = Database["public"]["Tables"]["messages"]["Row"];
+
+export type Task = Database["public"]["Tables"]["tasks"]["Row"] & {
+  assigned_to_profile?: Profile | null;
+  created_by_profile?: Profile | null;
+  client?: Client | null;
+  photos?: TaskPhoto[];
+};
+
+// This User type seems to be a custom client-side model. It's different from Profile.
+// It should be reviewed and reconciled with the Profile type in the future.
 export interface User {
   id: string;
   name: string;
@@ -13,61 +30,6 @@ export interface User {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface Organization {
-  id: string;
-  name: string;
-  logo_url?: string;
-  primary_color: string;
-  secondary_color: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Task {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  location: {
-    address: string;
-    latitude: number;
-    longitude: number;
-  };
-  clientInfo: {
-    name: string;
-    contact: string;
-    email?: string;
-  };
-  deadline: Date;
-  status: "assigned" | "accepted" | "in_progress" | "on_hold" | "completed" | "returned";
-  assignedTo?: string;
-  assignedBy: string;
-  organizationId: string;
-  priority: "low" | "medium" | "high";
-  estimatedDuration: number;
-  actualDuration?: number;
-  photos: TaskPhoto[];
-  checkInTime?: Date;
-  checkOutTime?: Date;
-  travelDistance?: number;
-  travelDuration?: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface TaskPhoto {
-  id: string;
-  taskId: string;
-  url: string;
-  type: "check_in" | "progress" | "completion";
-  timestamp: Date;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-  caption?: string;
 }
 
 export interface ChatMessage {
@@ -101,7 +63,7 @@ export interface Notification {
   message: string;
   type: "task_assigned" | "task_updated" | "message" | "reminder";
   isRead: boolean;
-  data?: Record<string, unknown>; // Changed from any to Record<string, unknown>
+  data?: Record<string, unknown>;
   createdAt: Date;
 }
 
@@ -111,31 +73,4 @@ export interface Photo {
   user_id: string;
   url: string;
   created_at: string;
-}
-
-export interface Profile {
-  id: string;
-  full_name: string;
-  role: UserRole;
-  organization_id?: string;
-  employee_id?: string;
-  designation?: string;
-  mobile_number?: string;
-  pin?: string;
-  is_active?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Client {
-  id: string;
-  name: string;
-  email?: string;
-  phone: string;
-  address?: string;
-  organization_id: string;
-  contact_person?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
 }
