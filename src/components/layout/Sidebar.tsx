@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
@@ -91,7 +90,7 @@ export default function Sidebar() {
     try {
       const [tasks, notifications] = await Promise.all([
         taskService.getTasksForUser(currentUserId),
-        notificationService.getUnreadNotifications(currentUserId),
+        notificationService.getUnreadNotifications(),
       ]);
       setTaskCount(tasks.length);
       setNotificationCount(notifications.length);
