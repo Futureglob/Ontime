@@ -210,7 +210,8 @@ export const offlineService = {
           
           await photoService.uploadTaskPhoto(
             photoPayload.taskId,
-            file
+            file,
+            photoPayload.meta
           );
         }
         break;
@@ -234,7 +235,8 @@ export const offlineService = {
       
       await photoService.uploadTaskPhoto(
         photoData.taskId,
-        file
+        file,
+        photoData.meta
       );
     }
   },

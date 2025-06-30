@@ -109,7 +109,7 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
         }
       }
 
-      console.log(`Capturing ${photoType} photo for task ${task.id}`);
+      console.log(`Capturing ${photoType} photo for task ${task.id}`, file);
       // Add your photo capture logic here
 
       setShowCamera(false);
