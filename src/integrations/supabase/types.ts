@@ -108,64 +108,70 @@ export type Database = {
       }
       tasks: {
         Row: {
-          id: string
-          organization_id: string | null
-          title: string
+          attachments: string[] | null
+          client_info: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          deadline: string | null
           description: string | null
-          task_type: string
+          id: string
           location: string | null
+          location_address: string | null
           location_lat: number | null
           location_lng: number | null
-          client_info: string | null
-          deadline: string | null
+          organization_id: string | null
+          status: string
+          task_type: string
+          title: string
+          updated_at: string
           assigned_to: string | null
-          assigned_by: string | null
-          status: string | null
-          travel_distance: number | null
-          travel_duration: number | null
-          working_hours: number | null
-          created_at: string | null
-          updated_at: string | null
+          priority: string | null
+          due_date: string | null
         }
         Insert: {
-          id?: string
-          organization_id?: string | null
-          title: string
+          attachments?: string[] | null
+          client_info?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
           description?: string | null
-          task_type: string
+          id?: string
           location?: string | null
+          location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
-          client_info?: string | null
-          deadline?: string | null
+          organization_id?: string | null
+          status?: string
+          task_type?: string
+          title: string
+          updated_at?: string
           assigned_to?: string | null
-          assigned_by?: string | null
-          status?: string | null
-          travel_distance?: number | null
-          travel_duration?: number | null
-          working_hours?: number | null
-          created_at?: string | null
-          updated_at?: string | null
+          priority?: string | null
+          due_date?: string | null
         }
         Update: {
-          id?: string
-          organization_id?: string | null
-          title?: string
+          attachments?: string[] | null
+          client_info?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
           description?: string | null
-          task_type?: string
+          id?: string
           location?: string | null
+          location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
-          client_info?: string | null
-          deadline?: string | null
+          organization_id?: string | null
+          status?: string
+          task_type?: string
+          title?: string
+          updated_at?: string
           assigned_to?: string | null
-          assigned_by?: string | null
-          status?: string | null
-          travel_distance?: number | null
-          travel_duration?: number | null
-          working_hours?: number | null
-          created_at?: string | null
-          updated_at?: string | null
+          priority?: string | null
+          due_date?: string | null
         }
         Relationships: [
           {

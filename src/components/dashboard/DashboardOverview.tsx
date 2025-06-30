@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
-import { taskService, Task } from "@/services/taskService";
+import { taskService, EnrichedTask } from "@/services/taskService";
 import { notificationService } from "@/services/notificationService";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -41,7 +41,7 @@ export default function DashboardOverview() {
     teamMembers: 0,
     unreadMessages: 0,
   });
-  const [recentTasks, setRecentTasks] = useState<Task[]>([]);
+  const [recentTasks, setRecentTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = useCallback(async () => {
@@ -88,7 +88,7 @@ export default function DashboardOverview() {
     return Math.round((stats.completedTasks / stats.totalTasks) * 100);
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string | null) => {
     switch (priority) {
       case 'high':
       case 'urgent':
