@@ -95,7 +95,7 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
     }
   };
 
-  const handlePhotoCapture = async (file: File) => {
+  const handlePhotoCapture = async () => {
     try {
       setUpdating(true);
       
@@ -109,7 +109,7 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
         }
       }
 
-      console.log(`Capturing ${photoType} photo for task ${task.id}`, file);
+      console.log(`Capturing ${photoType} photo for task ${task.id}`);
       // Add your photo capture logic here
 
       setShowCamera(false);
@@ -297,7 +297,7 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
                           if (files && files.length > 0) {
                             const file = files[0];
                             if (file instanceof File) {
-                              handlePhotoCapture(file);
+                              handlePhotoCapture();
                             } else {
                               console.error("Selected item is not a File object:", file);
                             }

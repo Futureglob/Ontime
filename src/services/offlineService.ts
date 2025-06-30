@@ -12,7 +12,7 @@ interface TaskUpdatePayload {
 }
 
 interface PhotoUploadMetadata {
-  type: "check_in" | "progress" | "completion";
+  type: PhotoType;
   location?: { lat: number; lng: number };
   timestamp: string;
   notes?: string;
