@@ -1,5 +1,4 @@
 
-        
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { Profile } from "./authService";
@@ -14,7 +13,7 @@ export type EnrichedTask = Task & {
 };
 
 // Mock data for development when database is not available
-const mockTasks: Task[] = [
+const mockTasks: EnrichedTask[] = [
   {
     id: "1",
     title: "Complete project documentation",
@@ -34,6 +33,8 @@ const mockTasks: Task[] = [
     client_info: null,
     location: null,
     task_type: "documentation",
+    priority: "high",
+    due_date: "2025-07-15T10:00:00Z",
   },
 ];
 
@@ -64,7 +65,7 @@ const enrichTasks = async (tasks: Task[]): Promise<EnrichedTask[]> => {
     }
 
     const profilesMap = new Map<string, Profile>();
-    profiles.forEach(p => profilesMap.set(p.id, p as Profile));
+    (profiles || []).forEach(p => profilesMap.set(p.id, p as Profile));
 
     return tasks.map(task => ({
         ...task,
@@ -83,14 +84,14 @@ export const taskService = {
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.warn("Database query failed for getTasks, using mock data:", error);
-        return mockTasks as EnrichedTask[];
+        console.warn("Database query failed for getTasks, using mock ", error);
+        return mockTasks;
       }
 
       return enrichTasks(data || []);
     } catch (error) {
       console.warn("Error fetching tasks, using mock ", error);
-      return mockTasks as EnrichedTask[];
+      return mockTasks;
     }
   },
 
@@ -104,13 +105,13 @@ export const taskService = {
 
       if (error) {
         console.warn("Database query failed for getTasksForUser, using mock ", error);
-        return mockTasks as EnrichedTask[];
+        return mockTasks.filter(t => t.assigned_to === userId || t.created_by === userId);
       }
 
       return enrichTasks(data || []);
     } catch (error) {
       console.warn("Error fetching user tasks, using mock ", error);
-      return mockTasks as EnrichedTask[];
+      return mockTasks.filter(t => t.assigned_to === userId || t.created_by === userId);
     }
   },
 
@@ -124,13 +125,13 @@ export const taskService = {
 
       if (error) {
         console.warn("Database query failed for getTasksForOrganization, using mock ", error);
-        return mockTasks as EnrichedTask[];
+        return mockTasks.filter(t => t.organization_id === organizationId);
       }
 
       return enrichTasks(data || []);
     } catch (error) {
       console.warn("Error fetching org tasks, using mock ", error);
-      return mockTasks as EnrichedTask[];
+      return mockTasks.filter(t => t.organization_id === organizationId);
     }
   },
 
@@ -144,8 +145,7 @@ export const taskService = {
 
       if (error) {
         console.warn("Database query failed for getTaskById, using mock ", error);
-        const mockTask = mockTasks.find(task => task.id === id) || null;
-        return mockTask ? (mockTask as EnrichedTask) : null;
+        return mockTasks.find(task => task.id === id) || null;
       }
       
       if (!data) return null;
@@ -155,8 +155,7 @@ export const taskService = {
 
     } catch (error) {
       console.warn("Error fetching task, using mock ", error);
-      const mockTask = mockTasks.find(task => task.id === id) || null;
-      return mockTask ? (mockTask as EnrichedTask) : null;
+      return mockTasks.find(task => task.id === id) || null;
     }
   },
 
@@ -180,9 +179,14 @@ export const taskService = {
         client_info: null,
         location: null,
         task_type: "general",
+        deadline: null,
+        attachments: null,
+        location_address: null,
+        location_lat: null,
+        location_lng: null,
         ...task,
       };
-      mockTasks.unshift(newTask);
+      mockTasks.unshift(newTask as EnrichedTask);
       return newTask;
     }
   },
@@ -202,7 +206,7 @@ export const taskService = {
       console.warn("Error updating task, simulating update:", error);
       const taskIndex = mockTasks.findIndex(task => task.id === id);
       if (taskIndex !== -1) {
-        mockTasks[taskIndex] = { ...mockTasks[taskIndex], ...updates, updated_at: new Date().toISOString() } as Task;
+        mockTasks[taskIndex] = { ...mockTasks[taskIndex], ...updates, updated_at: new Date().toISOString() } as EnrichedTask;
         return mockTasks[taskIndex];
       }
       throw new Error("Task not found");
