@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { AuthTokenResponsePassword, AuthResponse } from "@supabase/supabase-js";
+import { AuthTokenResponsePassword, AuthResponse, AuthError } from "@supabase/supabase-js";
 
 interface LoginWithPinResponse {
   access_token?: string;
@@ -14,42 +14,36 @@ export const authService = {
   },
 
   async loginWithPin(employeeId: string, pin: string): Promise<AuthResponse> {
-    try {
-      const { data, error } = await supabase.rpc('login_with_pin', { 
-        p_employee_id: employeeId.toUpperCase(), 
-        p_pin: pin 
+    const { data, error } = await supabase.rpc('login_with_pin', { 
+      p_employee_id: employeeId.toUpperCase(), 
+      p_pin: pin 
+    });
+
+    if (error) {
+      return {  { user: null, session: null }, error: error as unknown as AuthError };
+    }
+
+    const responseData = data as LoginWithPinResponse;
+
+    if (responseData && responseData.access_token && responseData.refresh_token) {
+      const sessionResponse = await supabase.auth.setSession({
+        access_token: responseData.access_token,
+        refresh_token: responseData.refresh_token,
       });
 
-      if (error) {
-        return { data: { user: null, session: null }, error };
+      if (sessionResponse.error) {
+        return {  { user: null, session: null }, error: sessionResponse.error };
       }
-
-      const responseData = data as LoginWithPinResponse;
-
-      if (responseData && responseData.access_token && responseData.refresh_token) {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: responseData.access_token,
-          refresh_token: responseData.refresh_token,
-        });
-
-        if (sessionError) {
-          return { data: { user: null, session: null }, error: sessionError };
-        }
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        return { data: { session, user: session?.user || null }, error: null };
-      }
-
-      return { data: { user: null, session: null }, error: new Error(responseData?.message || "Invalid credentials") };
-    } catch (error) {
-      return { data: { user: null, session: null }, error: error as Error };
+      
+      const getSessionResponse = await supabase.auth.getSession();
+      
+      return {  { session: getSessionResponse.data.session, user: getSessionResponse.data.session?.user ?? null }, error: getSessionResponse.error };
     }
+
+    return {  { user: null, session: null }, error: new Error(responseData?.message || "Invalid credentials") as AuthError };
   },
 
   async resetPassword(email: string) {
-    if (typeof window === "undefined") {
-      return { data: null, error: new Error("This function can only be run on the client.") };
-    }
     return supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });

@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
@@ -37,8 +36,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     try {
       await authService.logout();
       router.push('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
+    } catch (e) {
+      console.error('Logout failed:', e);
     }
   };
 

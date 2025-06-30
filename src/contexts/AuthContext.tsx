@@ -40,9 +40,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const getSessionData = async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      const currentUser = session?.user ?? null;
+      const sessionData = await supabase.auth.getSession();
+      if (sessionData.error) {
+        console.error("Error getting session:", sessionData.error);
+      }
+      setSession(sessionData.data.session);
+      const currentUser = sessionData.data.session?.user ?? null;
       setUser(currentUser);
       await fetchProfile(currentUser);
       setLoading(false);
@@ -50,7 +53,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     getSessionData();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const {  { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         const currentUser = session?.user ?? null;
@@ -63,7 +66,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, loading]);
 
   const logout = async () => {
     await supabase.auth.signOut();

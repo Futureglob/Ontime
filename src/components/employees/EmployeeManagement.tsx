@@ -55,7 +55,8 @@ export default function EmployeeManagement() {
         userProfile.organization_id
       );
       setEmployees(employeesData || []);
-    } catch (error) {
+    } catch (e) {
+      console.error("Failed to load employees:", e);
       setError("Failed to load employees");
       setEmployees([]);
     } finally {
@@ -84,8 +85,8 @@ export default function EmployeeManagement() {
     try {
       await profileService.deleteProfile(employee.id);
       loadEmployees();
-    } catch (error) {
-      console.error("Error deleting employee:", error);
+    } catch (e) {
+      console.error("Error deleting employee:", e);
     }
   };
 
@@ -104,8 +105,8 @@ export default function EmployeeManagement() {
         `PIN reset successfully for ${employee.full_name}. They can set a new PIN on next login.`
       );
       loadEmployees();
-    } catch (error) {
-      console.error("Error resetting PIN:", error);
+    } catch (e) {
+      console.error("Error resetting PIN:", e);
       alert("Failed to reset PIN. Please try again.");
     }
   };
