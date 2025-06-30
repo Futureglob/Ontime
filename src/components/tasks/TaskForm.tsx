@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +25,7 @@ import { clientService, Client } from "@/services/clientService";
 import { useToast } from "@/hooks/use-toast";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
@@ -79,17 +79,19 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
     fetchClients();
   }, [currentProfile?.organization_id, toast]);
 
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!currentProfile?.organization_id) {
         toast({ title: "Error", description: "Cannot create task without an organization.", variant: "destructive" });
         return;
-    };
+    }
     setLoading(true);
 
-    const taskData = {
-      ...values,
+    const taskData: TaskInsert = {
+      title: values.title,
+      description: values.description,
       due_date: values.due_date ? values.due_date.toISOString() : undefined,
+      priority: values.priority,
+      status: values.status,
       organization_id: currentProfile.organization_id,
       created_by: currentProfile.id,
       assignee_id: values.assignee_id || null,
@@ -101,7 +103,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
         await taskService.updateTask(task.id, taskData);
         toast({ title: "Success", description: "Task updated successfully." });
       } else {
-        await taskService.createTask(taskData as any);
+        await taskService.createTask(taskData);
         toast({ title: "Success", description: "Task created successfully." });
       }
       onSuccess();
