@@ -15,7 +15,6 @@ export type EnrichedTask = Task & {
 export const taskService = {
   async getTasks(): Promise<EnrichedTask[]> {
     try {
-      // Simple query without relationships to avoid foreign key errors
       const {  tasks, error } = await supabase
         .from("tasks")
         .select("*")
@@ -26,7 +25,6 @@ export const taskService = {
         return [];
       }
 
-      // Return tasks with null profiles for now
       return (tasks || []).map(task => ({
         ...task,
         created_by_profile: null,
@@ -40,7 +38,6 @@ export const taskService = {
 
   async getTasksForUser(_userId: string): Promise<EnrichedTask[]> {
     try {
-      // REMOVED: Query for non-existent columns assigned_to and created_by
       const {  tasks, error } = await supabase
         .from("tasks")
         .select("*")
@@ -96,6 +93,10 @@ export const taskService = {
 
       if (error) {
         console.error("Error fetching task by id:", error);
+        return null;
+      }
+
+      if (!task) {
         return null;
       }
 
@@ -169,7 +170,6 @@ export const taskService = {
 
   async getTaskCountForUser(_userId: string): Promise<number> {
     try {
-      // REMOVED: Query for non-existent columns assigned_to and created_by
       const { count, error } = await supabase
         .from("tasks")
         .select("id", { count: "exact", head: true });
