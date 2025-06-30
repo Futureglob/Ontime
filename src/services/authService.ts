@@ -13,15 +13,14 @@ export const authService = {
     return data;
   },
 
-  async signUp(email: string, password: string, meta: Record<string, unknown>): Promise<AuthResponse["data"]> {
-    const options: SignUpWithPasswordCredentials = {
+  async signUp(email: string, password: string, meta: Record<string, unknown>): Promise<{ user: User | null; session: Session | null; }> {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
          meta,
       },
-    };
-    const { data, error } = await supabase.auth.signUp(options);
+    });
     if (error) throw error;
     return data;
   },

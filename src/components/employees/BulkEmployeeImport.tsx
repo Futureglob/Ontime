@@ -154,7 +154,7 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           continue;
         }
 
-        const {  newProfile, error: signUpError } = await authService.signUp(
+        const signUpData = await authService.signUp(
           // Since email is optional, we create a placeholder email and the user can update it later.
           employee.email || `${employee.employee_id.toUpperCase()}@${organizationId}.ontime`, 
           crypto.randomUUID(), // Generate a random password
@@ -169,11 +169,11 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           }
         );
         
-        if (signUpError || !newProfile?.user) {
-          throw signUpError || new Error("Failed to create user profile.");
+        if (!signUpData?.user) {
+          throw new Error("Failed to create user profile.");
         }
 
-        const pinResult = await authService.generatePinForUser(newProfile.user.id);
+        const pinResult = await authService.generatePinForUser(signUpData.user.id);
         if (!pinResult) {
           throw new Error("Failed to generate PIN.");
         }
