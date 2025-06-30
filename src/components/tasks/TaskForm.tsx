@@ -71,7 +71,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
         try {
           const clientList = await clientService.getClientsByOrg(currentProfile.organization_id);
           setClients(clientList);
-        } catch (error) {
+        } catch (err) {
           toast({ title: "Error", description: "Could not fetch clients.", variant: "destructive" });
         }
       }
@@ -107,9 +107,9 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
         toast({ title: "Success", description: "Task created successfully." });
       }
       onSuccess();
-    } catch (error) {
-      const err = error as Error;
-      toast({ title: "Error", description: err.message || "Failed to save task.", variant: "destructive" });
+    } catch (err) {
+      const error = err as Error;
+      toast({ title: "Error", description: error.message || "Failed to save task.", variant: "destructive" });
     } finally {
       setLoading(false);
     }

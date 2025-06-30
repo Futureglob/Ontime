@@ -31,8 +31,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       try {
         const count = await messageService.getUnreadMessageCount(userId);
         setUnreadCount(count);
-      } catch (error) {
-        console.error("Error loading unread count:", error);
+      } catch (err) {
+        console.error("Error loading unread count:", err);
         setUnreadCount(0);
       }
     }
@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       await logout();
       router.push("/");
       toast({ title: "Logged out successfully" });
-    } catch (error) {
+    } catch (err) {
       toast({
         title: "Logout failed",
         description: "An error occurred during logout.",

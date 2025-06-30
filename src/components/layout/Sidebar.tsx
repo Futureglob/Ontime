@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
@@ -91,8 +90,8 @@ export default function Sidebar() {
       ]);
       setTaskCount(tasks.length);
       setNotificationCount(notifications.length);
-    } catch (error) {
-      console.error("Error loading sidebar data:", error);
+    } catch (err) {
+      console.error("Error loading sidebar data:", err);
       setTaskCount(0);
       setNotificationCount(0);
     }
