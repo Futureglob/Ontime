@@ -1,38 +1,37 @@
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/router";
 import LoginForm from "@/components/auth/LoginForm";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function HomePage() {
-  const { isAuthenticated, loading } = useAuth();
+  const { session, loading, currentProfile } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    // Prevent any cross-origin access attempts
-    if (typeof window !== "undefined") {
-      try {
-        // Remove any existing error handlers that might cause issues
-        window.onerror = null;
-        window.onunhandledrejection = null;
-      } catch (error) {
-        // Silently handle any errors
-        console.warn("Error handler cleanup failed:", error);
-      }
+    if (!loading && session && !currentProfile) {
+      // If session exists but profile is not loaded yet, maybe wait or show loading
+      // If profile is fetched and is null, maybe redirect to profile creation
     }
-  }, []);
+  }, [session, loading, currentProfile, router]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center light-blue-gradient">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
-          <p className="text-sky-700 font-medium">Loading OnTime...</p>
+      <div className="flex items-center justify-center h-screen">
+        <div className="flex flex-col space-y-3">
+          <Skeleton className="h-[125px] w-[250px] rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
+  if (!session) {
     return <LoginForm />;
   }
 

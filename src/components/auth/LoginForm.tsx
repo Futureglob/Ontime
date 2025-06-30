@@ -6,16 +6,41 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, EyeOff, Mail, Lock, User, KeyRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import authService from "@/services/authService";
+import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/router";
-import devDataService from "@/services/devDataService";
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+const pinSchema = z.object({
+  employeeId: z.string().min(1),
+  pin: z.string().min(6).max(6),
+});
 
 export default function LoginForm() {
+  const { toast } = useToast();
   const router = useRouter();
-  const { signIn, loginWithPin } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showPin, setShowPin] = useState(false);
-  const [error, setError] = useState("");
+  const [isPinLogin, setIsPinLogin] = useState(false);
+
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const pinForm = useForm<z.infer<typeof pinSchema>>({
+    resolver: zodResolver(pinSchema),
+    defaultValues: {
+      employeeId: "",
+      pin: "",
+    },
+  });
+
   const [activeTab, setActiveTab] = useState("email");
   
   const [emailFormData, setEmailFormData] = useState({
@@ -34,73 +59,6 @@ export default function LoginForm() {
       devDataService.setupTestEmployees();
     }
   }, []);
-
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    
-    if (!emailFormData.email || !emailFormData.password) {
-      setError("Please fill in all fields");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await signIn(emailFormData.email, emailFormData.password);
-      router.push("/");
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        if (err.message.includes("email_not_confirmed") || err.message.includes("Email not confirmed")) {
-          setError("Please check your email and click the confirmation link before signing in. If you didn't receive the email, contact your administrator.");
-        } else if (err.message.includes("invalid_credentials") || err.message.includes("Invalid login credentials")) {
-          setError("Invalid email or password. Please check your credentials and try again.");
-        } else {
-          setError(err.message || "Failed to sign in");
-        }
-      } else {
-        setError("An unknown error occurred during sign in.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePinSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    
-    if (!pinFormData.employeeId || !pinFormData.pin) {
-      setError("Please enter both Employee ID and PIN");
-      return;
-    }
-
-    if (pinFormData.pin.length !== 6) {
-      setError("PIN must be 6 digits");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await loginWithPin(pinFormData.employeeId, pinFormData.pin);
-      router.push("/");
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        if (err.message.includes("account_locked")) {
-          setError("Account is temporarily locked due to multiple failed attempts. Please contact your administrator.");
-        } else if (err.message.includes("Invalid Employee ID or PIN")) {
-          setError("Invalid Employee ID or PIN. Please check your credentials and try again.");
-        } else if (err.message.includes("pin_expired")) {
-          setError("Your PIN has expired. Please contact your administrator for a new PIN.");
-        } else {
-          setError(err.message || "Failed to sign in with PIN");
-        }
-      } else {
-        setError("An unknown error occurred during PIN sign in.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handlePinInputChange = (value: string) => {
     // Only allow numeric input and limit to 6 digits
@@ -121,8 +79,58 @@ export default function LoginForm() {
     alert(`PIN reset request for Employee ID: ${pinFormData.employeeId}\n\nYour request has been sent to the administrator. You will receive your new PIN orally from your supervisor.`);
   };
 
+  async function onSubmit(values: z.infer<typeof loginSchema>) {
+    try {
+      const { error } = await authService.login(values.email, values.password);
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login Successful",
+          description: "Welcome back!",
+        });
+        router.push('/');
+      }
+    } catch (error: any) {
+      toast({
+        title: "An Error Occurred",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function onPinSubmit(values: z.infer<typeof pinSchema>) {
+    try {
+      const { error } = await authService.loginWithPin(values.employeeId, values.pin);
+      if (error) {
+        toast({
+          title: "PIN Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login Successful",
+          description: "Welcome back!",
+        });
+        router.push('/');
+      }
+    } catch (error: any) {
+      toast({
+        title: "An Error Occurred",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center light-blue-gradient py-12 px-4 sm:px-6 lg:px-8">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           {/* Temporarily removed logo to fix page loading issue */}
@@ -153,14 +161,8 @@ export default function LoginForm() {
                 </TabsTrigger>
               </TabsList>
 
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
               <TabsContent value="email">
-                <form onSubmit={handleEmailSubmit} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div>
                     <label htmlFor="email" className="text-sm font-medium text-sky-800">Email</label>
                     <div className="relative">
@@ -231,7 +233,7 @@ export default function LoginForm() {
               </TabsContent>
 
               <TabsContent value="pin">
-                <form onSubmit={handlePinSubmit} className="space-y-4">
+                <form onSubmit={pinForm.handleSubmit(onPinSubmit)} className="space-y-4">
                   <div>
                     <label htmlFor="employeeId" className="text-sm font-medium text-sky-800">Employee ID</label>
                     <div className="relative">

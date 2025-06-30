@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
@@ -58,5 +57,18 @@ export const profileService = {
       return false;
     }
     return true;
+  },
+
+  async getProfilesByOrganization(organizationId: string) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('organization_id', organizationId);
+
+    if (error) {
+      console.error('Error fetching profiles by organization:', error);
+      throw error;
+    }
+    return data || [];
   },
 };

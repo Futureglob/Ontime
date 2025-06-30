@@ -1,10 +1,10 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import Sidebar from "./Sidebar";
 import messageService from "@/services/messageService";
 
@@ -13,13 +13,20 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { signOut, user, profile } = useAuth();
+  const { currentProfile, loading, logout } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  useEffect(() => {
+    if (!loading && !currentProfile) {
+      router.push("/");
+    }
+  }, [currentProfile, loading, router]);
+
   const loadUnreadCount = useCallback(async () => {
-    const userId = profile?.id || user?.id;
+    const userId = currentProfile?.id;
     if (userId) {
       try {
         const count = await messageService.getUnreadMessageCount(userId);
@@ -29,20 +36,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         setUnreadCount(0);
       }
     }
-  }, [profile, user]);
+  }, [currentProfile]);
 
   useEffect(() => {
     loadUnreadCount();
   }, [loadUnreadCount]);
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     try {
-      await signOut();
+      await logout();
       router.push("/");
+      toast({ title: "Logged out successfully" });
     } catch (error) {
-      console.error("Error signing out:", error);
+      toast({
+        title: "Logout failed",
+        description: "An error occurred during logout.",
+        variant: "destructive",
+      });
     }
   };
+
+  if (loading) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -84,11 +100,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="flex items-center gap-2">
                   <div className="hidden sm:block text-right">
                     <p className="text-sm font-medium text-gray-900">
-                      {profile?.full_name || user?.email}
+                      {currentProfile?.full_name || currentProfile?.email}
                     </p>
                     <p className="text-xs text-gray-500">Online</p>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <Button variant="ghost" size="sm" onClick={handleLogout}>
                     <LogOut className="h-4 w-4" />
                   </Button>
                 </div>
