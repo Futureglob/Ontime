@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +15,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { messageService, MessageWithSender } from "@/services/messageService";
-import { Database } from "@/integrations/supabase/types";
-
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 interface RealTimeMessagingProps {
   taskId: string;
@@ -27,7 +25,7 @@ export default function RealTimeMessaging({ taskId }: RealTimeMessagingProps) {
   const [messages, setMessages] = useState<MessageWithSender[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadMessages = useCallback(async (taskId: string) => {
