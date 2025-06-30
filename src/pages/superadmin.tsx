@@ -1,7 +1,4 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
-import SuperAdminDashboard from "@/components/superadmin/SuperAdminDashboard";
+
 import { useAuth } from "@/contexts/SimpleAuthContext";
 import RoleBasedSidebar from "@/components/layout/RoleBasedSidebar";
 
