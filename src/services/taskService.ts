@@ -54,7 +54,7 @@ const enrichTasks = async (tasks: Task[]): Promise<EnrichedTask[]> => {
         return tasks.map(t => ({ ...t, created_by_profile: null, assigned_to_profile: null }));
     }
 
-    const {  profiles, error } = await supabase
+    const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
         .in('id', Array.from(userIds));
@@ -73,7 +73,6 @@ const enrichTasks = async (tasks: Task[]): Promise<EnrichedTask[]> => {
         assigned_to_profile: profilesMap.get(task.assigned_to || '') || null,
     }));
 };
-
 
 export const taskService = {
   async getTasks(): Promise<EnrichedTask[]> {
@@ -184,7 +183,14 @@ export const taskService = {
         location_address: null,
         location_lat: null,
         location_lng: null,
-        ...task,
+        status: "pending",
+        title: task.title || "Untitled Task",
+        description: task.description || null,
+        assigned_to: task.assigned_to || null,
+        created_by: task.created_by || null,
+        organization_id: task.organization_id || null,
+        priority: task.priority || null,
+        due_date: task.due_date || null,
       };
       mockTasks.unshift(newTask as EnrichedTask);
       return newTask;

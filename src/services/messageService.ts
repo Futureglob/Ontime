@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Message, Task } from "@/types/database";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";

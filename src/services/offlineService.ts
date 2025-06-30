@@ -151,7 +151,10 @@ export const offlineService = {
     // Upload cached photos
     for (const photo of cachedPhotos) {
       try {
-        await this.uploadCachedPhoto(photo);
+        const result = await photoService.uploadPhoto(
+          photo.file,
+          photo.taskId
+        );
         syncedPhotos++;
       } catch (error) {
         console.error('Failed to upload cached photo:', error);
