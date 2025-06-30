@@ -14,9 +14,9 @@ const mockTasks: Task[] = [
     description: "Write comprehensive documentation for the OnTime project",
     status: "in_progress",
     priority: "high",
-    assigned_to: null,
-    created_by: null,
-    organization_id: null,
+    assigned_to: "user-1",
+    created_by: "admin-1",
+    organization_id: "org-1",
     due_date: "2025-07-02T10:00:00Z",
     completed_at: null,
     location_lat: null,
@@ -32,9 +32,9 @@ const mockTasks: Task[] = [
     description: "Go through client feedback and prepare response",
     status: "pending",
     priority: "medium",
-    assigned_to: null,
-    created_by: null,
-    organization_id: null,
+    assigned_to: "user-1",
+    created_by: "admin-1",
+    organization_id: "org-1",
     due_date: "2025-07-01T15:00:00Z",
     completed_at: null,
     location_lat: null,
@@ -50,9 +50,9 @@ const mockTasks: Task[] = [
     description: "Update server configurations for better performance",
     status: "completed",
     priority: "low",
-    assigned_to: null,
-    created_by: null,
-    organization_id: null,
+    assigned_to: "user-1",
+    created_by: "admin-1",
+    organization_id: "org-1",
     due_date: "2025-06-29T12:00:00Z",
     completed_at: "2025-06-29T11:30:00Z",
     location_lat: null,
@@ -69,17 +69,17 @@ export const taskService = {
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, assigned_to_profile:profiles!tasks_assigned_to_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.warn("Database not available, using mock data:", error);
+        console.warn("Database not available, using mock ", error);
         return mockTasks;
       }
 
-      return data || [];
+      return (data as any[]) || [];
     } catch (error) {
-      console.warn("Error fetching tasks, using mock data:", error);
+      console.warn("Error fetching tasks, using mock ", error);
       return mockTasks;
     }
   },
@@ -88,18 +88,38 @@ export const taskService = {
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, assigned_to_profile:profiles!tasks_assigned_to_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
         .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.warn("Database not available, using mock data:", error);
+        console.warn("Database not available, using mock data for user tasks:", error);
         return mockTasks;
       }
 
-      return data || [];
+      return (data as any[]) || [];
     } catch (error) {
-      console.warn("Error fetching user tasks, using mock data:", error);
+      console.warn("Error fetching user tasks, using mock ", error);
+      return mockTasks;
+    }
+  },
+
+  async getTasksForOrganization(organizationId: string): Promise<Task[]> {
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, assigned_to_profile:profiles!tasks_assigned_to_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
+        .eq('organization_id', organizationId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.warn("Database not available, using mock data for org tasks:", error);
+        return mockTasks;
+      }
+
+      return (data as any[]) || [];
+    } catch (error) {
+      console.warn("Error fetching org tasks, using mock ", error);
       return mockTasks;
     }
   },
@@ -108,18 +128,18 @@ export const taskService = {
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, assigned_to_profile:profiles!tasks_assigned_to_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
         .eq("id", id)
         .single();
 
       if (error) {
-        console.warn("Database not available, using mock data:", error);
+        console.warn("Database not available, using mock data for getTaskById:", error);
         return mockTasks.find(task => task.id === id) || null;
       }
 
-      return data;
+      return data as any;
     } catch (error) {
-      console.warn("Error fetching task, using mock data:", error);
+      console.warn("Error fetching task, using mock ", error);
       return mockTasks.find(task => task.id === id) || null;
     }
   },
@@ -132,50 +152,16 @@ export const taskService = {
         .select()
         .single();
 
-      if (error) {
-        console.warn("Database not available, simulating task creation:", error);
-        const newTask: Task = {
-          id: Math.random().toString(36).substr(2, 9),
-          title: task.title || "New Task",
-          description: task.description || null,
-          status: task.status || "pending",
-          priority: task.priority || "medium",
-          assigned_to: task.assigned_to || null,
-          created_by: task.created_by || null,
-          organization_id: task.organization_id || null,
-          due_date: task.due_date || null,
-          completed_at: null,
-          location_lat: task.location_lat || null,
-          location_lng: task.location_lng || null,
-          location_address: task.location_address || null,
-          attachments: task.attachments || [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        mockTasks.unshift(newTask);
-        return newTask;
-      }
-
-      return data;
+      if (error) throw error;
+      return data as Task;
     } catch (error) {
       console.warn("Error creating task, simulating creation:", error);
       const newTask: Task = {
         id: Math.random().toString(36).substr(2, 9),
-        title: task.title || "New Task",
-        description: task.description || null,
-        status: task.status || "pending",
-        priority: task.priority || "medium",
-        assigned_to: task.assigned_to || null,
-        created_by: task.created_by || null,
-        organization_id: task.organization_id || null,
-        due_date: task.due_date || null,
-        completed_at: null,
-        location_lat: task.location_lat || null,
-        location_lng: task.location_lng || null,
-        location_address: task.location_address || null,
-        attachments: task.attachments || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        completed_at: null,
+        ...task,
       };
       mockTasks.unshift(newTask);
       return newTask;
@@ -191,17 +177,8 @@ export const taskService = {
         .select()
         .single();
 
-      if (error) {
-        console.warn("Database not available, simulating task update:", error);
-        const taskIndex = mockTasks.findIndex(task => task.id === id);
-        if (taskIndex !== -1) {
-          mockTasks[taskIndex] = { ...mockTasks[taskIndex], ...updates, updated_at: new Date().toISOString() };
-          return mockTasks[taskIndex];
-        }
-        throw new Error("Task not found");
-      }
-
-      return data;
+      if (error) throw error;
+      return data as Task;
     } catch (error) {
       console.warn("Error updating task, simulating update:", error);
       const taskIndex = mockTasks.findIndex(task => task.id === id);
@@ -213,6 +190,10 @@ export const taskService = {
     }
   },
 
+  async updateTaskStatus(id: string, status: string): Promise<Task> {
+    return this.updateTask(id, { status, completed_at: status === 'completed' ? new Date().toISOString() : null });
+  },
+
   async deleteTask(id: string): Promise<void> {
     try {
       const { error } = await supabase
@@ -220,71 +201,13 @@ export const taskService = {
         .delete()
         .eq("id", id);
 
-      if (error) {
-        console.warn("Database not available, simulating task deletion:", error);
-        const taskIndex = mockTasks.findIndex(task => task.id === id);
-        if (taskIndex !== -1) {
-          mockTasks.splice(taskIndex, 1);
-        }
-        return;
-      }
+      if (error) throw error;
     } catch (error) {
       console.warn("Error deleting task, simulating deletion:", error);
       const taskIndex = mockTasks.findIndex(task => task.id === id);
       if (taskIndex !== -1) {
         mockTasks.splice(taskIndex, 1);
       }
-    }
-  },
-
-  async getTasksByStatus(status: string): Promise<Task[]> {
-    try {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("status", status)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.warn("Database not available, using mock data:", error);
-        return mockTasks.filter(task => task.status === status);
-      }
-
-      return data || [];
-    } catch (error) {
-      console.warn("Error fetching tasks by status, using mock data:", error);
-      return mockTasks.filter(task => task.status === status);
-    }
-  },
-
-  async getOverdueTasks(): Promise<Task[]> {
-    const now = new Date().toISOString();
-    
-    try {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .lt("due_date", now)
-        .neq("status", "completed")
-        .order("due_date", { ascending: true });
-
-      if (error) {
-        console.warn("Database not available, using mock data:", error);
-        return mockTasks.filter(task => 
-          task.due_date && 
-          new Date(task.due_date) < new Date() && 
-          task.status !== "completed"
-        );
-      }
-
-      return data || [];
-    } catch (error) {
-      console.warn("Error fetching overdue tasks, using mock data:", error);
-      return mockTasks.filter(task => 
-        task.due_date && 
-        new Date(task.due_date) < new Date() && 
-        task.status !== "completed"
-      );
     }
   },
 };

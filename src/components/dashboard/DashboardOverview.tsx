@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,8 +17,9 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
-import { taskService } from "@/services/taskService";
+import { taskService, Task } from "@/services/taskService";
 import { notificationService } from "@/services/notificationService";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardStats {
   totalTasks: number;
@@ -27,15 +28,6 @@ interface DashboardStats {
   overdueTasks: number;
   teamMembers: number;
   unreadMessages: number;
-}
-
-interface RecentTask {
-  id: string;
-  title: string;
-  status: string;
-  priority: string;
-  dueDate: string;
-  assignedTo: string;
 }
 
 export default function DashboardOverview() {
@@ -49,26 +41,22 @@ export default function DashboardOverview() {
     teamMembers: 0,
     unreadMessages: 0,
   });
-  const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
+  const [recentTasks, setRecentTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [profile]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!profile) return;
 
     try {
       setLoading(true);
       
-      // Load tasks for current user
-      const tasks = await taskService.getTasksForUser(profile.id);
-      const notifications = await notificationService.getUnreadNotifications();
+      const [tasks, notifications] = await Promise.all([
+        taskService.getTasksForUser(profile.id),
+        notificationService.getUnreadNotifications(),
+      ]);
       
-      // Calculate stats
       const completedTasks = tasks.filter(t => t.status === 'completed').length;
-      const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+      const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
       const overdueTasks = tasks.filter(t => {
         if (!t.due_date) return false;
         return new Date(t.due_date) < new Date() && t.status !== 'completed';
@@ -83,58 +71,17 @@ export default function DashboardOverview() {
         unreadMessages: notifications.length,
       });
 
-      // Set recent tasks (last 5)
-      setRecentTasks(
-        tasks.slice(0, 5).map(task => ({
-          id: task.id,
-          title: task.title,
-          status: task.status,
-          priority: task.priority,
-          dueDate: task.due_date || '',
-          assignedTo: task.assigned_to || 'Unassigned',
-        }))
-      );
+      setRecentTasks(tasks.slice(0, 5));
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
-      // Set mock data if database is not available
-      setStats({
-        totalTasks: 12,
-        completedTasks: 8,
-        pendingTasks: 3,
-        overdueTasks: 1,
-        teamMembers: 5,
-        unreadMessages: 2,
-      });
-      setRecentTasks([
-        {
-          id: '1',
-          title: 'Complete project documentation',
-          status: 'in_progress',
-          priority: 'high',
-          dueDate: '2025-07-02',
-          assignedTo: 'You',
-        },
-        {
-          id: '2',
-          title: 'Review client feedback',
-          status: 'pending',
-          priority: 'medium',
-          dueDate: '2025-07-01',
-          assignedTo: 'You',
-        },
-        {
-          id: '3',
-          title: 'Update system configurations',
-          status: 'completed',
-          priority: 'low',
-          dueDate: '2025-06-29',
-          assignedTo: 'You',
-        },
-      ]);
+      console.error('Error loading dashboard ', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const getCompletionPercentage = () => {
     if (stats.totalTasks === 0) return 0;
@@ -172,14 +119,21 @@ export default function DashboardOverview() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-80" />
           </div>
+          <Skeleton className="h-10 w-28" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+        </div>
+        <Skeleton className="h-40" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-96" />
+          <Skeleton className="h-96" />
         </div>
       </div>
     );
@@ -187,7 +141,6 @@ export default function DashboardOverview() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
@@ -205,7 +158,6 @@ export default function DashboardOverview() {
         )}
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -219,7 +171,6 @@ export default function DashboardOverview() {
             </p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
@@ -232,7 +183,6 @@ export default function DashboardOverview() {
             </p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Overdue</CardTitle>
@@ -241,26 +191,24 @@ export default function DashboardOverview() {
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{stats.overdueTasks}</div>
             <p className="text-xs text-muted-foreground">
-              Need attention
+              Need immediate attention
             </p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.teamMembers}</div>
+            <div className="text-2xl font-bold">{stats.unreadMessages}</div>
             <p className="text-xs text-muted-foreground">
-              Active users
+              In your inbox
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Progress Overview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -283,9 +231,7 @@ export default function DashboardOverview() {
         </CardContent>
       </Card>
 
-      {/* Recent Tasks and Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Tasks */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Tasks</CardTitle>
@@ -294,7 +240,7 @@ export default function DashboardOverview() {
             <div className="space-y-4">
               {recentTasks.length > 0 ? (
                 recentTasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => router.push(`/tasks?taskId=${task.id}`)}>
                     <div className="flex-1">
                       <h4 className="font-medium text-sm">{task.title}</h4>
                       <div className="flex items-center gap-2 mt-1">
@@ -304,10 +250,10 @@ export default function DashboardOverview() {
                         <Badge variant="outline" className={getPriorityColor(task.priority)}>
                           {task.priority}
                         </Badge>
-                        {task.dueDate && (
+                        {task.due_date && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {new Date(task.dueDate).toLocaleDateString()}
+                            {new Date(task.due_date).toLocaleDateString()}
                           </span>
                         )}
                       </div>
@@ -317,7 +263,7 @@ export default function DashboardOverview() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No tasks yet</p>
+                  <p>No tasks yet. You're all caught up!</p>
                   {canCreateTasks && (
                     <Button
                       variant="outline"
@@ -334,7 +280,6 @@ export default function DashboardOverview() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
         <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
@@ -361,7 +306,7 @@ export default function DashboardOverview() {
               
               <Button
                 variant="outline"
-                className="h-20 flex flex-col items-center justify-center gap-2"
+                className="h-20 flex flex-col items-center justify-center gap-2 relative"
                 onClick={() => router.push('/chat')}
               >
                 <MessageSquare className="h-6 w-6" />
