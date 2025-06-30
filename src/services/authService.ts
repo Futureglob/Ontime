@@ -39,7 +39,9 @@ export const authService = {
         .single();
 
       if (error) {
-        console.error("Error fetching user profile:", error);
+        if (error.code !== "PGRST116") {
+          console.error("Error fetching user profile:", error);
+        }
         return null;
       }
       return data as Profile;
@@ -52,17 +54,8 @@ export const authService = {
   async getUserRole(userId: string): Promise<UserRole | null> {
     if (!userId) return null;
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user role:", error);
-        return null;
-      }
-      return data?.role as UserRole;
+      const profile = await this.getUserProfile(userId);
+      return profile?.role || null;
     } catch (error) {
       console.error("Exception fetching user role:", error);
       return null;
@@ -90,7 +83,17 @@ export const authService = {
   async generatePinForUser(userId: string): Promise<{ pin: string } | null> {
     console.log(`Generating PIN for user ${userId}`);
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
-    // In a real app, you"d save a hash of this to the user"s profile
+    
+    const { error } = await supabase
+      .from("profiles")
+      .update({ pin: pin }) // In a real app, you'd save a HASH of this pin
+      .eq("id", userId);
+
+    if (error) {
+      console.error(`Error saving PIN for user ${userId}:`, error);
+      return null;
+    }
+    
     return { pin };
   },
 
@@ -101,19 +104,21 @@ export const authService = {
 
   async signInWithPin(userId: string, pin: string): Promise<any> {
     console.log(`Signing in with PIN for user ${userId}`);
-    const { data, error } = await supabase
+    const {  profile, error } = await supabase
       .from("profiles")
       .select("id, pin")
       .eq("id", userId)
       .single();
 
-    if (error || !data) {
+    if (error || !profile) {
       throw new Error("User not found or PIN not set up.");
     }
 
-    // In a real app, you"d compare a hash, not the plain text PIN
-    if (data.pin === pin) {
+    if (profile.pin === pin) {
       const {  { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Authentication session not found. Cannot complete PIN sign-in.");
+      }
       return { session };
     } else {
       throw new Error("Invalid PIN");

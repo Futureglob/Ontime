@@ -44,9 +44,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const getInitialSession = async () => {
-      const {  { session } } = await supabase.auth.getSession();
-      setSession(session);
-      const currentUser = session?.user ?? null;
+      const {  { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      const currentUser = initialSession?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
@@ -58,9 +58,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     getInitialSession();
 
     const {  { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        const currentUser = session?.user ?? null;
+      async (_event, newSession) => {
+        setSession(newSession);
+        const currentUser = newSession?.user ?? null;
         setUser(currentUser);
 
         if (currentUser) {
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signOut = async () => {
+  const signOut = async (): Promise<void> => {
     await authService.signOut();
     setProfile(null);
     setUser(null);
@@ -92,8 +92,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithPin = async (pin: string) => {
-    if (!user) throw new Error("User not authenticated for PIN sign-in");
-    return authService.signInWithPin(user.id, pin);
+    if (!profile?.id) throw new Error("User profile not available for PIN sign-in.");
+    return authService.signInWithPin(profile.id, pin);
   };
 
   const value = {
