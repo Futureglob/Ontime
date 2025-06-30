@@ -12,13 +12,11 @@ import { offlineService } from "@/services/offlineService";
 import { notificationService } from "@/services/notificationService";
 
 interface FieldTaskCardProps {
-  task: Task & {
-    assigned_by_profile?: { full_name: string };
-  };
-  onTaskUpdated: () => void;
+  task: EnrichedTask;
+  onTakePhoto: () => void;
 }
 
-export default function FieldTaskCard({ task, onTaskUpdated }: FieldTaskCardProps) {
+export default function FieldTaskCard({ task, onTakePhoto }: FieldTaskCardProps) {
   const [updating, setUpdating] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [photoType, setPhotoType] = useState<PhotoType>(PhotoType.CHECK_IN);

@@ -1,6 +1,10 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Message, Task } from "@/types/database";
+import { Database } from "@/integrations/supabase/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+
+type Message = Database["public"]["Tables"]["messages"]["Row"];
+type Task = Database["public"]["Tables"]["tasks"]["Row"];
 
 export interface MessageWithSender extends Message {
   sender?: {
@@ -81,7 +85,7 @@ export const messageService = {
   async getUnreadMessageCount(userId: string): Promise<number> {
     try {
       // Simplified approach - get tasks first, then count messages
-      const {  userTasks } = await supabase
+      const { data: userTasks } = await supabase
         .from("tasks")
         .select("id")
         .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
@@ -108,7 +112,7 @@ export const messageService = {
   async getTaskConversations(userId: string) {
     try {
       // Get user's tasks with simplified query
-      const {  userTasks } = await supabase
+      const { data: userTasks } = await supabase
         .from("tasks")
         .select("*")
         .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
@@ -121,7 +125,7 @@ export const messageService = {
         ...userTasks.map(t => t.created_by)
       ].filter(Boolean))];
 
-      const {  profiles } = await supabase
+      const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, designation")
         .in("id", userIds);

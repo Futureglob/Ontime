@@ -28,16 +28,12 @@ interface PhotoData {
 }
 
 interface PhotoCaptureProps {
-  taskId: string;
-  onPhotoCapture?: (photo: PhotoData) => void;
-  allowedTypes?: ("check_in" | "progress" | "completion")[];
+  task: EnrichedTask;
+  onSuccess: () => void;
+  onCancel: () => void;
 }
 
-export default function PhotoCapture({ 
-  taskId, 
-  onPhotoCapture, 
-  allowedTypes = ["check_in", "progress", "completion"] 
-}: PhotoCaptureProps) {
+export default function PhotoCapture({ task, onSuccess, onCancel }: PhotoCaptureProps) {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [selectedType, setSelectedType] = useState<"check_in" | "progress" | "completion">("progress");
@@ -167,11 +163,10 @@ export default function PhotoCapture({
             longitude: location.coords.longitude,
             address
           } : undefined,
-          taskId
+          taskId: task.id
         };
 
         setPhotos(prev => [...prev, newPhoto]);
-        onPhotoCapture?.(newPhoto);
         stopCamera();
       } catch (error) {
         console.error("Error uploading photo:", error);
@@ -214,11 +209,10 @@ export default function PhotoCapture({
           longitude: location.coords.longitude,
           address
         } : undefined,
-        taskId
+        taskId: task.id
       };
 
       setPhotos(prev => [...prev, newPhoto]);
-      onPhotoCapture?.(newPhoto);
     } catch (error) {
       console.error("Error uploading photo:", error);
     } finally {
@@ -283,7 +277,7 @@ export default function PhotoCapture({
           <div>
             <label className="text-sm font-medium mb-2 block">Photo Type</label>
             <div className="flex gap-2">
-              {allowedTypes.map((type) => (
+              {["check_in", "progress", "completion"].map((type) => (
                 <Button
                   key={type}
                   variant={selectedType === type ? "default" : "outline"}

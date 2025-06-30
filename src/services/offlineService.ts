@@ -151,10 +151,7 @@ export const offlineService = {
     // Upload cached photos
     for (const photo of cachedPhotos) {
       try {
-        const result = await photoService.uploadPhoto(
-          photo.file,
-          photo.taskId
-        );
+        await this.uploadCachedPhoto(photo);
         syncedPhotos++;
       } catch (error) {
         console.error('Failed to upload cached photo:', error);
@@ -199,11 +196,7 @@ export const offlineService = {
         const updatePayload = action.payload as TaskUpdatePayload;
         await taskService.updateTaskStatus(
           updatePayload.taskId,
-          { 
-            status: updatePayload.status as TaskStatus, // Cast to TaskStatus
-            notes: updatePayload.notes 
-          },
-          updatePayload.assignedTo!
+          updatePayload.status
         );
         break;
 
@@ -217,8 +210,7 @@ export const offlineService = {
           
           await photoService.uploadTaskPhoto(
             photoPayload.taskId,
-            file,
-            photoPayload.meta
+            file
           );
         }
         break;
@@ -242,8 +234,7 @@ export const offlineService = {
       
       await photoService.uploadTaskPhoto(
         photoData.taskId,
-        file,
-        photoData.meta
+        file
       );
     }
   },
