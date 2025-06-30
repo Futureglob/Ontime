@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginForm from "@/components/auth/LoginForm";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -7,7 +6,6 @@ import DashboardOverview from "@/components/dashboard/DashboardOverview";
 
 export default function HomePage() {
   const { isAuthenticated, loading } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     // Prevent any cross-origin access attempts
