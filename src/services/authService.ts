@@ -3,14 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { rateLimit, hashPin } from "@/lib/utils";
 
-// Simplified Profile type to prevent recursion
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 
 export const authService = {
   async signIn(email: string, password: string) {
-    await rateLimit(email); // Rate limit by email
+    await rateLimit(email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -22,7 +20,6 @@ export const authService = {
     }
 
     if (data.user) {
-      // Fetch profile without joining organization to prevent recursion
       const {  profile, error: profileError } = await supabase
         .from("profiles")
         .select(`*`)
@@ -31,7 +28,6 @@ export const authService = {
 
       if (profileError) {
         console.error("Profile fetch error on sign-in:", profileError);
-        // Still return user data if profile fetch fails
         return { user: data.user, profile: null };
       }
       
@@ -42,9 +38,8 @@ export const authService = {
   },
 
   async signInWithPin(employeeId: string, pin: string) {
-    await rateLimit(employeeId); // Rate limit by employee ID
+    await rateLimit(employeeId);
     
-    // Fetch profile without joining organization
     const {  profiles, error: profileError } = await supabase
       .from("profiles")
       .select(`*`)
@@ -82,7 +77,6 @@ export const authService = {
     }
 
     if (session?.user) {
-        // Fetch profile without joining organization
         const {  profile, error: profileError } = await supabase
             .from("profiles")
             .select(`*`)
@@ -99,7 +93,7 @@ export const authService = {
     return { user: null, profile: null };
   },
 
-  async signUp(email: string, password: string, profileData: Omit<ProfileInsert, 'id'>) {
+  async signUp(email: string, password: string, profileData: Omit<ProfileInsert, "id">) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -111,9 +105,8 @@ export const authService = {
     }
 
     if (data.user) {
-      // Insert and then select profile without join
       const {  newProfile, error: profileError } = await supabase
-        .from('profiles')
+        .from("profiles")
         .insert({ ...profileData, id: data.user.id })
         .select(`*`)
         .single();
@@ -130,7 +123,6 @@ export const authService = {
   },
 
   async getUserProfile(userId: string): Promise<Profile | null> {
-    // Fetch profile without joining organization
     const {  profile, error } = await supabase
       .from("profiles")
       .select(`*`)
@@ -154,13 +146,13 @@ export const authService = {
     const hashedPin = await hashPin(pin, userId);
 
     const { data, error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update({ 
         pin_hash: hashedPin,
         pin_updated_at: new Date().toISOString(),
-        pin_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days expiry
+        pin_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       })
-      .eq('id', userId)
+      .eq("id", userId)
       .select()
       .single();
 

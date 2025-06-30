@@ -3,7 +3,6 @@ import { taskService, TaskUpdate } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
 import { notificationService } from "@/services/notificationService";
 
-// Define specific payload types for offline actions
 interface TaskUpdatePayload {
   taskId: string;
   status: string;
@@ -33,7 +32,7 @@ interface PhotoUploadPayload {
 
 interface OfflineTaskAction {
   id: string;
-  action: 'update_status' | 'upload_photo' | 'create_task';
+  action: "update_status" | "upload_photo" | "create_task";
   payload: TaskUpdatePayload | PhotoUploadPayload | Record<string, unknown>;
   timestamp: number;
 }
@@ -53,47 +52,43 @@ interface QueuedItem {
 }
 
 export const offlineService = {
-  // Store offline actions in localStorage
   storeOfflineAction(action: OfflineTaskAction) {
     const offlineActions = this.getOfflineActions();
     offlineActions.push(action);
-    localStorage.setItem('ontime_offline_actions', JSON.stringify(offlineActions));
+    localStorage.setItem("ontime_offline_actions", JSON.stringify(offlineActions));
     
-    // Show notification about queued action
-    notificationService.showNotification('Action Queued', {
-      body: 'Your action will sync when you\'re back online',
-      tag: 'offline-queue'
+    notificationService.showNotification("Action Queued", {
+      body: "Your action will sync when you're back online",
+      tag: "offline-queue"
     });
   },
 
   getOfflineActions(): OfflineTaskAction[] {
-    const stored = localStorage.getItem('ontime_offline_actions');
+    const stored = localStorage.getItem("ontime_offline_actions");
     return stored ? JSON.parse(stored) : [];
   },
 
   clearOfflineActions() {
-    localStorage.removeItem('ontime_offline_actions');
+    localStorage.removeItem("ontime_offline_actions");
   },
 
-  // Cache task data for offline access
   cacheTaskData(tasks: Record<string, unknown>[]) {
-    localStorage.setItem('ontime_cached_tasks', JSON.stringify({
+    localStorage.setItem("ontime_cached_tasks", JSON.stringify({
       tasks,
       timestamp: Date.now()
     }));
   },
 
   getCachedTaskData(): Record<string, unknown>[] | null {
-    const cached = localStorage.getItem('ontime_cached_tasks');
+    const cached = localStorage.getItem("ontime_cached_tasks");
     if (!cached) return null;
     
     const parsed = JSON.parse(cached);
-    const isExpired = Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000; // 24 hours
+    const isExpired = Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000;
     
     return isExpired ? null : parsed.tasks;
   },
 
-  // Cache photos for offline upload
   cachePhotoForUpload(taskId: string, file: File, meta: PhotoUploadMetadata) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -108,33 +103,31 @@ export const offlineService = {
       
       const cachedPhotos = this.getCachedPhotos();
       cachedPhotos.push(photoData);
-      localStorage.setItem('ontime_cached_photos', JSON.stringify(cachedPhotos));
+      localStorage.setItem("ontime_cached_photos", JSON.stringify(cachedPhotos));
       
-      // Show notification about cached photo
-      notificationService.showNotification('Photo Cached', {
-        body: 'Photo will upload when you\'re back online',
-        tag: 'offline-photo-cache'
+      notificationService.showNotification("Photo Cached", {
+        body: "Photo will upload when you're back online",
+        tag: "offline-photo-cache"
       });
     };
     reader.readAsDataURL(file);
   },
 
   getCachedPhotos(): CachedPhoto[] {
-    const cached = localStorage.getItem('ontime_cached_photos');
+    const cached = localStorage.getItem("ontime_cached_photos");
     return cached ? JSON.parse(cached) : [];
   },
 
   clearCachedPhotos() {
-    localStorage.removeItem('ontime_cached_photos');
+    localStorage.removeItem("ontime_cached_photos");
   },
 
-  // Sync offline data when back online
   async syncOfflineData() {
     const offlineActions = this.getOfflineActions();
     const cachedPhotos = this.getCachedPhotos();
     
     if (offlineActions.length === 0 && cachedPhotos.length === 0) {
-      return; // Nothing to sync
+      return;
     }
 
     let syncedActions = 0;
@@ -142,29 +135,26 @@ export const offlineService = {
     const failedActions: OfflineTaskAction[] = [];
     const failedPhotos: CachedPhoto[] = [];
 
-    // Process offline actions
     for (const action of offlineActions) {
       try {
         await this.processOfflineAction(action);
         syncedActions++;
       } catch (error) {
-        console.error('Failed to sync offline action:', error);
+        console.error("Failed to sync offline action:", error);
         failedActions.push(action);
       }
     }
     
-    // Upload cached photos
     for (const photo of cachedPhotos) {
       try {
         await this.uploadCachedPhoto(photo);
         syncedPhotos++;
       } catch (error) {
-        console.error('Failed to upload cached photo:', error);
+        console.error("Failed to upload cached photo:", error);
         failedPhotos.push(photo);
       }
     }
     
-    // Sync task status updates
     const taskUpdates = await this.getQueuedData("taskUpdates");
     for (const update of taskUpdates) {
       try {
@@ -176,40 +166,36 @@ export const offlineService = {
       }
     }
     
-    // Clear successfully synced data
     if (failedActions.length === 0) {
       this.clearOfflineActions();
     } else {
-      // Keep only failed actions
-      localStorage.setItem('ontime_offline_actions', JSON.stringify(failedActions));
+      localStorage.setItem("ontime_offline_actions", JSON.stringify(failedActions));
     }
 
     if (failedPhotos.length === 0) {
       this.clearCachedPhotos();
     } else {
-      // Keep only failed photos
-      localStorage.setItem('ontime_cached_photos', JSON.stringify(failedPhotos));
+      localStorage.setItem("ontime_cached_photos", JSON.stringify(failedPhotos));
     }
 
-    // Show sync results notification
     if (syncedActions > 0 || syncedPhotos > 0) {
-      notificationService.showNotification('Sync Complete', {
+      notificationService.showNotification("Sync Complete", {
         body: `Synced ${syncedActions} actions and ${syncedPhotos} photos`,
-        tag: 'sync-complete'
+        tag: "sync-complete"
       });
     }
 
     if (failedActions.length > 0 || failedPhotos.length > 0) {
-      notificationService.showNotification('Partial Sync', {
+      notificationService.showNotification("Partial Sync", {
         body: `${failedActions.length + failedPhotos.length} items failed to sync`,
-        tag: 'sync-partial'
+        tag: "sync-partial"
       });
     }
   },
 
   async processOfflineAction(action: OfflineTaskAction) {
     switch (action.action) {
-      case 'update_status':
+      case "update_status":
         const updatePayload = action.payload as TaskUpdatePayload;
         await taskService.updateTask(
           updatePayload.taskId,
@@ -217,10 +203,9 @@ export const offlineService = {
         );
         break;
 
-      case 'upload_photo':
+      case "upload_photo":
         const photoPayload = action.payload as PhotoUploadPayload;
-        if (photoPayload.fileData && typeof photoPayload.fileData === 'string') {
-          // Convert base64 back to file
+        if (photoPayload.fileData && typeof photoPayload.fileData === "string") {
           const response = await fetch(photoPayload.fileData);
           const blob = await response.blob();
           const file = new File([blob], photoPayload.fileName, { type: photoPayload.fileType });
@@ -238,19 +223,17 @@ export const offlineService = {
         }
         break;
 
-      case 'create_task':
-        // Implementation for task creation if needed
-        console.log('Task creation sync not implemented yet');
+      case "create_task":
+        console.log("Task creation sync not implemented yet");
         break;
 
       default:
-        console.warn('Unknown offline action type:', action.action);
+        console.warn("Unknown offline action type:", action.action);
     }
   },
 
   async uploadCachedPhoto(photoData: CachedPhoto) {
-    if (photoData.fileData && typeof photoData.fileData === 'string') {
-      // Convert base64 back to file
+    if (photoData.fileData && typeof photoData.fileData === "string") {
       const response = await fetch(photoData.fileData);
       const blob = await response.blob();
       const file = new File([blob], photoData.fileName, { type: photoData.fileType });
@@ -268,7 +251,6 @@ export const offlineService = {
     }
   },
 
-  // Get sync status for UI
   getSyncStatus() {
     const offlineActions = this.getOfflineActions();
     const cachedPhotos = this.getCachedPhotos();
@@ -280,21 +262,19 @@ export const offlineService = {
     };
   },
 
-  // Manual sync trigger
   async forceSyncNow() {
     if (navigator.onLine) {
       await this.syncOfflineData();
       return true;
     } else {
-      notificationService.showNotification('Sync Failed', {
-        body: 'Cannot sync while offline',
-        tag: 'sync-failed'
+      notificationService.showNotification("Sync Failed", {
+        body: "Cannot sync while offline",
+        tag: "sync-failed"
       });
       return false;
     }
   },
 
-  // Queue management
   async getQueuedData(queueName: string): Promise<QueuedItem[]> {
     const stored = localStorage.getItem(`ontime_${queueName}`);
     return stored ? JSON.parse(stored) : [];
@@ -309,7 +289,7 @@ export const offlineService = {
   async removeFromQueue(queueName: string, id: string): Promise<boolean> {
     const existing = await this.getQueuedData(queueName);
     const filtered = existing.filter(item => item.id !== id);
-    if (filtered.length === existing.length) return false; // Item not found
+    if (filtered.length === existing.length) return false;
     
     localStorage.setItem(`ontime_${queueName}`, JSON.stringify(filtered));
     return true;

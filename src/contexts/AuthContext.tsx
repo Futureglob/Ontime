@@ -59,7 +59,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Initial check
     const initialAuthCheck = async () => {
       setLoading(true);
       const {  { session } } = await supabase.auth.getSession();
