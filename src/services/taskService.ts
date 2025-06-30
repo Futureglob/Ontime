@@ -23,7 +23,7 @@ export const taskService = {
       console.error("Error fetching tasks:", error);
       return [];
     }
-    return data as EnrichedTask[];
+    return data as unknown as EnrichedTask[];
   },
 
   async getTasksForUser(userId: string): Promise<EnrichedTask[]> {
@@ -37,7 +37,7 @@ export const taskService = {
       console.error("Error fetching user tasks:", error);
       return [];
     }
-    return data as EnrichedTask[];
+    return data as unknown as EnrichedTask[];
   },
 
   async getTasksForOrganization(organizationId: string): Promise<EnrichedTask[]> {
@@ -51,7 +51,7 @@ export const taskService = {
       console.error("Error fetching org tasks:", error);
       return [];
     }
-    return data as EnrichedTask[];
+    return data as unknown as EnrichedTask[];
   },
 
   async getTaskById(id: string): Promise<EnrichedTask | null> {
@@ -65,7 +65,7 @@ export const taskService = {
       console.error("Error fetching task by id:", error);
       return null;
     }
-    return data as EnrichedTask;
+    return data as unknown as EnrichedTask;
   },
 
   async createTask(task: TaskInsert): Promise<Task> {
