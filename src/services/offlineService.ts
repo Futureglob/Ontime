@@ -1,89 +1,91 @@
-import { openDB, IDBPDatabase } from "idb";
-import { Task, Photo } from "@/types"; // Assuming types are defined here
 
-const DB_NAME = "OnTimeDB";
-const DB_VERSION = 1;
-const TASK_STORE = "tasks";
-const PHOTO_STORE = "photos";
-const SYNC_QUEUE_STORE = "syncQueue";
+    import { openDB, IDBPDatabase } from "idb";
+    import { Task, Photo } from "@/types"; // Assuming types are defined here
 
-interface SyncQueueItem {
-  id?: number;
-  type: "task" | "photo";
-  action: "create" | "update" | "delete";
-  payload: any;
-}
+    const DB_NAME = "OnTimeDB";
+    const DB_VERSION = 1;
+    const TASK_STORE = "tasks";
+    const PHOTO_STORE = "photos";
+    const SYNC_QUEUE_STORE = "syncQueue";
 
-const initDB = async (): Promise<IDBPDatabase> => {
-  return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(TASK_STORE)) {
-        db.createObjectStore(TASK_STORE, { keyPath: "id" });
-      }
-      if (!db.objectStoreNames.contains(PHOTO_STORE)) {
-        db.createObjectStore(PHOTO_STORE, { keyPath: "id" });
-      }
-      if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
-        db.createObjectStore(SYNC_QUEUE_STORE, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-      }
-    },
-  });
-};
+    interface SyncQueueItem {
+      id?: number;
+      type: "task" | "photo";
+      action: "create" | "update" | "delete";
+      payload: unknown;
+    }
 
-export const offlineService = {
-  // Task operations
-  async getOfflineTasks(): Promise<Task[]> {
-    const db = await initDB();
-    return db.getAll(TASK_STORE);
-  },
+    const initDB = async (): Promise<IDBPDatabase> => {
+      return openDB(DB_NAME, DB_VERSION, {
+        upgrade(db) {
+          if (!db.objectStoreNames.contains(TASK_STORE)) {
+            db.createObjectStore(TASK_STORE, { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains(PHOTO_STORE)) {
+            db.createObjectStore(PHOTO_STORE, { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+            db.createObjectStore(SYNC_QUEUE_STORE, {
+              keyPath: "id",
+              autoIncrement: true,
+            });
+          }
+        },
+      });
+    };
 
-  async saveTaskOffline(task: Task): Promise<IDBValidKey> {
-    const db = await initDB();
-    return db.put(TASK_STORE, task);
-  },
+    export const offlineService = {
+      // Task operations
+      async getOfflineTasks(): Promise<Task[]> {
+        const db = await initDB();
+        return db.getAll(TASK_STORE);
+      },
 
-  async deleteTaskOffline(taskId: string): Promise<void> {
-    const db = await initDB();
-    return db.delete(TASK_STORE, taskId);
-  },
+      async saveTaskOffline(task: Task): Promise<IDBValidKey> {
+        const db = await initDB();
+        return db.put(TASK_STORE, task);
+      },
 
-  // Photo operations
-  async getOfflinePhotos(): Promise<Photo[]> {
-    const db = await initDB();
-    return db.getAll(PHOTO_STORE);
-  },
+      async deleteTaskOffline(taskId: string): Promise<void> {
+        const db = await initDB();
+        return db.delete(TASK_STORE, taskId);
+      },
 
-  async savePhotoOffline(photo: Photo): Promise<IDBValidKey> {
-    const db = await initDB();
-    return db.put(PHOTO_STORE, photo);
-  },
+      // Photo operations
+      async getOfflinePhotos(): Promise<Photo[]> {
+        const db = await initDB();
+        return db.getAll(PHOTO_STORE);
+      },
 
-  async deletePhotoOffline(photoId: string): Promise<void> {
-    const db = await initDB();
-    return db.delete(PHOTO_STORE, photoId);
-  },
+      async savePhotoOffline(photo: Photo): Promise<IDBValidKey> {
+        const db = await initDB();
+        return db.put(PHOTO_STORE, photo);
+      },
 
-  // Sync queue operations
-  async getSyncQueue(): Promise<SyncQueueItem[]> {
-    const db = await initDB();
-    return db.getAll(SYNC_QUEUE_STORE);
-  },
+      async deletePhotoOffline(photoId: string): Promise<void> {
+        const db = await initDB();
+        return db.delete(PHOTO_STORE, photoId);
+      },
 
-  async addToSyncQueue(item: SyncQueueItem): Promise<IDBValidKey> {
-    const db = await initDB();
-    return db.add(SYNC_QUEUE_STORE, item);
-  },
+      // Sync queue operations
+      async getSyncQueue(): Promise<SyncQueueItem[]> {
+        const db = await initDB();
+        return db.getAll(SYNC_QUEUE_STORE);
+      },
 
-  async removeFromSyncQueue(itemId: number): Promise<void> {
-    const db = await initDB();
-    return db.delete(SYNC_QUEUE_STORE, itemId);
-  },
+      async addToSyncQueue(item: SyncQueueItem): Promise<IDBValidKey> {
+        const db = await initDB();
+        return db.add(SYNC_QUEUE_STORE, item);
+      },
 
-  async clearSyncQueue(): Promise<void> {
-    const db = await initDB();
-    return db.clear(SYNC_QUEUE_STORE);
-  },
-};
+      async removeFromSyncQueue(itemId: number): Promise<void> {
+        const db = await initDB();
+        return db.delete(SYNC_QUEUE_STORE, itemId);
+      },
+
+      async clearSyncQueue(): Promise<void> {
+        const db = await initDB();
+        return db.clear(SYNC_QUEUE_STORE);
+      },
+    };
+  
