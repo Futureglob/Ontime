@@ -172,6 +172,7 @@ export type Database = {
           created_by: string
           location: string | null
           client_id: string | null
+          task_type: string | null
         }
         Insert: {
           id?: string
@@ -188,6 +189,7 @@ export type Database = {
           created_by: string
           location?: string | null
           client_id?: string | null
+          task_type?: string | null
         }
         Update: {
           id?: string
@@ -204,18 +206,20 @@ export type Database = {
           created_by?: string
           location?: string | null
           client_id?: string | null
+          task_type?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "tasks_assigned_by_fkey"
-            columns: ["assigned_by"]
+            foreignKeyName: "tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            referencedRelation: "profiles"
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
@@ -228,13 +232,6 @@ export type Database = {
             foreignKeyName: "tasks_organization_id_fkey"
             columns: ["organization_id"]
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
             referencedColumns: ["id"]
           }
         ]

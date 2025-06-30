@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { taskService, Task } from "@/services/taskService";
@@ -36,25 +35,14 @@ export default function TaskManagement() {
     [currentProfile]
   );
 
-  const fetchTasks = useCallback(async () => {
+  const loadTasks = useCallback(async () => {
     if (!currentProfile) return;
     setLoading(true);
     try {
-      if (currentProfile.role === "org_admin" && currentProfile.organization_id) {
-        const orgTasks = await taskService.getTasksForOrganization(
-          currentProfile.organization_id
-        );
-        setTasks(orgTasks);
-      } else if (currentProfile.role === "super_admin") {
-        const allTasks = await taskService.getTasks();
-        setTasks(allTasks);
-      } else {
-        const userTasks = await taskService.getTasksForUser(currentProfile.id);
-        setTasks(userTasks);
-      }
+      const tasksData = await taskService.getTasks(currentProfile.organization_id);
+      setTasks(tasksData);
     } catch (error) {
       console.error("Failed to load tasks:", error);
-      setTasks([]);
     } finally {
       setLoading(false);
     }
@@ -72,23 +60,22 @@ export default function TaskManagement() {
   }, [currentProfile?.organization_id]);
 
   useEffect(() => {
-    fetchTasks();
+    loadTasks();
     fetchUsers();
-  }, [fetchTasks, fetchUsers]);
+  }, [loadTasks, fetchUsers]);
 
-  const handleEdit = (task: Task) => {
+  const handleEditTask = (task: Task) => {
     setSelectedTask(task);
     setShowForm(true);
   };
 
-  const handleDelete = async (taskId: string) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
-      try {
-        await taskService.deleteTask(taskId);
-        fetchTasks();
-      } catch (error) {
-        console.error("Failed to delete task:", error);
-      }
+  const handleDeleteTask = async (taskToDelete: Task) => {
+    if (!confirm(`Are you sure you want to delete task "${taskToDelete.title}"?`)) return;
+    try {
+      await taskService.deleteTask(taskToDelete.id);
+      loadTasks();
+    } catch (error) {
+      console.error("Failed to delete task:", error);
     }
   };
 
@@ -104,7 +91,7 @@ export default function TaskManagement() {
   const handleSuccess = () => {
     setSelectedTask(null);
     setShowForm(false);
-    fetchTasks();
+    loadTasks();
   };
 
   if (showForm) {
@@ -167,11 +154,11 @@ export default function TaskManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTasks.length > 0 ? (
             filteredTasks.map(task => (
-              <TaskCard 
-                key={task.id} 
-                task={task} 
-                onEdit={handleEdit}
-                onDelete={handleDelete}
+              <TaskCard
+                key={task.id}
+                task={task}
+                onEdit={handleEditTask}
+                onDelete={handleDeleteTask}
               />
             ))
           ) : (

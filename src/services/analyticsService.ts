@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TaskOverview {
@@ -78,14 +77,33 @@ export const analyticsService = {
       const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
       const inProgressTasks = tasks?.filter(t => t.status === "in_progress").length || 0;
       const pendingTasks = tasks?.filter(t => t.status === "assigned").length || 0;
-      const overdueTasks = tasks?.filter(t => {
-        if (!t.deadline) return false;
-        return new Date(t.deadline) < new Date() && t.status !== "completed";
-      }).length || 0;
+      const completedOnTime = tasks.filter(
+        (task) =>
+          task.completed_at &&
+          task.due_date &&
+          new Date(task.completed_at) <= new Date(task.due_date)
+      ).length;
+
+      const overdueTasks = tasks.filter(
+        (task) =>
+          task.status !== "completed" &&
+          task.due_date &&
+          new Date(task.due_date) < new Date()
+      ).length;
 
       const totalEmployees = employees?.length || 0;
       const activeEmployees = employees?.filter(e => e.is_active).length || 0;
       const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+      const completionTimes = tasks
+        .filter((task) => task.completed_at && task.due_date)
+        .map((task) =>
+          new Date(task.completed_at as string).getTime() - new Date(task.due_date as string).getTime()
+        );
+
+      const avgTimeToComplete =
+        completionTimes.reduce((a, b) => a + b, 0) /
+        (completionTimes.length || 1);
 
       return {
         totalTasks,
@@ -96,7 +114,7 @@ export const analyticsService = {
         totalEmployees,
         activeEmployees,
         completionRate,
-        avgCompletionTime: 4.5,
+        avgCompletionTime: avgTimeToComplete,
         totalWorkingHours: completedTasks * 4.5,
         averageTasksPerEmployee: activeEmployees > 0 ? totalTasks / activeEmployees : 0,
         totalTravelDistance: 0,

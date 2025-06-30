@@ -29,7 +29,7 @@ interface DashboardStats {
 }
 
 export default function DashboardOverview() {
-  const { currentProfile } = useAuth();
+  const { currentProfile, logout } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     totalTasks: 0,
@@ -107,6 +107,15 @@ export default function DashboardOverview() {
   };
 
   const canCreateTasks = currentProfile?.role && ['task_manager', 'org_admin', 'super_admin'].includes(currentProfile.role);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -322,6 +331,13 @@ export default function DashboardOverview() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="flex justify-center mt-6">
+        <Button onClick={handleLogout} className="light-blue-button">
+          <Plus className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
       </div>
     </div>
   );

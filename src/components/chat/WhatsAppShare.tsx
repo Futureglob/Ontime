@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -53,6 +52,26 @@ export default function WhatsAppShare({ task, customMessage }: WhatsAppShareProp
       case "returned": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const generateMessage = () => {
+    if (!task) return "";
+
+    const taskTitle = `*Task:* ${task.title}`;
+    const taskDesc = task.description ? `*Description:* ${task.description}` : "";
+    const taskStatus = `*Status:* ${task.status}`;
+    const taskPriority = `*Priority:* ${task.priority}`;
+    const taskDueDate = task.due_date ? `*Due Date:* ${new Date(task.due_date).toLocaleDateString()}` : "";
+
+    const messageParts = [
+      taskTitle,
+      taskDesc,
+      taskStatus,
+      taskPriority,
+      taskDueDate,
+    ];
+
+    return messageParts.join("\n");
   };
 
   return (

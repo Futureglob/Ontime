@@ -135,6 +135,26 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
     getOtherParticipant(conv.task)?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const getGroupedChats = () => {
+    return filteredConversations.reduce((acc, chat) => {
+      const key = chat.task.assigned_to === user.id ? chat.task.assigned_by : chat.task.assigned_to;
+      if (key && !acc[key]) {
+        acc[key] = {
+          profile: getOtherParticipant(chat.task),
+          tasks: [],
+        };
+      }
+      if (key) {
+        acc[key].tasks.push(chat);
+      }
+      return acc;
+    }, {} as Record<string, { profile: { full_name: string; designation: string; avatar_url?: string } | null; tasks: ChatConversation[] }>);
+  };
+
+  const handleSelectChat = (task: Task) => {
+    onSelectConversation(task);
+  };
+
   if (loading) {
     return (
       <Card className="h-full">
@@ -191,59 +211,59 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
             </div>
           ) : (
             <div className="space-y-1 p-2">
-              {filteredConversations.map((conversation) => {
-                const otherParticipant = getOtherParticipant(conversation.task);
-                const isSelected = selectedTaskId === conversation.task_id;
+              {getGroupedChats().map((group) => {
+                const { profile, tasks } = group;
+                const isSelected = selectedTaskId === tasks[0].task_id;
                 
                 return (
                   <div
-                    key={conversation.task_id}
-                    onClick={() => onSelectConversation(conversation.task)}
+                    key={profile?.full_name || `group-${Date.now()}`}
+                    onClick={() => handleSelectChat(tasks[0].task)}
                     className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${
                       isSelected ? "bg-muted" : ""
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarImage src={otherParticipant?.avatar_url} />
+                        <AvatarImage src={profile?.avatar_url} />
                         <AvatarFallback>
-                          {otherParticipant?.full_name?.charAt(0) || "U"}
+                          {profile?.full_name?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-medium text-sm truncate">
-                            {otherParticipant?.full_name || "Unknown User"}
+                            {profile?.full_name || "Unknown User"}
                           </h4>
-                          {conversation.lastMessage && (
+                          {tasks[0].lastMessage && (
                             <span className="text-xs text-muted-foreground flex-shrink-0">
-                              {formatTime(conversation.lastMessage.created_at)}
+                              {formatTime(tasks[0].lastMessage.created_at)}
                             </span>
                           )}
                         </div>
                         
                         <p className="text-xs text-muted-foreground mb-2 truncate">
-                          Task: {conversation.task.title}
+                          Task: {tasks[0].task.title}
                         </p>
                         
                         <div className="flex items-center justify-between">
                           <Badge 
-                            className={`text-xs ${getStatusColor(conversation.task.status || "")}`}
+                            className={`text-xs ${getStatusColor(tasks[0].task.status || "")}`}
                           >
-                            {conversation.task.status?.replace("_", " ").toUpperCase()}
+                            {tasks[0].task.status?.replace("_", " ").toUpperCase()}
                           </Badge>
                           
-                          {conversation.unreadCount > 0 && (
+                          {tasks[0].unreadCount > 0 && (
                             <Badge variant="destructive" className="text-xs">
-                              {conversation.unreadCount}
+                              {tasks[0].unreadCount}
                             </Badge>
                           )}
                         </div>
                         
-                        {conversation.lastMessage && (
+                        {tasks[0].lastMessage && (
                           <p className="text-xs text-muted-foreground mt-1 truncate">
-                            {conversation.lastMessage.content}
+                            {tasks[0].lastMessage.content}
                           </p>
                         )}
                       </div>

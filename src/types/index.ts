@@ -13,6 +13,7 @@ export type Task = Database["public"]["Tables"]["tasks"]["Row"] & {
   created_by_profile?: Profile | null;
   client?: Client | null;
   photos?: TaskPhoto[];
+  task_type?: string | null;
 };
 
 // This User type seems to be a custom client-side model. It's different from Profile.

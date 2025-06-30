@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
@@ -15,60 +14,77 @@ export interface MessageWithSender extends Message {
 }
 
 export const messageService = {
-  async sendMessage(taskId: string, senderId: string, content: string) {
+  async sendMessage(
+    taskId: string,
+    senderId: string,
+    receiverId: string,
+    content: string
+  ): Promise<Message> {
     const { data, error } = await supabase
       .from("messages")
-      .insert([{
-        task_id: taskId,
-        sender_id: senderId,
-        receiver_id: senderId,
-        content,
-        is_read: false,
-      }])
+      .insert([{ task_id: taskId, sender_id: senderId, receiver_id: receiverId, content }])
       .select()
       .single();
 
-    if (error) throw error;
-
-    // Get sender info separately to avoid complex joins
-    const { data: senderData } = await supabase
-      .from("profiles")
-      .select("full_name, designation")
-      .eq("id", senderId)
-      .single();
-
-    return {
-      ...data,
-      sender: senderData
-    } as MessageWithSender;
+    if (error) {
+      console.error("Error sending message:", error);
+      throw error;
+    }
+    return data;
   },
 
   async getTaskMessages(taskId: string): Promise<MessageWithSender[]> {
-    const { data: messages, error } = await supabase
+    const { data, error } = await supabase
       .from("messages")
-      .select("*")
+      .select("*, sender:profiles!messages_sender_id_fkey(*)")
       .eq("task_id", taskId)
       .order("created_at", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching task messages:", error);
+      throw error;
+    }
+    return data || [];
+  },
 
-    if (!messages || messages.length === 0) return [];
+  async getChatList(userId: string): Promise<ChatListItem[]> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select(
+        `
+        *,
+        messages(count),
+        participants:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url)
+      `
+      )
+      .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
+      .order("updated_at", { ascending: false });
 
-    // Get all unique sender IDs
-    const senderIds = [...new Set(messages.map(m => m.sender_id))];
-    
-    // Get sender profiles separately
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, designation")
-      .in("id", senderIds);
+    if (error) {
+      console.error("Error fetching chat list:", error);
+      throw error;
+    }
 
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+    return data.map((task: any) => ({
+      task,
+      lastMessage: null, // This would require another query or a more complex one
+      unreadCount: task.messages[0]?.count || 0,
+      participants: [task.participants].filter(Boolean),
+    }));
+  },
 
-    return messages.map(message => ({
-      ...message,
-      sender: profileMap.get(message.sender_id)
-    })) as MessageWithSender[];
+  subscribeToTaskMessages(
+    taskId: string,
+    onMessage: (payload: any) => void
+  ) {
+    return supabase
+      .channel(`messages:task=${taskId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `task_id=eq.${taskId}` },
+        onMessage
+      )
+      .subscribe();
   },
 
   async markMessagesAsRead(taskId: string, userId: string) {
@@ -76,10 +92,12 @@ export const messageService = {
       .from("messages")
       .update({ is_read: true })
       .eq("task_id", taskId)
-      .neq("sender_id", userId)
+      .eq("receiver_id", userId)
       .eq("is_read", false);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error marking messages as read:", error);
+    }
   },
 
   async getUnreadMessageCount(userId: string): Promise<number> {
@@ -173,18 +191,6 @@ export const messageService = {
       console.error("Error loading conversations:", error);
       return [];
     }
-  },
-
-  subscribeToTaskMessages(taskId: string, callback: (payload: RealtimePostgresChangesPayload<Message>) => void) {
-    return supabase
-      .channel(`messages:task_id=eq.${taskId}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `task_id=eq.${taskId}`
-      }, callback)
-      .subscribe();
   },
 
   subscribeToUserMessages(userId: string, callback: (payload: RealtimePostgresChangesPayload<Message>) => void) {

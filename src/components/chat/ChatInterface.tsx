@@ -20,6 +20,7 @@ import { notificationService } from "@/services/notificationService";
 import { Task } from "@/types/database";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 // import WhatsAppShare from "./WhatsAppShare"; // Removed unused WhatsAppShare import
+import { toast } from "@/components/ui/toast";
 
 interface ChatMessage {
   id: string;
@@ -137,12 +138,33 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
     };
   }, [task?.id, handleNewMessage]);
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !task?.id || !user?.id || sending) return;
+  const getGroupedMessages = () => {
+    const groups = messages.reduce((acc, message) => {
+      const date = new Date(message.created_at).toDateString();
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(message);
+      return acc;
+    }, {} as Record<string, MessageWithSender[]>);
 
+    // Sort messages within each group
+    Object.keys(groups).forEach(date => {
+      groups[date].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    });
+
+    return groups;
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !user || !task) return;
     try {
-      setSending(true);
-      await messageService.sendMessage(task.id, user.id, newMessage.trim());
+      const receiverId = user.id === task.created_by ? task.assignee_id : task.created_by;
+      if (!receiverId) {
+        toast.error("Cannot determine message receiver.");
+        return;
+      }
+      await messageService.sendMessage(task.id, user.id, receiverId, newMessage.trim());
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -155,7 +177,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
@@ -262,74 +284,79 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message, index) => {
-                const isOwnMessage = message.sender_id === user?.id;
-                const showAvatar = index === 0 || messages[index - 1].sender_id !== message.sender_id;
-                
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${isOwnMessage ? "justify-end" : "justify-start"}`}
-                  >
-                    {!isOwnMessage && showAvatar && (
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={message.sender?.avatar_url} />
-                        <AvatarFallback>
-                          {message.sender?.full_name?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
+              {Object.entries(getGroupedMessages()).map(([date, messages]) => (
+                <div key={date} className="bg-background/10 p-3 rounded-lg mt-2">
+                  <div className="text-sm text-muted-foreground mb-1">{date}</div>
+                  {messages.map((message, index) => {
+                    const isOwnMessage = message.sender_id === user?.id;
+                    const showAvatar = index === 0 || messages[index - 1].sender_id !== message.sender_id;
                     
-                    {!isOwnMessage && !showAvatar && (
-                      <div className="w-8" />
-                    )}
-                    
-                    <div className={`max-w-[70%] ${isOwnMessage ? "order-1" : ""}`}>
+                    return (
                       <div
-                        className={`rounded-lg px-3 py-2 ${
-                          isOwnMessage
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
-                        }`}
+                        key={message.id}
+                        className={`flex gap-3 ${isOwnMessage ? "justify-end" : "justify-start"}`}
                       >
-                        <p className="text-sm">{message.content}</p>
+                        {!isOwnMessage && showAvatar && (
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={message.sender?.avatar_url} />
+                            <AvatarFallback>
+                              {message.sender?.full_name?.charAt(0) || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         
-                        {message.attachment_url && (
-                          <div className="mt-2">
-                            {message.attachment_type?.startsWith("image/") ? (
-                              <Image
-                                src={message.attachment_url}
-                                alt="Attachment"
-                                width={200} // Provide appropriate width
-                                height={150} // Provide appropriate height
-                                className="max-w-full h-auto rounded object-cover"
-                              />
-                            ) : (
-                              <div className="flex items-center gap-2 p-2 bg-background/10 rounded">
-                                <Paperclip className="h-4 w-4" />
-                                <span className="text-xs">Attachment</span>
+                        {!isOwnMessage && !showAvatar && (
+                          <div className="w-8" />
+                        )}
+                        
+                        <div className={`max-w-[70%] ${isOwnMessage ? "order-1" : ""}`}>
+                          <div
+                            className={`rounded-lg px-3 py-2 ${
+                              isOwnMessage
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                            
+                            {message.attachment_url && (
+                              <div className="mt-2">
+                                {message.attachment_type?.startsWith("image/") ? (
+                                  <Image
+                                    src={message.attachment_url}
+                                    alt="Attachment"
+                                    width={200} // Provide appropriate width
+                                    height={150} // Provide appropriate height
+                                    className="max-w-full h-auto rounded object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex items-center gap-2 p-2 bg-background/10 rounded">
+                                    <Paperclip className="h-4 w-4" />
+                                    <span className="text-xs">Attachment</span>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                      
-                      <div className={`flex items-center gap-1 mt-1 text-xs text-muted-foreground ${isOwnMessage ? "justify-end" : ""}`}>
-                        <span>{formatTime(message.created_at)}</span>
-                        {isOwnMessage && (
-                          <div className="flex items-center">
-                            {message.is_read ? (
-                              <CheckCheck className="h-3 w-3 text-blue-500" />
-                            ) : (
-                              <Check className="h-3 w-3" />
+                          
+                          <div className={`flex items-center gap-1 mt-1 text-xs text-muted-foreground ${isOwnMessage ? "justify-end" : ""}`}>
+                            <span>{formatTime(message.created_at)}</span>
+                            {isOwnMessage && (
+                              <div className="flex items-center">
+                                {message.is_read ? (
+                                  <CheckCheck className="h-3 w-3 text-blue-500" />
+                                ) : (
+                                  <Check className="h-3 w-3" />
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              ))}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -363,7 +390,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
           />
           
           <Button
-            onClick={sendMessage}
+            onClick={handleSendMessage}
             disabled={!newMessage.trim() || sending}
             size="sm"
           >

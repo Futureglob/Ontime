@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause, WifiOff } from "lucide-react";
+import { MapPin, Camera, Navigation, Clock, CheckCircle, XCircle, Play, Pause, WifiOff, Briefcase, Calendar } from "lucide-react";
 import { EnrichedTask } from "@/services/taskService";
 
 interface FieldTaskCardProps {
@@ -132,13 +132,31 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
     }
   };
 
+  const handleNavigate = () => {
+    if (task.location) {
+      const [lat, lng] = task.location.split(',').map(parseFloat);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
+      }
+    }
+  };
+
   const canAccept = task.status === "assigned";
   const canStart = task.status === "accepted";
   const canComplete = task.status === "in_progress";
   const canTakePhoto = ["accepted", "in_progress"].includes(task.status);
 
+  const isOverdue = task.due_date && new Date(task.due_date) < new Date();
+
+  const cardBorderColor = () => {
+    if (task.status === 'completed') return 'border-green-500';
+    if (isOverdue) return 'border-red-500';
+    if (task.priority === 'high') return 'border-yellow-500';
+    return 'border-gray-200';
+  };
+
   return (
-    <Card className={`hover:shadow-lg transition-all duration-200 ${urgency === "urgent" ? "ring-2 ring-red-200" : ""} ${!isOnline ? "border-orange-200 bg-orange-50/30" : ""}`}>
+    <Card className={`overflow-hidden transition-shadow hover:shadow-lg ${cardBorderColor()}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg font-semibold line-clamp-2 flex-1">{task.title}</CardTitle>
@@ -166,47 +184,33 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
-        {task.description && (
-          <p className="text-sm text-muted-foreground line-clamp-3">{task.description}</p>
-        )}
-
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span className="font-medium">{task.task_type}</span>
-          </div>
-
+      <CardContent className="p-4 space-y-3">
+        <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
+        
+        <div className="space-y-2 text-sm">
+          {task.client && (
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              <span>{task.client.name}</span>
+            </div>
+          )}
           {task.location && (
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="line-clamp-2 flex-1">{task.location}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={openInMaps}
-                className="h-8 w-8 p-0 flex-shrink-0"
-              >
-                <Navigation className="h-4 w-4" />
-              </Button>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span>{task.location}</span>
             </div>
           )}
-
-          {task.deadline && (
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span>Due: {new Date(task.deadline).toLocaleDateString()}</span>
-            </div>
-          )}
-
-          {task.client_info && (
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Client: {task.client_info}</span>
+          {task.due_date && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className={isOverdue ? 'text-red-600 font-semibold' : ''}>
+                Due: {new Date(task.due_date).toLocaleDateString()}
+              </span>
             </div>
           )}
         </div>
-
+      </CardContent>
+      <CardFooter className="bg-gray-50 p-4 flex justify-between items-center">
         <div className="flex flex-col gap-2 pt-2">
           {canAccept && (
             <Button 
@@ -335,7 +339,7 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
             </Button>
           </div>
         </div>
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 }

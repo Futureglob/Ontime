@@ -37,7 +37,7 @@ const baseNavigation = [
 const superAdminNav = { name: "Super Admin", href: "/superadmin", icon: ShieldCheck };
 
 export default function Sidebar() {
-  const { currentProfile } = useAuth();
+  const { currentProfile, logout } = useAuth();
   const router = useRouter();
 
   const navigationItems = useMemo(() => {
@@ -103,6 +103,15 @@ export default function Sidebar() {
 
   const handleNavigation = (href: string) => {
     router.push(href);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   return (
@@ -181,6 +190,17 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+
+      <div className="border-t border-gray-200 p-4">
+        <Button
+          variant="ghost"
+          className="w-full justify-center gap-3 h-10"
+          onClick={handleLogout}
+        >
+          <User className="h-4 w-4" />
+          Logout
+        </Button>
+      </div>
     </div>
   );
 }

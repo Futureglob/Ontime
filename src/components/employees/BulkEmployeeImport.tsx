@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -139,6 +138,7 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
     setProgress(0);
     
     const results: ImportResult[] = [];
+    let createdCount = 0;
     
     for (let i = 0; i < employees.length; i++) {
       const employee = employees[i];
@@ -169,19 +169,21 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           }
         );
         
-        if (!signUpData?.user) {
-          throw new Error("Failed to create user profile.");
+        if (signUpData.error) {
+          throw signUpData.error;
         }
 
-        const pinResult = await authService.generatePinForUser(signUpData.user.id);
-        if (!pinResult) {
-          throw new Error("Failed to generate PIN.");
+        if (signUpData.data.user) {
+          await authService.generatePinForUser(signUpData.data.user.id);
+          createdCount++;
+        } else {
+          throw new Error("User not created");
         }
         
         results.push({
           success: true,
           employee,
-          pin: pinResult.pin
+          pin: signUpData.data.user.pin
         });
 
       } catch (error) {

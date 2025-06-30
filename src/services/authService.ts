@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { AuthTokenResponsePassword, AuthResponse, AuthError } from "@supabase/supabase-js";
+import { AuthTokenResponsePassword, AuthResponse, AuthError, PostgrestError } from "@supabase/supabase-js";
 
 interface LoginWithPinResponse {
   access_token?: string;
@@ -15,13 +15,13 @@ export const authService = {
 
   async loginWithPin(employeeId: string, pin: string): Promise<AuthResponse> {
     try {
-      const { data, error } = await (supabase.rpc as any)("login_with_pin", {
+      const { data, error } = await supabase.rpc("login_with_pin", {
         p_employee_id: employeeId.toUpperCase(),
         p_pin: pin,
       });
 
       if (error) {
-        const authError = new AuthError(error.message, parseInt(error.code, 10) || 500);
+        const authError = new AuthError((error as PostgrestError).message, parseInt((error as PostgrestError).code, 10) || 500);
         return { data: { user: null, session: null }, error: authError };
       }
 
@@ -37,10 +37,11 @@ export const authService = {
       }
 
       const authError = new AuthError(responseData?.message || "Invalid credentials or PIN", 401);
-      return { data: { user: null, session: null }, error: authError };
-    } catch (error) {
-      const authError = new AuthError("Login failed", 500);
-      return { data: { user: null, session: null }, error: authError };
+      return {  { user: null, session: null }, error: authError };
+    } catch (e) {
+      const error = e as Error;
+      const authError = new AuthError(error.message || "Login failed", 500);
+      return {  { user: null, session: null }, error: authError };
     }
   },
 
@@ -54,7 +55,23 @@ export const authService = {
     return supabase.auth.signOut();
   },
 
-  async signUp(email: string, password: string, options?: Record<string, any>): Promise<AuthResponse> {
+  async signUp(email: string, password: string, options?: Record<string, unknown>): Promise<AuthResponse> {
     return supabase.auth.signUp({ email, password, options });
+  },
+
+  async generatePinForUser(userId: string): Promise<{ error: AuthError | null }> {
+    const { error } = await supabase.rpc('generate_user_pin', { p_user_id: userId });
+    if (error) {
+      return { error: new AuthError(error.message, 500) };
+    }
+    return { error: null };
+  },
+
+  async resetUserPin(userId: string): Promise<{ error: AuthError | null }> {
+    const { error } = await supabase.rpc('reset_user_pin', { p_user_id: userId });
+    if (error) {
+      return { error: new AuthError(error.message, 500) };
+    }
+    return { error: null };
   },
 };
