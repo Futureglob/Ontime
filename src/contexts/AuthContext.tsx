@@ -1,5 +1,4 @@
-
-    import {
+import {
   createContext,
   useContext,
   useEffect,
@@ -44,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const getInitialSession = async () => {
-      const {  { session: initialSession } } = await supabase.auth.getSession();
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
       setSession(initialSession);
       const currentUser = initialSession?.user ?? null;
       setUser(currentUser);
@@ -57,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     getInitialSession();
 
-    const {  { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
         setSession(newSession);
         const currentUser = newSession?.user ?? null;

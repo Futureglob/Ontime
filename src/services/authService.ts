@@ -1,5 +1,4 @@
-
-    import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/types";
 import { AuthResponse, Session, User } from "@supabase/supabase-js";
 
@@ -86,7 +85,7 @@ export const authService = {
   },
 
   async getCurrentUser(): Promise<User | null> {
-    const {  { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     return user;
   },
 
