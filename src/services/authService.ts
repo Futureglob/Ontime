@@ -1,10 +1,10 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { rateLimit, hashPin } from "@/lib/utils";
 
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
-  organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
-};
+// Simplified Profile type to prevent recursion
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 
@@ -22,15 +22,17 @@ export const authService = {
     }
 
     if (data.user) {
-      const { data: profile, error: profileError } = await supabase
+      // Fetch profile without joining organization to prevent recursion
+      const {  profile, error: profileError } = await supabase
         .from("profiles")
-        .select(`*, organization:organizations(*)`)
+        .select(`*`)
         .eq("id", data.user.id)
         .single();
 
       if (profileError) {
         console.error("Profile fetch error on sign-in:", profileError);
-        throw profileError;
+        // Still return user data if profile fetch fails
+        return { user: data.user, profile: null };
       }
       
       return { user: data.user, profile: profile as Profile };
@@ -42,9 +44,10 @@ export const authService = {
   async signInWithPin(employeeId: string, pin: string) {
     await rateLimit(employeeId); // Rate limit by employee ID
     
-    const { data: profiles, error: profileError } = await supabase
+    // Fetch profile without joining organization
+    const {  profiles, error: profileError } = await supabase
       .from("profiles")
-      .select(`*, organization:organizations(*)`)
+      .select(`*`)
       .eq("employee_id", employeeId)
       .eq("is_active", true);
 
@@ -73,7 +76,7 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const {  { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError) {
         console.error("Error getting session:", sessionError);
@@ -81,9 +84,10 @@ export const authService = {
     }
 
     if (session?.user) {
-        const { data: profile, error: profileError } = await supabase
+        // Fetch profile without joining organization
+        const {  profile, error: profileError } = await supabase
             .from("profiles")
-            .select(`*, organization:organizations(*)`)
+            .select(`*`)
             .eq("id", session.user.id)
             .single();
 
@@ -109,10 +113,11 @@ export const authService = {
     }
 
     if (data.user) {
-      const { data: newProfile, error: profileError } = await supabase
+      // Insert and then select profile without join
+      const {  newProfile, error: profileError } = await supabase
         .from('profiles')
         .insert({ ...profileData, id: data.user.id })
-        .select(`*, organization:organizations(*)`)
+        .select(`*`)
         .single();
 
       if (profileError) {
@@ -127,9 +132,10 @@ export const authService = {
   },
 
   async getUserProfile(userId: string): Promise<Profile | null> {
-    const { data: profile, error } = await supabase
+    // Fetch profile without joining organization
+    const {  profile, error } = await supabase
       .from("profiles")
-      .select(`*, organization:organizations(*)`)
+      .select(`*`)
       .eq("id", userId)
       .single();
 

@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useContext,
@@ -8,15 +9,10 @@ import {
   useCallback,
 } from "react";
 import { User as SupabaseUser } from "@supabase/supabase-js";
-import authService from "@/services/authService";
-import { Database } from "@/integrations/supabase/types";
+import authService, { Profile } from "@/services/authService";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
-type Profile = Database["public"]["Tables"]["profiles"]["Row"] & {
-  organization: Database["public"]["Tables"]["organizations"]["Row"] | null;
-};
 
 interface AuthContextType {
   user: SupabaseUser | null;
@@ -37,65 +33,50 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [isPinLogin, setIsPinLogin] = useState(false);
   const router = useRouter();
 
+  const fetchProfile = useCallback(async (user: SupabaseUser) => {
+    try {
+      const userProfile = await authService.getUserProfile(user.id);
+      setProfile(userProfile);
+    } catch (error) {
+      console.error("Failed to fetch profile on auth change:", error);
+      setProfile(null);
+    }
+  }, []);
+
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // Check if we're in a browser environment
-        if (typeof window === "undefined") {
-          setLoading(false);
-          return;
-        }
+    const {  { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setLoading(true);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
 
-        // Safely access sessionStorage
-        let savedProfile = null;
-        let isPinLoginSaved = null;
-        
-        try {
-          savedProfile = sessionStorage.getItem("pin_login_profile");
-          isPinLoginSaved = sessionStorage.getItem("is_pin_login");
-        } catch (error) {
-          console.warn("SessionStorage access failed:", error);
+        if (currentUser) {
+          await fetchProfile(currentUser);
+        } else {
+          setProfile(null);
         }
-
-        if (savedProfile && isPinLoginSaved) {
-          try {
-            setProfile(JSON.parse(savedProfile));
-            setIsPinLogin(true);
-            setLoading(false);
-            return;
-          } catch (error) {
-            console.warn("Failed to parse saved profile:", error);
-            // Clear invalid data
-            try {
-              sessionStorage.removeItem("pin_login_profile");
-              sessionStorage.removeItem("is_pin_login");
-            } catch (e) {
-              console.warn("Failed to clear sessionStorage:", e);
-            }
-          }
-        }
-
-        // SIMPLIFIED: Just check if user is authenticated, don't fetch profile yet
-        try {
-          const { data: { user }, error } = await supabase.auth.getUser();
-          if (error) {
-            console.warn("Auth check failed:", error);
-          } else {
-            setUser(user);
-            // Don't fetch profile here to avoid the infinite recursion issue
-          }
-        } catch (error) {
-          console.warn("Auth initialization failed:", error);
-        }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-      } finally {
         setLoading(false);
       }
-    };
+    );
 
-    initAuth();
-  }, []);
+    // Initial check
+    const initialAuthCheck = async () => {
+      setLoading(true);
+      const {  { session } } = await supabase.auth.getSession();
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        await fetchProfile(currentUser);
+      }
+      setLoading(false);
+    };
+    
+    initialAuthCheck();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
   const isAuthenticated = useMemo(() => {
     return !!(user || profile) && !loading;
@@ -107,17 +88,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authService.signIn(email, password);
       if (result && result.user) {
         setUser(result.user);
-        setProfile(result.profile as Profile);
+        setProfile(result.profile);
         setIsPinLogin(false);
-        
-        // Safely clear sessionStorage
-        try {
-          sessionStorage.removeItem("pin_login_profile");
-          sessionStorage.removeItem("is_pin_login");
-        } catch (error) {
-          console.warn("Failed to clear sessionStorage:", error);
-        }
-        
+        sessionStorage.removeItem("pin_login_profile");
+        sessionStorage.removeItem("is_pin_login");
         console.log("Regular login successful:", result.user.email);
       }
     } catch (error) {
@@ -134,19 +108,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authService.signInWithPin(employeeId, pin);
       if (result && result.profile) {
         setUser(null);
-        const typedProfile = result.profile as Profile;
-        setProfile(typedProfile);
+        setProfile(result.profile);
         setIsPinLogin(true);
-        
-        // Safely save to sessionStorage
-        try {
-          sessionStorage.setItem("pin_login_profile", JSON.stringify(typedProfile));
-          sessionStorage.setItem("is_pin_login", "true");
-        } catch (error) {
-          console.warn("Failed to save to sessionStorage:", error);
-        }
-        
-        console.log("PIN login successful, profile set:", typedProfile);
+        sessionStorage.setItem("pin_login_profile", JSON.stringify(result.profile));
+        sessionStorage.setItem("is_pin_login", "true");
+        console.log("PIN login successful, profile set:", result.profile);
       }
     } catch (error) {
       console.error("PIN login error:", error);
@@ -161,15 +127,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       if (!isPinLogin) {
         await authService.signOut();
       }
-      
-      // Safely clear sessionStorage
-      try {
-        sessionStorage.removeItem("pin_login_profile");
-        sessionStorage.removeItem("is_pin_login");
-      } catch (error) {
-        console.warn("Failed to clear sessionStorage:", error);
-      }
-      
+      sessionStorage.removeItem("pin_login_profile");
+      sessionStorage.removeItem("is_pin_login");
       setUser(null);
       setProfile(null);
       setIsPinLogin(false);
