@@ -1,11 +1,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
-import { Profile } from "./profileService";
 
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
 export type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 export type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 export type EnrichedTask = Task & {
   created_by_profile: Profile | null;
@@ -17,7 +17,11 @@ export const taskService = {
     try {
       const { data: tasks, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey(*),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+        `)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -25,39 +29,7 @@ export const taskService = {
         return [];
       }
 
-      if (!tasks || tasks.length === 0) {
-        return [];
-      }
-
-      // Get all unique user IDs for profiles
-      const userIds = [...new Set([
-        ...tasks.map(t => t.created_by).filter(Boolean),
-        ...tasks.map(t => t.assigned_to).filter(Boolean)
-      ])];
-
-      let profiles: Profile[] = [];
-      if (userIds.length > 0) {
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .in("id", userIds);
-
-        if (!profileError && profileData) {
-          profiles = profileData;
-        }
-      }
-
-      // Create a map for quick profile lookup
-      const profileMap = new Map(profiles.map(p => [p.id, p]));
-
-      // Enrich tasks with profile data
-      const enrichedTasks: EnrichedTask[] = tasks.map(task => ({
-        ...task,
-        created_by_profile: task.created_by ? profileMap.get(task.created_by) || null : null,
-        assigned_to_profile: task.assigned_to ? profileMap.get(task.assigned_to) || null : null,
-      }));
-
-      return enrichedTasks;
+      return (tasks || []) as EnrichedTask[];
     } catch (error) {
       console.error("Error in getTasks:", error);
       return [];
@@ -68,7 +40,11 @@ export const taskService = {
     try {
       const { data: tasks, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey(*),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+        `)
         .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
         .order("created_at", { ascending: false });
 
@@ -77,39 +53,7 @@ export const taskService = {
         return [];
       }
 
-      if (!tasks || tasks.length === 0) {
-        return [];
-      }
-
-      // Get all unique user IDs for profiles
-      const userIds = [...new Set([
-        ...tasks.map(t => t.created_by).filter(Boolean),
-        ...tasks.map(t => t.assigned_to).filter(Boolean)
-      ])];
-
-      let profiles: Profile[] = [];
-      if (userIds.length > 0) {
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .in("id", userIds);
-
-        if (!profileError && profileData) {
-          profiles = profileData;
-        }
-      }
-
-      // Create a map for quick profile lookup
-      const profileMap = new Map(profiles.map(p => [p.id, p]));
-
-      // Enrich tasks with profile data
-      const enrichedTasks: EnrichedTask[] = tasks.map(task => ({
-        ...task,
-        created_by_profile: task.created_by ? profileMap.get(task.created_by) || null : null,
-        assigned_to_profile: task.assigned_to ? profileMap.get(task.assigned_to) || null : null,
-      }));
-
-      return enrichedTasks;
+      return (tasks || []) as EnrichedTask[];
     } catch (error) {
       console.error("Error in getTasksForUser:", error);
       return [];
@@ -120,7 +64,11 @@ export const taskService = {
     try {
       const { data: tasks, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey(*),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+        `)
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false });
 
@@ -129,39 +77,7 @@ export const taskService = {
         return [];
       }
 
-      if (!tasks || tasks.length === 0) {
-        return [];
-      }
-
-      // Get all unique user IDs for profiles
-      const userIds = [...new Set([
-        ...tasks.map(t => t.created_by).filter(Boolean),
-        ...tasks.map(t => t.assigned_to).filter(Boolean)
-      ])];
-
-      let profiles: Profile[] = [];
-      if (userIds.length > 0) {
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .in("id", userIds);
-
-        if (!profileError && profileData) {
-          profiles = profileData;
-        }
-      }
-
-      // Create a map for quick profile lookup
-      const profileMap = new Map(profiles.map(p => [p.id, p]));
-
-      // Enrich tasks with profile data
-      const enrichedTasks: EnrichedTask[] = tasks.map(task => ({
-        ...task,
-        created_by_profile: task.created_by ? profileMap.get(task.created_by) || null : null,
-        assigned_to_profile: task.assigned_to ? profileMap.get(task.assigned_to) || null : null,
-      }));
-
-      return enrichedTasks;
+      return (tasks || []) as EnrichedTask[];
     } catch (error) {
       console.error("Error in getTasksForOrganization:", error);
       return [];
@@ -172,7 +88,11 @@ export const taskService = {
     try {
       const { data: task, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey(*),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+        `)
         .eq("id", id)
         .single();
 
@@ -181,36 +101,7 @@ export const taskService = {
         return null;
       }
 
-      if (!task) {
-        return null;
-      }
-
-      // Get profiles for created_by and assigned_to
-      const userIds = [task.created_by, task.assigned_to].filter(Boolean);
-      let profiles: Profile[] = [];
-
-      if (userIds.length > 0) {
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .in("id", userIds);
-
-        if (!profileError && profileData) {
-          profiles = profileData;
-        }
-      }
-
-      // Create a map for quick profile lookup
-      const profileMap = new Map(profiles.map(p => [p.id, p]));
-
-      // Enrich task with profile data
-      const enrichedTask: EnrichedTask = {
-        ...task,
-        created_by_profile: task.created_by ? profileMap.get(task.created_by) || null : null,
-        assigned_to_profile: task.assigned_to ? profileMap.get(task.assigned_to) || null : null,
-      };
-
-      return enrichedTask;
+      return task as EnrichedTask;
     } catch (error) {
       console.error("Error in getTaskById:", error);
       return null;
@@ -254,5 +145,42 @@ export const taskService = {
       .eq("id", id);
 
     if (error) throw error;
+  },
+
+  async getTaskCount(): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true });
+
+      if (error) {
+        console.error("Error getting task count:", error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error("Error in getTaskCount:", error);
+      return 0;
+    }
+  },
+
+  async getTaskCountForUser(userId: string): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
+
+      if (error) {
+        console.error("Error getting user task count:", error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error("Error in getTaskCountForUser:", error);
+      return 0;
+    }
   },
 };
