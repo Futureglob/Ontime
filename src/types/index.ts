@@ -106,3 +106,19 @@ export interface Notification {
   data?: Record<string, unknown>; // Changed from any to Record<string, unknown>
   createdAt: Date;
 }
+
+export interface Photo {
+  id: string;
+  task_id: string;
+  user_id: string;
+  url: string;
+  created_at: string;
+}
+
+export interface Profile {
+  id: string;
+  full_name: string;
+  role: UserRole;
+  org_id?: string;
+  pin?: string;
+}
