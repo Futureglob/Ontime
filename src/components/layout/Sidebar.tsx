@@ -14,6 +14,8 @@ import {
   User,
   ShieldCheck,
   Bell,
+  Home,
+  Users2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { taskService } from "@/services/taskService";
@@ -21,13 +23,14 @@ import { notificationService } from "@/services/notificationService";
 import Image from "next/image";
 
 const baseNavigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare },
-  { name: "Employees", href: "/employees", icon: Users },
+  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Tasks", href: "/tasks", icon: Briefcase },
   { name: "Field Work", href: "/field", icon: MapPin },
+  { name: "Employees", href: "/employees", icon: Users },
+  { name: "Clients", href: "/clients", icon: Users2 },
   { name: "Messages", href: "/chat", icon: MessageSquare },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Organization", href: "/organization", icon: Building2 },
+  { name: "Analytics", href: "/analytics", icon: BarChart2 },
+  { name: "Organization", href: "/organization", icon: Building },
   { name: "Profile", href: "/profile", icon: User },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
@@ -35,20 +38,14 @@ const baseNavigation = [
 const superAdminNav = { name: "Super Admin", href: "/superadmin", icon: ShieldCheck };
 
 export default function Sidebar() {
+  const { user, loading, currentProfile } = useAuth();
   const router = useRouter();
-  const { user, profile } = useAuth();
-  const [taskCount, setTaskCount] = useState(0);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const isMobile = useMobile();
 
-  const currentProfile = useMemo(() => profile, [profile]);
-  const isSuperAdmin = useMemo(() => currentProfile?.role === "super_admin", [currentProfile]);
+  const isSuperAdmin = currentProfile?.role === "super_admin";
 
   const navigationItems = useMemo(() => {
-    if (!currentProfile) {
-      // Not authenticated, show minimal navigation
-      return [];
-    }
+    if (!currentProfile) return [];
 
     let nav = [...baseNavigation];
 
@@ -83,6 +80,10 @@ export default function Sidebar() {
     
     return nav;
   }, [currentProfile]);
+
+  const [taskCount, setTaskCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const loadData = useCallback(async () => {
     const currentUserId = user?.id || profile?.id;

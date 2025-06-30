@@ -106,72 +106,104 @@ export type Database = {
           }
         ]
       }
-      tasks: {
+      clients: {
         Row: {
-          attachments: string[] | null
-          client_info: string | null
-          completed_at: string | null
-          created_at: string
-          created_by: string | null
-          deadline: string | null
-          description: string | null
           id: string
-          location: string | null
-          location_address: string | null
-          location_lat: number | null
-          location_lng: number | null
-          organization_id: string | null
-          status: string
-          task_type: string
-          title: string
+          name: string
+          contact_person: string | null
+          place: string | null
+          emirate: string | null
+          latitude: number | null
+          longitude: number | null
+          phone: string | null
+          organization_id: string
+          created_at: string
           updated_at: string
-          assigned_to: string | null
-          priority: string | null
-          due_date: string | null
         }
         Insert: {
-          attachments?: string[] | null
-          client_info?: string | null
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          deadline?: string | null
-          description?: string | null
           id?: string
-          location?: string | null
-          location_address?: string | null
-          location_lat?: number | null
-          location_lng?: number | null
-          organization_id?: string | null
-          status?: string
-          task_type?: string
-          title: string
+          name: string
+          contact_person?: string | null
+          place?: string | null
+          emirate?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string | null
+          organization_id: string
+          created_at?: string
           updated_at?: string
-          assigned_to?: string | null
-          priority?: string | null
-          due_date?: string | null
         }
         Update: {
-          attachments?: string[] | null
-          client_info?: string | null
+          id?: string
+          name?: string
+          contact_person?: string | null
+          place?: string | null
+          emirate?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string | null
+          organization_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      tasks: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          status: string
+          priority: string
+          due_date: string | null
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+          assignee_id: string | null
+          organization_id: string
+          created_by: string
+          location: string | null
+          client_id: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          status?: string
+          priority?: string
+          due_date?: string | null
           completed_at?: string | null
           created_at?: string
-          created_by?: string | null
-          deadline?: string | null
-          description?: string | null
-          id?: string
-          location?: string | null
-          location_address?: string | null
-          location_lat?: number | null
-          location_lng?: number | null
-          organization_id?: string | null
-          status?: string
-          task_type?: string
-          title?: string
           updated_at?: string
-          assigned_to?: string | null
-          priority?: string | null
+          assignee_id?: string | null
+          organization_id: string
+          created_by: string
+          location?: string | null
+          client_id?: string | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          status?: string
+          priority?: string
           due_date?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+          assignee_id?: string | null
+          organization_id?: string
+          created_by?: string
+          location?: string | null
+          client_id?: string | null
         }
         Relationships: [
           {
@@ -196,6 +228,13 @@ export type Database = {
             foreignKeyName: "tasks_organization_id_fkey"
             columns: ["organization_id"]
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           }
         ]
