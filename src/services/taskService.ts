@@ -14,58 +14,94 @@ export type EnrichedTask = Task & {
 
 export const taskService = {
   async getTasks(): Promise<EnrichedTask[]> {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*, created_by_profile:profiles!tasks_created_by_fkey(*), assigned_to_profile:profiles!tasks_assigned_to_fkey(*)")
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey(*),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+        `)
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching tasks:", error);
+      if (error) {
+        console.error("Error fetching tasks:", error);
+        return [];
+      }
+      return (data || []) as EnrichedTask[];
+    } catch (error) {
+      console.error("Error in getTasks:", error);
       return [];
     }
-    return data as unknown as EnrichedTask[];
   },
 
   async getTasksForUser(userId: string): Promise<EnrichedTask[]> {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*, created_by_profile:profiles!tasks_created_by_fkey(*), assigned_to_profile:profiles!tasks_assigned_to_fkey(*)")
-      .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey(*),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+        `)
+        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching user tasks:", error);
+      if (error) {
+        console.error("Error fetching user tasks:", error);
+        return [];
+      }
+      return (data || []) as EnrichedTask[];
+    } catch (error) {
+      console.error("Error in getTasksForUser:", error);
       return [];
     }
-    return data as unknown as EnrichedTask[];
   },
 
   async getTasksForOrganization(organizationId: string): Promise<EnrichedTask[]> {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*, created_by_profile:profiles!tasks_created_by_fkey(*), assigned_to_profile:profiles!tasks_assigned_to_fkey(*)")
-      .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey(*),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+        `)
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching org tasks:", error);
+      if (error) {
+        console.error("Error fetching org tasks:", error);
+        return [];
+      }
+      return (data || []) as EnrichedTask[];
+    } catch (error) {
+      console.error("Error in getTasksForOrganization:", error);
       return [];
     }
-    return data as unknown as EnrichedTask[];
   },
 
   async getTaskById(id: string): Promise<EnrichedTask | null> {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*, created_by_profile:profiles!tasks_created_by_fkey(*), assigned_to_profile:profiles!tasks_assigned_to_fkey(*)")
-      .eq("id", id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey(*),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey(*)
+        `)
+        .eq("id", id)
+        .single();
 
-    if (error) {
-      console.error("Error fetching task by id:", error);
+      if (error) {
+        console.error("Error fetching task by id:", error);
+        return null;
+      }
+      return data as EnrichedTask;
+    } catch (error) {
+      console.error("Error in getTaskById:", error);
       return null;
     }
-    return data as unknown as EnrichedTask;
   },
 
   async createTask(task: TaskInsert): Promise<Task> {
@@ -92,7 +128,10 @@ export const taskService = {
   },
 
   async updateTaskStatus(id: string, status: string): Promise<Task> {
-    return this.updateTask(id, { status, completed_at: status === 'completed' ? new Date().toISOString() : null });
+    return this.updateTask(id, { 
+      status, 
+      completed_at: status === 'completed' ? new Date().toISOString() : null 
+    });
   },
 
   async deleteTask(id: string): Promise<void> {
