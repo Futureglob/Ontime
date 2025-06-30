@@ -1,4 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
+
+    import { supabase } from "@/integrations/supabase/client";
 import { AuthTokenResponsePassword, AuthResponse, AuthError } from "@supabase/supabase-js";
 
 interface LoginWithPinResponse {
@@ -52,3 +53,4 @@ export const authService = {
     return supabase.auth.signUp({ email, password, options });
   },
 };
+  
