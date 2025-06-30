@@ -14,14 +14,14 @@ export const authService = {
   },
 
   async loginWithPin(employeeId: string, pin: string): Promise<AuthResponse> {
-    const { data, error } = await supabase.rpc("login_with_pin", {
+    const { data, error } = await (supabase.rpc as any)("login_with_pin", {
       p_employee_id: employeeId.toUpperCase(),
       p_pin: pin,
     });
 
     if (error) {
       const authError = new AuthError(error.message, parseInt(error.code, 10) || 500);
-      return { data: { user: null, session: null }, error: authError };
+      return {  { user: null, session: null }, error: authError };
     }
 
     const responseData = data as LoginWithPinResponse;
@@ -36,7 +36,7 @@ export const authService = {
     }
 
     const authError = new AuthError(responseData?.message || "Invalid credentials or PIN", 401);
-    return { data: { user: null, session: null }, error: authError };
+    return {  { user: null, session: null }, error: authError };
   },
 
   async resetPassword(email: string) {
@@ -49,7 +49,7 @@ export const authService = {
     return supabase.auth.signOut();
   },
 
-  async signUp(email: string, password: string, options?: Record<string, unknown>): Promise<AuthResponse> {
+  async signUp(email: string, password: string, options?: Record<string, any>): Promise<AuthResponse> {
     return supabase.auth.signUp({ email, password, options });
   },
 };

@@ -64,7 +64,7 @@ export default function SuperAdminDashboard() {
         ...systemStatsData, 
         activeSuperAdmins: adminsData.length 
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error loading dashboard: ", error);
       toast.error("Failed to load dashboard data.");
     }
@@ -75,7 +75,7 @@ export default function SuperAdminDashboard() {
     try {
       await logout();
       toast.success("Logged out successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Logout failed:", error);
       toast.error("Logout failed. Please try again.");
     }
@@ -96,7 +96,7 @@ export default function SuperAdminDashboard() {
       try {
         await superAdminService.deleteOrganization(orgId);
         loadDashboardData(); // Refresh data
-      } catch (error) {
+      } catch (error: unknown) {
         alert("Failed to delete organization: " + (error as Error).message);
       }
     }
