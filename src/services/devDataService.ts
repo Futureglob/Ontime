@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { hashPin } from "@/lib/utils";
 
 export const devDataService = {
   async setupTestEmployees() {
@@ -28,7 +29,7 @@ export const devDataService = {
 
       const orgId = orgs[0].id;
 
-      // Create test employees with PINs
+      // Create test employees with properly hashed PINs
       const testEmployees = [
         {
           id: "test-employee-1",
@@ -39,7 +40,7 @@ export const devDataService = {
           mobile_number: "+1234567890",
           organization_id: orgId,
           is_active: true,
-          pin_hash: "pin_123456", // PIN: 123456
+          pin_hash: await hashPin("123456", "test-employee-1"), // PIN: 123456
           pin_created_at: new Date().toISOString(),
           pin_expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days
           failed_pin_attempts: 0
@@ -53,7 +54,7 @@ export const devDataService = {
           mobile_number: "+1234567891",
           organization_id: orgId,
           is_active: true,
-          pin_hash: "pin_654321", // PIN: 654321
+          pin_hash: await hashPin("654321", "test-employee-2"), // PIN: 654321
           pin_created_at: new Date().toISOString(),
           pin_expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
           failed_pin_attempts: 0
@@ -67,7 +68,7 @@ export const devDataService = {
           mobile_number: "+1234567892",
           organization_id: orgId,
           is_active: true,
-          pin_hash: "pin_111111", // PIN: 111111
+          pin_hash: await hashPin("111111", "test-employee-3"), // PIN: 111111
           pin_created_at: new Date().toISOString(),
           pin_expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
           failed_pin_attempts: 0
@@ -81,7 +82,7 @@ export const devDataService = {
           mobile_number: "+1234567893",
           organization_id: orgId,
           is_active: true,
-          pin_hash: "pin_999999", // PIN: 999999
+          pin_hash: await hashPin("999999", "test-employee-4"), // PIN: 999999
           pin_created_at: new Date().toISOString(),
           pin_expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
           failed_pin_attempts: 0

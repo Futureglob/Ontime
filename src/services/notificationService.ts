@@ -194,17 +194,36 @@ export const notificationService = {
   },
 
   // Get unread notifications from a database (placeholder)
-  async getUnreadNotifications(): Promise<NotificationType[]> {
-    // TODO: Implement proper notification storage and retrieval from Supabase
-    // Removed console.log to prevent spam in console
-    return [];
+  async getUnreadNotifications(): Promise<any[]> {
+    // Mock implementation - replace with actual Supabase query
+    try {
+      // For now, return empty array to prevent errors
+      return [];
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      return [];
+    }
   },
 
   // Mark a notification as read
-  async markNotificationAsRead(notificationId: string): Promise<void> {
-    // TODO: Implement proper notification storage and retrieval from Supabase
-    // Removed console.log to prevent spam in console
-    console.log(`Marking notification ${notificationId} as read`);
+  async markAsRead(notificationId: string): Promise<void> {
+    // Mock implementation
+    console.log("Marking notification as read:", notificationId);
+  },
+
+  showNotification(title: string, options?: { body?: string; tag?: string }): void {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, options);
+    } else {
+      console.log("Notification:", title, options?.body);
+    }
+  },
+
+  async requestPermission(): Promise<NotificationPermission> {
+    if ("Notification" in window) {
+      return await Notification.requestPermission();
+    }
+    return "denied";
   }
 };
 
