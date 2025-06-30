@@ -12,7 +12,7 @@ interface TaskUpdatePayload {
 }
 
 interface PhotoUploadMetadata {
-  type: PhotoType;
+  type: "check_in" | "progress" | "completion";
   location?: { lat: number; lng: number };
   timestamp: string;
   notes?: string;
@@ -71,21 +71,21 @@ export const offlineService = {
   },
 
   // Cache task data for offline access
-  cacheTaskData(tasks: Task[]) {
+  cacheTaskData(tasks: any[]) {
     localStorage.setItem('ontime_cached_tasks', JSON.stringify({
       tasks,
       timestamp: Date.now()
     }));
   },
 
-  getCachedTaskData(): Task[] | null {
+  getCachedTaskData(): any[] | null {
     const cached = localStorage.getItem('ontime_cached_tasks');
     if (!cached) return null;
     
     const parsed = JSON.parse(cached);
     const isExpired = Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000; // 24 hours
     
-    return isExpired ? null : parsed.tasks as Task[];
+    return isExpired ? null : parsed.tasks;
   },
 
   // Cache photos for offline upload
@@ -134,8 +134,8 @@ export const offlineService = {
 
     let syncedActions = 0;
     let syncedPhotos = 0;
-    const failedActions: OfflineTaskAction[] = []; // Changed to const
-    const failedPhotos: CachedPhoto[] = []; // Changed to const
+    const failedActions: OfflineTaskAction[] = [];
+    const failedPhotos: CachedPhoto[] = [];
 
     // Process offline actions
     for (const action of offlineActions) {

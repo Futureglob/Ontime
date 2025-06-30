@@ -13,6 +13,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import Image from "next/image";
+import { EnrichedTask } from "@/services/taskService";
 
 interface PhotoData {
   id: string;
@@ -33,7 +34,7 @@ interface PhotoCaptureProps {
   onCancel: () => void;
 }
 
-export default function PhotoCapture({ task, onSuccess, onCancel }: PhotoCaptureProps) {
+export default function PhotoCapture({ task }: PhotoCaptureProps) {
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [selectedType, setSelectedType] = useState<"check_in" | "progress" | "completion">("progress");
@@ -132,11 +133,6 @@ export default function PhotoCapture({ task, onSuccess, onCancel }: PhotoCapture
       try {
         setUploading(true);
         
-        // Create file from blob
-        // const file = new File([blob], `${selectedType}_${Date.now()}.jpg`, {
-        //   type: "image/jpeg"
-        // });
-
         // Mock photo upload - replace with actual service call
         const photoUrl = URL.createObjectURL(blob);
         
@@ -282,7 +278,7 @@ export default function PhotoCapture({ task, onSuccess, onCancel }: PhotoCapture
                   key={type}
                   variant={selectedType === type ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedType(type)}
+                  onClick={() => setSelectedType(type as "check_in" | "progress" | "completion")}
                   className="flex items-center gap-2"
                 >
                   {getTypeIcon(type)}
