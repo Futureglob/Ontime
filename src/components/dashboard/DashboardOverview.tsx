@@ -17,9 +17,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 import { taskService, Task } from "@/services/taskService";
-import { notificationService } from "@/services/notificationService";
 import { Skeleton } from "@/components/ui/skeleton";
-import { superAdminService } from "@/services/superAdminService";
 
 interface DashboardStats {
   totalTasks: number;

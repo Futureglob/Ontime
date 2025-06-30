@@ -1,4 +1,5 @@
-import { taskService } from "@/services/taskService";
+
+import { taskService, TaskUpdate } from "@/services/taskService";
 import { photoService } from "@/services/photoService";
 import { notificationService } from "@/services/notificationService";
 
@@ -159,13 +160,14 @@ export const offlineService = {
     }
     
     // Sync task status updates
-    const taskUpdates = await this.getQueuedData('taskUpdates');
+    const taskUpdates = await this.getQueuedData("taskUpdates");
     for (const update of taskUpdates) {
       try {
-        await taskService.updateTask(update.id, update.data);
-        await this.removeFromQueue('taskUpdates', update.id);
+        const typedUpdate = update as { id: string;  TaskUpdate };
+        await taskService.updateTask(typedUpdate.id, typedUpdate.data);
+        await this.removeFromQueue("taskUpdates", typedUpdate.id);
       } catch (error) {
-        console.error('Failed to sync task update:', error);
+        console.error("Failed to sync task update:", error);
       }
     }
     
@@ -204,9 +206,9 @@ export const offlineService = {
     switch (action.action) {
       case 'update_status':
         const updatePayload = action.payload as TaskUpdatePayload;
-        await taskService.updateTaskStatus(
+        await taskService.updateTask(
           updatePayload.taskId,
-          updatePayload.status
+          { status: updatePayload.status, notes: updatePayload.notes }
         );
         break;
 
@@ -288,12 +290,12 @@ export const offlineService = {
   },
 
   // Queue management
-  async getQueuedData(queueName: string): Promise<any[]> {
+  async getQueuedData(queueName: string): Promise<Record<string, unknown>[]> {
     const stored = localStorage.getItem(`ontime_${queueName}`);
     return stored ? JSON.parse(stored) : [];
   },
 
-  async addToQueue(queueName: string, data: any) {
+  async addToQueue(queueName: string,  Record<string, unknown>) {
     const existing = await this.getQueuedData(queueName);
     existing.push(data);
     localStorage.setItem(`ontime_${queueName}`, JSON.stringify(existing));
@@ -301,7 +303,7 @@ export const offlineService = {
 
   async removeFromQueue(queueName: string, id: string) {
     const existing = await this.getQueuedData(queueName);
-    const filtered = existing.filter(item => item.id !== id);
+    const filtered = existing.filter(item => (item as { id: string }).id !== id);
     if (filtered.length === existing.length) return false; // Item not found
     
     localStorage.setItem(`ontime_${queueName}`, JSON.stringify(filtered));
