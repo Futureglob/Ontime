@@ -38,30 +38,32 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setLoading(true);
-        setSession(session);
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        await fetchProfile(currentUser);
-        setLoading(false);
-      }
-    );
-
-    // Initial load
-    (async () => {
+    const getSessionData = async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const {  { session } } = await supabase.auth.getSession();
       setSession(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       await fetchProfile(currentUser);
       setLoading(false);
-    })();
+    };
 
-    return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+    getSessionData();
+
+    const {  { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        await fetchProfile(currentUser);
+        if (loading) setLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile, loading]);
 
   const logout = async () => {
     await supabase.auth.signOut();

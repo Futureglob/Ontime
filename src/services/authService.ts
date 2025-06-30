@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { AuthTokenResponsePassword } from "@supabase/supabase-js";
 
 interface LoginWithPinResponse {
   access_token?: string;
@@ -8,7 +9,7 @@ interface LoginWithPinResponse {
 }
 
 export const authService = {
-  async login(email: string, password: string) {
+  async login(email: string, password: string): Promise<AuthTokenResponsePassword> {
     return supabase.auth.signInWithPassword({ email, password });
   },
 
@@ -20,7 +21,7 @@ export const authService = {
       });
 
       if (error) {
-        return { data: null, error };
+        return {  null, error };
       }
 
       const responseData = data as LoginWithPinResponse;
@@ -32,16 +33,16 @@ export const authService = {
         });
 
         if (sessionError) {
-          return { data: null, error: sessionError };
+          return {  null, error: sessionError };
         }
         
-        const { data: { session } } = await supabase.auth.getSession();
-        return { data: { session }, error: null };
+        const {  { session } } = await supabase.auth.getSession();
+        return {  { session }, error: null };
       }
 
-      return { data: null, error: new Error(responseData?.message || "Invalid credentials") };
+      return {  null, error: new Error(responseData?.message || "Invalid credentials") };
     } catch (error) {
-      return { data: null, error: error as Error };
+      return {  null, error: error as Error };
     }
   },
 

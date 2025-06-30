@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { profileService, type Profile } from "@/services/profileService";
+import { profileService } from "@/services/profileService";
 import EmployeeForm from "./EmployeeForm";
 import {
   AlertDialog,
@@ -27,9 +28,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Database } from "@/integrations/supabase/types";
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+
 
 export default function EmployeeManagement() {
-  const { profile: userProfile, loading: authLoading } = useAuth();
+  const { currentProfile: userProfile, loading: authLoading } = useAuth();
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +43,11 @@ export default function EmployeeManagement() {
   const [editingEmployee, setEditingEmployee] = useState<Profile | null>(null);
 
   const loadEmployees = useCallback(async () => {
-    console.log("loadEmployees called with profile:", userProfile);
-    
     if (!userProfile?.organization_id) {
-      console.log("No organization ID found:", userProfile);
       setEmployeesLoading(false);
       return;
     }
 
-    console.log("Loading employees for organization:", userProfile.organization_id);
     setEmployeesLoading(true);
     setError(null);
     
@@ -54,20 +55,16 @@ export default function EmployeeManagement() {
       const employeesData = await profileService.getOrganizationProfiles(
         userProfile.organization_id
       );
-      console.log("Loaded employees:", employeesData);
       setEmployees(employeesData || []);
     } catch (err) {
-      console.error("Error loading employees:", err);
       setError("Failed to load employees");
       setEmployees([]);
     } finally {
       setEmployeesLoading(false);
     }
-  }, [userProfile]); // Added userProfile to dependencies
+  }, [userProfile]);
 
   useEffect(() => {
-    console.log("Effect triggered - Auth loading:", authLoading, "Profile:", userProfile);
-    
     if (!authLoading && userProfile?.organization_id) {
       loadEmployees();
     }
