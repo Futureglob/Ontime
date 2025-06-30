@@ -30,9 +30,8 @@ const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   status: z.string().min(1, "Status is required"),
-  priority: z.string().min(1, "Priority is required"),
   assigned_to: z.string().optional(),
-  due_date: z.date().optional(),
+  deadline: z.date().optional(),
 });
 
 interface TaskFormProps {
@@ -50,7 +49,6 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
     register,
     handleSubmit,
     control,
-    reset,
     formState: { errors },
   } = useForm<z.infer<typeof taskSchema>>({
     resolver: zodResolver(taskSchema),
@@ -58,19 +56,19 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
       title: task?.title || "",
       description: task?.description || "",
       status: task?.status || "pending",
-      priority: task?.priority || "medium",
       assigned_to: task?.assigned_to || "",
-      due_date: task?.due_date ? new Date(task.due_date) : undefined,
+      deadline: task?.deadline ? new Date(task.deadline) : undefined,
     },
   });
 
   const loadUsers = useCallback(async () => {
     if (profile?.organization_id) {
       try {
-        const orgUsers = await profileService.getProfilesByOrganization(profile.organization_id);
-        setUsers(orgUsers);
+        const orgUsers = await profileService.getOrganizationProfiles(profile.organization_id);
+        setUsers(orgUsers || []);
       } catch (error) {
         console.error("Failed to load users:", error);
+        setUsers([]);
       }
     }
   }, [profile?.organization_id]);
@@ -84,16 +82,16 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
     setLoading(true);
 
     try {
+      const data = {
+        ...values,
+        deadline: values.deadline ? values.deadline.toISOString() : null,
+      };
+
       if (task) {
-        const updateData: TaskUpdate = {
-          ...values,
-          due_date: values.due_date ? values.due_date.toISOString() : null,
-        };
-        await taskService.updateTask(task.id, updateData);
+        await taskService.updateTask(task.id, data as TaskUpdate);
       } else {
         const insertData: TaskInsert = {
-          ...values,
-          due_date: values.due_date ? values.due_date.toISOString() : null,
+          ...data,
           created_by: profile.id,
           organization_id: profile.organization_id,
         };
@@ -152,29 +150,6 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <label>Priority</label>
-              <Controller
-                name="priority"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
               <label>Assign To</label>
               <Controller
                 name="assigned_to"
@@ -185,7 +160,7 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                       <SelectValue placeholder="Select a user" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users && users.map((user) => (
+                      {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name}
                         </SelectItem>
@@ -195,10 +170,12 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                 )}
               />
             </div>
-            <div className="space-y-2">
-              <label>Due Date</label>
+          </div>
+
+          <div className="space-y-2">
+              <label>Deadline</label>
               <Controller
-                name="due_date"
+                name="deadline"
                 control={control}
                 render={({ field }) => (
                   <Popover>
@@ -226,7 +203,6 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                 )}
               />
             </div>
-          </div>
 
           <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={onCancel}>

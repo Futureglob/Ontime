@@ -1,10 +1,10 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { taskService, Task } from "@/services/taskService";
+import { taskService, EnrichedTask, Task } from "@/services/taskService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Filter, Search } from "lucide-react";
+import { PlusCircle, Search } from "lucide-react";
 import TaskCard from "./TaskCard";
 import TaskForm from "./TaskForm";
 import { Input } from "@/components/ui/input";
@@ -19,13 +19,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TaskManagement() {
   const { profile } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
 
   const canCreateTasks = useMemo(() => 
     profile?.role && ['task_manager', 'org_admin', 'super_admin'].includes(profile.role),
@@ -36,7 +35,7 @@ export default function TaskManagement() {
     if (!profile) return;
     setLoading(true);
     try {
-      let fetchedTasks: Task[];
+      let fetchedTasks: EnrichedTask[];
       if (profile.role === 'org_admin' || profile.role === 'super_admin') {
         fetchedTasks = await taskService.getTasksForOrganization(profile.organization_id!);
       } else {
@@ -81,10 +80,9 @@ export default function TaskManagement() {
       const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             task.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
-      return matchesSearch && matchesStatus && matchesPriority;
+      return matchesSearch && matchesStatus;
     });
-  }, [tasks, searchTerm, statusFilter, priorityFilter]);
+  }, [tasks, searchTerm, statusFilter]);
 
   if (isFormOpen) {
     return (
@@ -135,18 +133,6 @@ export default function TaskManagement() {
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Filter by priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
             </SelectContent>
           </Select>
         </CardContent>
