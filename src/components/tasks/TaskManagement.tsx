@@ -1,6 +1,8 @@
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { taskService, Task } from "@/services/taskService";
+import { profileService } from "@/services/profileService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Search } from "lucide-react";
@@ -15,35 +17,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Database } from "@/integrations/supabase/types";
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 export default function TaskManagement() {
-  const { profile } = useAuth();
+  const { currentProfile } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const canCreateTasks = useMemo(() => 
-    profile?.role && ['task_manager', 'org_admin', 'super_admin'].includes(profile.role),
-    [profile]
+    currentProfile?.role && ['task_manager', 'org_admin', 'super_admin'].includes(currentProfile.role),
+    [currentProfile]
   );
 
-  const loadTasks = useCallback(async () => {
-    if (!profile) return;
+  const fetchTasks = useCallback(async () => {
+    if (!currentProfile) return;
     setLoading(true);
     try {
-      if (profile.role === "org_admin" && profile.organization_id) {
+      if (currentProfile.role === "org_admin" && currentProfile.organization_id) {
         const orgTasks = await taskService.getTasksForOrganization(
-          profile.organization_id
+          currentProfile.organization_id
         );
         setTasks(orgTasks);
-      } else if (profile.role === "super_admin") {
+      } else if (currentProfile.role === "super_admin") {
         const allTasks = await taskService.getTasks();
         setTasks(allTasks);
       } else {
-        const userTasks = await taskService.getTasksForUser();
+        const userTasks = await taskService.getTasksForUser(currentProfile.id);
         setTasks(userTasks);
       }
     } catch (error) {
@@ -52,28 +58,34 @@ export default function TaskManagement() {
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [currentProfile]);
+
+  const fetchUsers = useCallback(async () => {
+    if (!currentProfile?.organization_id) return;
+    try {
+      const orgUsers = await profileService.getProfilesByOrganization(currentProfile.organization_id);
+      setUsers(orgUsers);
+    } catch (error) {
+      console.error("Failed to load users:", error);
+      setUsers([]);
+    }
+  }, [currentProfile?.organization_id]);
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
-
-  const handleFormSuccess = () => {
-    setIsFormOpen(false);
-    setSelectedTask(null);
-    loadTasks();
-  };
+    fetchTasks();
+    fetchUsers();
+  }, [fetchTasks, fetchUsers]);
 
   const handleEdit = (task: Task) => {
     setSelectedTask(task);
-    setIsFormOpen(true);
+    setShowForm(true);
   };
 
   const handleDelete = async (taskId: string) => {
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
         await taskService.deleteTask(taskId);
-        loadTasks();
+        fetchTasks();
       } catch (error) {
         console.error("Failed to delete task:", error);
       }
@@ -91,19 +103,17 @@ export default function TaskManagement() {
 
   const handleSuccess = () => {
     setSelectedTask(null);
-    setIsFormOpen(false);
-    loadTasks();
+    setShowForm(false);
+    fetchTasks();
   };
 
-  if (isFormOpen) {
+  if (showForm) {
     return (
       <TaskForm
         task={selectedTask}
+        users={users}
         onSuccess={handleSuccess}
-        onCancel={() => {
-          setIsFormOpen(false);
-          setSelectedTask(null);
-        }}
+        onCancel={() => setShowForm(false)}
       />
     );
   }
@@ -113,7 +123,7 @@ export default function TaskManagement() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Task Management</h1>
         {canCreateTasks && (
-          <Button onClick={() => setIsFormOpen(true)}>
+          <Button onClick={() => setShowForm(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Task
           </Button>

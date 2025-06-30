@@ -1,21 +1,21 @@
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  LayoutDashboard,
-  CheckSquare,
-  Users,
+  Home,
+  Briefcase,
   MapPin,
+  Users,
+  Users2,
   MessageSquare,
-  BarChart3,
-  Settings,
-  Building2,
+  BarChart2,
+  Building,
   User,
+  Settings,
   ShieldCheck,
   Bell,
-  Home,
-  Users2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { taskService } from "@/services/taskService";
@@ -38,11 +38,8 @@ const baseNavigation = [
 const superAdminNav = { name: "Super Admin", href: "/superadmin", icon: ShieldCheck };
 
 export default function Sidebar() {
-  const { user, loading, currentProfile } = useAuth();
+  const { currentProfile } = useAuth();
   const router = useRouter();
-  const isMobile = useMobile();
-
-  const isSuperAdmin = currentProfile?.role === "super_admin";
 
   const navigationItems = useMemo(() => {
     if (!currentProfile) return [];
@@ -51,29 +48,24 @@ export default function Sidebar() {
 
     switch (currentProfile.role) {
       case "employee":
-        // Employees can only see basic functionality
         nav = nav.filter((item) =>
           ["Dashboard", "Tasks", "Field Work", "Messages", "Profile"].includes(item.name)
         );
         break;
       case "task_manager":
-        // Task managers can see most features except organization management and super admin
         nav = nav.filter((item) => 
           !["Organization", "Super Admin"].includes(item.name)
         );
         break;
       case "org_admin":
-        // Org admins can see everything except super admin
         nav = nav.filter((item) => item.name !== "Super Admin");
         break;
       case "super_admin":
-        // Super admins see all base items plus super admin panel
         if (!nav.find((item) => item.name === "Super Admin")) {
           nav.push(superAdminNav);
         }
         break;
       default:
-        // Default fallback for unknown roles
         nav = nav.filter((item) => ["Dashboard", "Tasks", "Profile"].includes(item.name));
         break;
     }
@@ -86,8 +78,7 @@ export default function Sidebar() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   const loadData = useCallback(async () => {
-    const currentUserId = user?.id || profile?.id;
-    if (!currentUserId) {
+    if (!currentProfile) {
       setTaskCount(0);
       setNotificationCount(0);
       return;
@@ -95,8 +86,8 @@ export default function Sidebar() {
 
     try {
       const [tasks, notifications] = await Promise.all([
-        taskService.getTasksForUser(),
-        notificationService.getUnreadNotifications(),
+        taskService.getTasksForUser(currentProfile.id),
+        notificationService.getUnreadNotifications(currentProfile.id),
       ]);
       setTaskCount(tasks.length);
       setNotificationCount(notifications.length);
@@ -105,7 +96,7 @@ export default function Sidebar() {
       setTaskCount(0);
       setNotificationCount(0);
     }
-  }, [user?.id, profile?.id]);
+  }, [currentProfile]);
 
   useEffect(() => {
     loadData();
@@ -174,7 +165,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {profile && (
+      {currentProfile && (
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">
@@ -182,10 +173,10 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {profile.full_name || "User"}
+                {currentProfile.full_name || "User"}
               </p>
               <p className="text-xs text-gray-500 capitalize">
-                {profile.role?.replace("_", " ") || "Employee"}
+                {currentProfile.role?.replace("_", " ") || "Employee"}
               </p>
             </div>
           </div>
