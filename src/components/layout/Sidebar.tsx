@@ -95,7 +95,7 @@ export default function Sidebar() {
       setTaskCount(tasks.length);
       setNotificationCount(notifications.length);
     } catch (error) {
-      console.error("Error loading sidebar ", error);
+      console.error("Error loading sidebar data:", error);
       setTaskCount(0);
       setNotificationCount(0);
     }
