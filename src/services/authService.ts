@@ -1,6 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Profile, UserRole } from "@/types";
-import { AuthResponse, Session, User, SignUpWithPasswordCredentials } from "@supabase/supabase-js";
+import { AuthResponse, Session, User } from "@supabase/supabase-js";
 
 export const authService = {
   async signIn(email: string, password: string): Promise<AuthResponse["data"]> {
@@ -17,7 +18,7 @@ export const authService = {
       email,
       password,
       options: {
-         meta,
+          meta,
       },
     });
     if (error) throw error;
