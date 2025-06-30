@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
@@ -15,7 +16,7 @@ export const taskService = {
   async getTasks(): Promise<EnrichedTask[]> {
     try {
       // Simple query without relationships to avoid foreign key errors
-      const { data: tasks, error } = await supabase
+      const {  tasks, error } = await supabase
         .from("tasks")
         .select("*")
         .order("created_at", { ascending: false });
@@ -37,10 +38,10 @@ export const taskService = {
     }
   },
 
-  async getTasksForUser(userId: string): Promise<EnrichedTask[]> {
+  async getTasksForUser(_userId: string): Promise<EnrichedTask[]> {
     try {
       // REMOVED: Query for non-existent columns assigned_to and created_by
-      const { data: tasks, error } = await supabase
+      const {  tasks, error } = await supabase
         .from("tasks")
         .select("*")
         .order("created_at", { ascending: false });
@@ -63,7 +64,7 @@ export const taskService = {
 
   async getTasksForOrganization(organizationId: string): Promise<EnrichedTask[]> {
     try {
-      const { data: tasks, error } = await supabase
+      const {  tasks, error } = await supabase
         .from("tasks")
         .select("*")
         .eq("organization_id", organizationId)
@@ -87,7 +88,7 @@ export const taskService = {
 
   async getTaskById(id: string): Promise<EnrichedTask | null> {
     try {
-      const { data: task, error } = await supabase
+      const {  task, error } = await supabase
         .from("tasks")
         .select("*")
         .eq("id", id)
@@ -166,7 +167,7 @@ export const taskService = {
     }
   },
 
-  async getTaskCountForUser(userId: string): Promise<number> {
+  async getTaskCountForUser(_userId: string): Promise<number> {
     try {
       // REMOVED: Query for non-existent columns assigned_to and created_by
       const { count, error } = await supabase
