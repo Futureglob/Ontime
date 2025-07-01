@@ -35,5 +35,6 @@ export default function ProfilePage() {
 }
 
 ProfilePage.getLayout = function getLayout(page: React.ReactElement) {
+  // Don't apply layout for super admin users
   return <DashboardLayout>{page}</DashboardLayout>;
 };

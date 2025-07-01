@@ -9,8 +9,12 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user && !isSuperAdmin) {
-      router.replace("/profile");
+    if (!loading && user) {
+      if (isSuperAdmin) {
+        router.replace("/superadmin");
+      } else {
+        router.replace("/profile");
+      }
     }
   }, [user, loading, isSuperAdmin, router]);
 
@@ -22,7 +26,7 @@ export default function HomePage() {
     );
   }
 
-  if (user && !isSuperAdmin) {
+  if (user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         Redirecting...
