@@ -1,5 +1,6 @@
-import { supabase } from "@/integrations/supabase/client";
-import { Profile } from "@/types/database";
+
+        import { supabase } from "@/integrations/supabase/client";
+import type { Organization, OrganizationDetails, Profile, TaskSummary } from "@/types/database";
 
 const organizationManagementService = {
   async getEmployees(organizationId: string): Promise<Profile[]> {
@@ -9,7 +10,7 @@ const organizationManagementService = {
       .eq("organization_id", organizationId);
 
     if (error) throw error;
-    return data as Profile[];
+    return data || [];
   },
 
   async addEmployee(employeeData: {
@@ -41,7 +42,7 @@ const organizationManagementService = {
         organization_id: employeeData.organizationId,
         full_name: employeeData.fullName,
         employee_id: employeeData.employeeId,
-        role: employeeData.role,
+        role: employeeData.role as Profile["role"],
         designation: employeeData.designation || "",
         mobile_number: employeeData.mobileNumber || "",
       })
@@ -49,7 +50,6 @@ const organizationManagementService = {
       .single();
 
     if (profileError) {
-      // Clean up created user if profile creation fails
       await supabase.auth.admin.deleteUser(user.id);
       throw profileError;
     }
@@ -146,8 +146,8 @@ const organizationManagementService = {
   },
 
   async generateUserPin(userId: string) {
-    const { data, error } = await supabase.rpc("generate_user_pin" as any, {
-      user_id: userId,
+    const { data, error } = await supabase.rpc("generate_user_pin", {
+      p_user_id: userId,
     });
     if (error) {
       console.error("Error generating user PIN:", error);
@@ -217,6 +217,9 @@ const organizationManagementService = {
       mobile_number?: string;
     }[]
   ) {
+    // This implementation is a placeholder. A proper implementation
+    // would need to create auth users first, then create profiles.
+    console.log("Bulk import called with:", { organization_id, employees });
     const { data, error } = await supabase
       .from("profiles")
       .insert(
@@ -227,9 +230,13 @@ const organizationManagementService = {
       )
       .select();
 
-    if (error) throw error;
+    if (error) {
+        console.error("Bulk import error:", error);
+        throw error;
+    }
     return data as Profile[];
   }
 };
 
 export default organizationManagementService;
+      

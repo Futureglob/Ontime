@@ -1,20 +1,29 @@
-import { useState, useEffect } from "react";
+
+        import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import profileService from "@/services/profileService";
-import storageService from "@/services/storageService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Profile } from "@/types/database";
 
 const profileFormSchema = z.object({
   full_name: z.string().min(2, {
     message: "Full name must be at least 2 characters.",
   }),
-  phone: z.string().optional(),
+  mobile_number: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -28,7 +37,7 @@ export default function ProfileSettings() {
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       full_name: "",
-      phone: "",
+      mobile_number: "",
     },
   });
 
@@ -36,27 +45,23 @@ export default function ProfileSettings() {
     if (currentProfile) {
       form.reset({
         full_name: currentProfile.full_name || "",
-        phone: currentProfile.phone || "",
+        mobile_number: currentProfile.mobile_number || "",
       });
     }
   }, [currentProfile, form]);
 
   async function onSubmit( ProfileFormValues) {
-    if (!user || !currentProfile) return;
+    if (!currentProfile) return;
 
     setIsSubmitting(true);
     try {
-      const { error } = await profileService.updateProfile(user.id, {
-        ...data,
-        id: user.id,
-        organization_id: currentProfile.organization_id,
-        role: currentProfile.role,
+      const updates: Partial<Profile> = {
+        full_name: data.full_name,
+        mobile_number: data.mobile_number,
         updated_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        throw error;
-      }
+      };
+      
+      await profileService.updateProfile(currentProfile.id, updates);
 
       await refreshProfile();
 
@@ -99,7 +104,7 @@ export default function ProfileSettings() {
                 <FormItem>
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Your full name" {...field} />
+                    <Input placeholder="Your full name" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -107,12 +112,12 @@ export default function ProfileSettings() {
             />
             <FormField
               control={form.control}
-              name="phone"
+              name="mobile_number"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="Your phone number" {...field} />
+                    <Input placeholder="Your phone number" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -127,3 +132,4 @@ export default function ProfileSettings() {
     </Card>
   );
 }
+      

@@ -29,7 +29,7 @@ export default function Sidebar({ profile, onLogout }: SidebarProps) {
 
   const getNavLinks = () => {
     switch (profile.role) {
-      case "superadmin":
+      case "super_admin":
         return [
           { href: "/superadmin", label: "Dashboard", icon: Shield },
           { href: "/settings", label: "System Settings", icon: Settings },
