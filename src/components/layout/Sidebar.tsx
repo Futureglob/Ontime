@@ -20,6 +20,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { taskService } from "@/services/taskService";
 import { notificationService } from "@/services/notificationService";
 import Image from "next/image";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import RoleSwitcher from "@/components/dev/RoleSwitcher";
 
 const baseNavigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -85,11 +88,11 @@ export default function Sidebar() {
 
     try {
       const [tasks, notifications] = await Promise.all([
-        taskService.getTasksForUser(currentProfile.id),
+        taskService.getTasksForUser(currentProfile.user_id),
         notificationService.getUnreadNotifications(),
       ]);
       const pendingCount = tasks.filter(task => 
-        task.assignee_id === currentProfile.id && 
+        task.assigned_to === currentProfile.user_id && 
         ['assigned', 'pending'].includes(task.status)
       ).length;
       setTaskCount(pendingCount);

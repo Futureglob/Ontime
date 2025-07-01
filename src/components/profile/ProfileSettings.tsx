@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -78,7 +77,7 @@ export default function ProfileSettings() {
     try {
       let avatar_url = profile.avatar_url;
       if (avatarFile) {
-        avatar_url = await storageService.uploadAvatar(user.id, avatarFile);
+        avatar_url = await storageService.uploadProfilePhoto(user.id, avatarFile);
       }
 
       const updatedProfileData = {
@@ -89,7 +88,7 @@ export default function ProfileSettings() {
       const updatedProfile = await profileService.updateProfile(profile.id, updatedProfileData);
       setProfile(updatedProfile);
       toast({ title: "Success", description: "Profile updated successfully." });
-    } catch (error) {
+    } catch (err) {
       toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
     }
   };
