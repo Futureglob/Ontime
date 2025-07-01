@@ -1,27 +1,13 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
+import type { Profile } from "@/types/database";
 
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-
-export const profileService = {
-  async getOrganizationProfiles(organizationId: string): Promise<Profile[]> {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("organization_id", organizationId);
-
-    if (error) {
-      console.error("Error fetching organization profiles:", error);
-      return [];
-    }
-    return data || [];
-  },
-
+const profileService = {
   async getProfile(userId: string): Promise<Profile | null> {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", userId)
+      .eq("user_id", userId)
       .single();
 
     if (error) {
@@ -31,44 +17,18 @@ export const profileService = {
     return data;
   },
 
-  async updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile | null> {
+  async updateProfile(profileId: string, updates: Partial<Profile>): Promise<Profile> {
     const { data, error } = await supabase
       .from("profiles")
       .update(updates)
-      .eq("id", userId)
+      .eq("id", profileId)
       .select()
       .single();
 
-    if (error) {
-      console.error("Error updating profile:", error);
-      return null;
-    }
+    if (error) throw error;
     return data;
   },
-
-  async deleteProfile(userId: string): Promise<boolean> {
-    const { error } = await supabase
-      .from("profiles")
-      .delete()
-      .eq("id", userId);
-
-    if (error) {
-      console.error("Error deleting profile:", error);
-      return false;
-    }
-    return true;
-  },
-
-  async getProfilesByOrganization(organizationId: string) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    if (error) {
-      console.error('Error fetching profiles by organization:', error);
-      throw error;
-    }
-    return data || [];
-  },
 };
+
+export default profileService;
+  

@@ -1,459 +1,190 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
-import { 
-  Upload, 
-  Download, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle,
-  FileText
-} from "lucide-react";
-import { organizationManagementService } from "@/services/organizationManagementService";
+import { useDropzone } from "react-dropzone";
+import * as XLSX from "xlsx";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { authService } from "@/services/authService";
+import organizationManagementService from "@/services/organizationManagementService";
+import authService from "@/services/authService";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { UploadCloud, FileText, AlertTriangle, CheckCircle } from "lucide-react";
 
 interface BulkEmployeeImportProps {
-  onImportComplete: () => void;
-  onClose: () => void;
+  onSuccess: () => void;
 }
 
-interface EmployeeImportData {
-  full_name: string;
-  employee_id: string;
-  designation: string;
-  mobile_number: string;
+type EmployeeData = {
+  email: string;
+  fullName: string;
   role: string;
-  email?: string;
-}
+  employeeId: string;
+  designation?: string;
+  mobileNumber?: string;
+};
 
-interface ImportResult {
-  success: boolean;
-  employee: EmployeeImportData;
-  error?: string;
-  pin?: string;
-}
+export default function BulkEmployeeImport({ onSuccess }: BulkEmployeeImportProps) {
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const [employees, setEmployees] = useState<EmployeeData[]>([]);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-interface ImportSummary {
-  total: number;
-  successful: number;
-  failed: number;
-  results: ImportResult[];
-}
+  const onDrop = (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setFileName(file.name);
+      setError(null);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = event.target?.result;
+          const workbook = XLSX.read(data, { type: "binary" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json<any>(worksheet);
+          
+          const requiredFields = ["email", "fullName", "role", "employeeId"];
+          if (json.length > 0 && !requiredFields.every(field => field in json[0])) {
+            throw new Error(`Missing required columns. Please include: ${requiredFields.join(", ")}`);
+          }
 
-export default function BulkEmployeeImport({ onImportComplete, onClose }: BulkEmployeeImportProps) {
-  const { currentProfile } = useAuth();
-  const [employees, setEmployees] = useState<EmployeeImportData[]>([]);
-  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [step, setStep] = useState<"upload" | "preview" | "importing" | "results">("upload");
-
-  const downloadTemplate = () => {
-    const csvContent = `full_name,employee_id,designation,mobile_number,role,email
-John Doe,EMP001,Manager,+1234567890,employee,john@example.com
-Jane Smith,EMP002,Supervisor,+1234567891,employee,jane@example.com
-Mike Johnson,EMP003,Technician,+1234567892,employee,`;
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "employee_import_template.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
-
-    if (!selectedFile.name.endsWith(".csv")) {
-      alert("Please upload a CSV file");
-      return;
-    }
-
-    parseCSV(selectedFile);
-  };
-
-  const parseCSV = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split("\n").filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        alert("CSV file must contain at least a header row and one data row");
-        return;
-      }
-
-      const headers = lines[0].split(",").map(h => h.trim());
-      const requiredHeaders = ["full_name", "employee_id", "designation", "mobile_number", "role"];
-      
-      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-      if (missingHeaders.length > 0) {
-        alert(`Missing required columns: ${missingHeaders.join(", ")}`);
-        return;
-      }
-
-      const employeeData: EmployeeImportData[] = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(",").map(v => v.trim());
-        if (values.length < requiredHeaders.length) continue;
-
-        const employee: EmployeeImportData = {
-          full_name: values[headers.indexOf("full_name")] || "",
-          employee_id: values[headers.indexOf("employee_id")] || "",
-          designation: values[headers.indexOf("designation")] || "",
-          mobile_number: values[headers.indexOf("mobile_number")] || "",
-          role: values[headers.indexOf("role")] || "employee",
-          email: values[headers.indexOf("email")] || undefined
-        };
-
-        if (employee.full_name && employee.employee_id) {
-          employeeData.push(employee);
+          const parsedEmployees: EmployeeData[] = json.map((row) => ({
+            email: row.email,
+            fullName: row.fullName,
+            role: row.role,
+            employeeId: String(row.employeeId),
+            designation: row.designation,
+            mobileNumber: row.mobileNumber ? String(row.mobileNumber) : undefined,
+          }));
+          setEmployees(parsedEmployees);
+        } catch (e: any) {
+          setError(`Error parsing file: ${e.message}`);
+          setEmployees([]);
+          setFileName(null);
         }
-      }
-
-      setEmployees(employeeData);
-      setStep("preview");
-    };
-
-    reader.readAsText(file);
-  };
-
-  const validateEmployeeData = (employee: EmployeeImportData): string | null => {
-    if (!employee.full_name.trim()) return "Full name is required";
-    if (!employee.employee_id.trim()) return "Employee ID is required";
-    if (!employee.designation.trim()) return "Designation is required";
-    if (!employee.mobile_number.trim()) return "Mobile number is required";
-    if (!["employee", "task_manager", "org_admin"].includes(employee.role)) {
-      return "Role must be: employee, task_manager, or org_admin";
+      };
+      reader.readAsBinaryString(file);
     }
-    if (!employee.email) return "Email is required for creating an account.";
-    return null;
   };
 
-  const generateRandomPassword = () => {
-    return Math.random().toString(36).slice(-8);
-  }
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "application/vnd.ms-excel": [".xls"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+    },
+    maxFiles: 1,
+  });
 
-  const importEmployees = async () => {
-    if (!currentProfile?.organization_id) {
-      alert("Organization context is missing.");
+  const handleUpload = async () => {
+    if (!profile?.organization_id) {
+      toast({ title: "Error", description: "No organization found.", variant: "destructive" });
       return;
     }
-    setStep("importing");
-    setProgress(0);
-    
-    const validEmployees = employees.filter(e => !validateEmployeeData(e));
-    const results: ImportResult[] = [];
+    setIsUploading(true);
+    let successCount = 0;
+    let errorCount = 0;
 
-    for (let i = 0; i < validEmployees.length; i++) {
-      const employee = validEmployees[i];
+    for (const employee of employees) {
       try {
-        const { user, error } = await organizationManagementService.signUpUser(
-          employee.email!,
-          generateRandomPassword(),
-          currentProfile.organization_id
-        );
-
-        if (error || !user) {
-          results.push({ success: false, employee, error: error?.message || "Unknown error during sign up" });
-          continue;
-        }
-
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
-            full_name: employee.full_name,
-            employee_id: employee.employee_id,
-            designation: employee.designation,
-            mobile_number: employee.mobile_number,
-            role: employee.role,
-          })
-          .eq("id", user.id);
-
-        if (profileError) {
-          results.push({ success: false, employee, error: profileError.message });
-          continue;
-        }
-        
-        const { pin, error: pinError } = await authService.generatePinForUser(user.id);
-        if (pinError) {
-            results.push({ success: false, employee, error: pinError.message });
-            continue;
-        }
-
-        results.push({ success: true, employee, pin });
-
-      } catch (error) {
-        results.push({ success: false, employee, error: (error as Error).message });
+        // This is a simplified flow. In a real app, you'd invite the user
+        // and they would set their own password. For this implementation,
+        // we create the user directly.
+        await organizationManagementService.addEmployee({
+          ...employee,
+          organizationId: profile.organization_id,
+        });
+        successCount++;
+      } catch (e: any) {
+        console.error(`Failed to import ${employee.email}:`, e);
+        errorCount++;
       }
-      setProgress(((i + 1) / validEmployees.length) * 100);
     }
 
-    const successCount = results.filter(r => r.success).length;
-    const failedCount = results.filter(r => !r.success).length;
-
-    setImportSummary({
-      total: validEmployees.length,
-      successful: successCount,
-      failed: failedCount,
-      results: results
+    setIsUploading(false);
+    toast({
+      title: "Import Complete",
+      description: `${successCount} employees imported successfully. ${errorCount} failed.`,
     });
-
-    setStep("results");
-    onImportComplete();
-  };
-
-  const downloadResults = () => {
-    if (!importSummary) return;
-    const successfulImports = importSummary.results.filter(r => r.success);
-    
-    if (successfulImports.length === 0) {
-      alert("No successful imports to download");
-      return;
+    if (successCount > 0) {
+      onSuccess();
     }
-
-    const csvContent = `full_name,employee_id,email,pin
-${successfulImports.map(result => 
-      `${result.employee.full_name},${result.employee.employee_id},${result.employee.email},${result.pin}`
-    ).join("\n")}`;
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `employee_import_results_${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  };
-
-  const handleComplete = () => {
-    onClose();
+    setEmployees([]);
+    setFileName(null);
   };
 
   return (
     <div className="space-y-6">
-      {step === "upload" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
-              Bulk Employee Import
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <FileText className="h-4 w-4" />
-              <AlertDescription>
-                Upload a CSV file with employee data. Required columns: full_name, employee_id, designation, mobile_number, role, email.
-              </AlertDescription>
-            </Alert>
-            
-            <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={downloadTemplate}>
-                <Download className="h-4 w-4 mr-2" />
-                Download Template
-              </Button>
-            </div>
+      <div
+        {...getRootProps()}
+        className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer
+        ${isDragActive ? "border-primary bg-primary/10" : "border-muted-foreground/50 hover:border-primary"}`}
+      >
+        <input {...getInputProps()} />
+        <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
+        {isDragActive ? (
+          <p className="mt-2">Drop the file here ...</p>
+        ) : (
+          <p className="mt-2">Drag & drop an Excel file here, or click to select file</p>
+        )}
+        <p className="text-xs text-muted-foreground mt-1">.xlsx or .xls files only</p>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="csv-file">Select CSV File</Label>
-              <Input
-                id="csv-file"
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Import Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      {step === "preview" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Preview Import Data ({employees.length} employees)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="max-h-96 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Full Name</TableHead>
-                    <TableHead>Employee ID</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
+      {fileName && !error && (
+        <Alert>
+          <FileText className="h-4 w-4" />
+          <AlertTitle>File Ready</AlertTitle>
+          <AlertDescription>
+            {fileName} ({employees.length} records found). Ready to import.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {employees.length > 0 && (
+        <div>
+          <h3 className="font-semibold mb-2">Preview Data (first 5 rows)</h3>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Employee ID</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {employees.slice(0, 5).map((emp, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{emp.email}</TableCell>
+                    <TableCell>{emp.fullName}</TableCell>
+                    <TableCell>{emp.role}</TableCell>
+                    <TableCell>{emp.employeeId}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees.map((employee, index) => {
-                    const error = validateEmployeeData(employee);
-                    return (
-                      <TableRow key={index}>
-                        <TableCell>{employee.full_name}</TableCell>
-                        <TableCell>{employee.employee_id}</TableCell>
-                        <TableCell>{employee.email || "N/A"}</TableCell>
-                        <TableCell>{employee.role}</TableCell>
-                        <TableCell>
-                          {error ? (
-                            <Badge variant="destructive" title={error}>
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Error
-                            </Badge>
-                          ) : (
-                            <Badge variant="default">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Valid
-                            </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep("upload")}>
-                Back
-              </Button>
-              <Button onClick={importEmployees} disabled={employees.length === 0 || employees.some(e => validateEmployeeData(e))}>
-                Import {employees.filter(e => !validateEmployeeData(e)).length} Employees
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       )}
 
-      {step === "importing" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Importing Employees...</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Progress value={progress} className="w-full" />
-            <p className="text-center text-sm text-gray-600">
-              Processing {Math.round(progress)}% complete
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "results" && importSummary && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Import Results</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {importSummary.successful}
-                </div>
-                <div className="text-sm text-gray-600">Successful</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
-                  {importSummary.failed}
-                </div>
-                <div className="text-sm text-gray-600">Failed</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {importSummary.total}
-                </div>
-                <div className="text-sm text-gray-600">Total Valid</div>
-              </div>
-            </div>
-
-            {importSummary.failed > 0 && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Some employees could not be imported. Check the details below.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="max-h-64 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {importSummary.results.map((result, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{result.employee.full_name}</div>
-                          <div className="text-sm text-gray-500">{result.employee.email}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {result.success ? (
-                           <Badge variant="default">
-                             <CheckCircle className="h-3 w-3 mr-1" />
-                             Success
-                           </Badge>
-                        ) : (
-                           <Badge variant="destructive">
-                             <XCircle className="h-3 w-3 mr-1" />
-                             Failed
-                           </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {result.success ? (
-                          <span className="text-sm">PIN: {result.pin}</span>
-                        ) : (
-                          <span className="text-red-600 text-sm">{result.error}</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep("upload")}>
-                Import More
-              </Button>
-              <div className="flex gap-2">
-                {importSummary.successful > 0 && (
-                  <Button variant="outline" onClick={downloadResults}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download PINs
-                  </Button>
-                )}
-                <Button onClick={handleComplete}>
-                  Complete
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <Button
+        onClick={handleUpload}
+        disabled={employees.length === 0 || isUploading}
+        className="w-full"
+      >
+        {isUploading ? "Importing..." : `Import ${employees.length} Employees`}
+      </Button>
     </div>
   );
 }

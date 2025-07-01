@@ -1,9 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type Task = Database["public"]["Tables"]["tasks"]["Row"];
 type Organization = Database["public"]["Tables"]["organizations"]["Row"];
 
 export interface OrganizationDetails extends Organization {
@@ -40,35 +38,42 @@ const organizationManagementService = {
     fullName: string;
     role: string;
     employeeId: string;
+    organizationId: string; // Added organizationId
     designation?: string;
     mobileNumber?: string;
   }) {
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const {  authData, error: authError } = await supabase.auth.admin.createUser({
       email: employeeData.email,
-      password: Math.random().toString(36).slice(-8),
+      password: Math.random().toString(36).slice(-8), // Insecure, for dev only
       email_confirm: true,
       user_metadata: {
         full_name: employeeData.fullName,
-        role: employeeData.role
-      }
+        role: employeeData.role,
+      },
     });
 
     if (authError) throw authError;
+    if (!authData.user) throw new Error("User creation failed.");
 
-    const { data: profile, error: profileError } = await supabase
+    const {  profile, error: profileError } = await supabase
       .from("profiles")
       .insert({
         user_id: authData.user.id,
+        organization_id: employeeData.organizationId, // Use it here
         full_name: employeeData.fullName,
         employee_id: employeeData.employeeId,
         role: employeeData.role,
         designation: employeeData.designation || "",
-        mobile_number: employeeData.mobileNumber || ""
+        mobile_number: employeeData.mobileNumber || "",
       })
       .select()
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      // Clean up created user if profile creation fails
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      throw profileError;
+    }
     return profile;
   },
 

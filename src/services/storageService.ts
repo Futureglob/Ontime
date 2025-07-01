@@ -1,69 +1,47 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-const BUCKETS = {
-  avatars: "avatars",
-  taskPhotos: "task_photos",
-};
-
-export const storageService = {
-  async uploadFile(
-    bucket: string,
-    filePath: string,
-    file: File
-  ): Promise<string> {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: true,
-      });
-
-    if (error) {
-      console.error(`Error uploading to ${bucket}:`, error);
-      throw error;
-    }
-
-    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path);
-
-    return publicUrl;
-  },
-
-  async uploadProfilePhoto(userId: string, file: File): Promise<string> {
+const storageService = {
+  async uploadAvatar(userId: string, file: File): Promise<string> {
     const fileExt = file.name.split(".").pop();
-    const filePath = `${userId}.${fileExt}`;
-    return this.uploadFile(BUCKETS.avatars, filePath, file);
-  },
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
 
-  async uploadTaskPhoto(taskId: string, file: File): Promise<string> {
-    const fileName = `${taskId}/${new Date().toISOString()}-${file.name}`;
-    return this.uploadFile(BUCKETS.taskPhotos, fileName, file);
-  },
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file);
 
-  async deleteFile(publicUrl: string): Promise<void> {
-    try {
-      const url = new URL(publicUrl);
-      const pathWithBucket = url.pathname.split("/public/")[1];
-      const [bucket, ...pathParts] = pathWithBucket.split("/");
-      const path = pathParts.join("/");
-
-      if (!bucket || !path) {
-        console.error("Could not determine bucket or path from URL:", publicUrl);
-        return;
-      }
-
-      const { error } = await supabase.storage.from(bucket).remove([path]);
-
-      if (error) {
-        console.error("Error deleting file from storage:", error);
-      }
-    } catch (e) {
-      console.error("Invalid URL for file deletion:", publicUrl, e);
+    if (uploadError) {
+      throw uploadError;
     }
+
+    const { data } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
   },
 
-  getPublicUrl(bucket: string, path: string): string {
-    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
-    return publicUrl;
-  },
+  async uploadTaskPhoto(taskId: string, userId: string, file: File): Promise<{ photo_url: string, file_path: string }> {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${taskId}-${Date.now()}.${fileExt}`;
+    const filePath = `task-photos/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("task_photos")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data } = supabase.storage
+      .from("task_photos")
+      .getPublicUrl(filePath);
+
+    return { photo_url: data.publicUrl, file_path: filePath };
+  }
 };
+
+export default storageService;
+  

@@ -1,142 +1,102 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { faker } from "@faker-js/faker";
 
-const BATCH_SIZE = 10;
-
-export const devDataService = {
+const devDataService = {
   async seedDatabase(organizationId: string) {
-    try {
-      console.log("Starting database seed...");
+    console.log("Seeding database for organization:", organizationId);
 
-      const clients = Array.from({ length: 20 }, () => ({
-        organization_id: organizationId,
-        name: faker.company.name(),
-        email: faker.internet.email(),
-        phone: faker.phone.number(),
-        address: faker.location.streetAddress(true),
-      }));
-      
-      const { data: seededClients, error: clientError } = await supabase
-        .from("clients")
-        .insert(clients)
-        .select();
-      
-      if (clientError) throw clientError;
-      console.log(`${seededClients.length} clients seeded.`);
+    const employees = [
+      {
+        email: "manager@ontime.com",
+        fullName: "Manager Mike",
+        role: "manager",
+        employeeId: "MGR001",
+      },
+      {
+        email: "employee1@ontime.com",
+        fullName: "Employee Eric",
+        role: "employee",
+        employeeId: "EMP001",
+      },
+      {
+        email: "employee2@ontime.com",
+        fullName: "Employee Eve",
+        role: "employee",
+        employeeId: "EMP002",
+      },
+    ];
 
-      const employees = [];
-      for (let i = 0; i < 50; i++) {
-        const fullName = faker.person.fullName();
-        const email = faker.internet.email({
-          firstName: fullName.split(" ")[0],
-          lastName: fullName.split(" ")[1],
-        });
-        const password = "password123";
-        const role = faker.helpers.arrayElement([
-          "employee",
-          "task_manager",
-          "org_admin",
-        ]);
+    for (const employee of employees) {
+      // Check if user exists
+      const {  { user } } = await supabase.auth.admin.createUser({
+        email: employee.email,
+        password: "password",
+        email_confirm: true,
+        user_meta { full_name: employee.fullName },
+      });
 
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              role: role,
-              organization_id: organizationId,
-            },
-          },
-        });
+      if (user) {
+        // Check if profile exists
+        const {  profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
 
-        if (authError) {
-          console.error(`Error creating auth user ${email}:`, authError.message);
-          continue;
-        }
-
-        if (authData.user) {
-          const pin = faker.string.numeric(4);
-          
-          employees.push({
-            user_id: authData.user.id,
+        if (!profile) {
+          await supabase.from("profiles").insert({
+            user_id: user.id,
             organization_id: organizationId,
-            employee_id: `EMP-${faker.string.alphanumeric(5).toUpperCase()}`,
-            full_name: fullName,
-            designation: faker.person.jobTitle(),
-            mobile_number: faker.phone.number(),
-            role: role,
-            is_active: true,
-            pin: pin,
+            full_name: employee.fullName,
+            role: employee.role,
+            employee_id: employee.employeeId,
           });
         }
       }
-
-      let seededProfiles = [];
-      for (let i = 0; i < employees.length; i += BATCH_SIZE) {
-        const batch = employees.slice(i, i + BATCH_SIZE);
-        const { data, error } = await supabase.from("profiles").insert(batch).select();
-        if (error) {
-          console.error("Error inserting profile batch:", error.message);
-        } else if (data) {
-          seededProfiles = [...seededProfiles, ...data];
-        }
-      }
-      console.log(`${seededProfiles.length} employees (profiles) seeded.`);
-
-      if (seededProfiles.length > 0 && seededClients.length > 0) {
-        const tasks = [];
-        for (let i = 0; i < 100; i++) {
-          const created_by_profile = faker.helpers.arrayElement(
-            seededProfiles.filter((p) => p.role !== "employee")
-          );
-          const assigned_to_profile = faker.helpers.arrayElement(
-            seededProfiles.filter((p) => p.role === "employee")
-          );
-          const client = faker.helpers.arrayElement(seededClients);
-
-          if (created_by_profile && assigned_to_profile && client) {
-            tasks.push({
-              organization_id: organizationId,
-              client_id: client.id,
-              title: faker.lorem.sentence(5),
-              description: faker.lorem.paragraph(),
-              status: faker.helpers.arrayElement([
-                "assigned",
-                "in_progress",
-                "completed",
-                "on_hold",
-              ]),
-              priority: faker.helpers.arrayElement(["low", "medium", "high"]),
-              assigned_to: assigned_to_profile.user_id,
-              created_by: created_by_profile.user_id,
-              due_date: faker.date.future().toISOString(),
-              location_address: faker.location.streetAddress(true),
-              location_lat: faker.location.latitude(),
-              location_lng: faker.location.longitude(),
-            });
-          }
-        }
-        
-        const { data: seededTasks, error: taskError } = await supabase
-          .from("tasks")
-          .insert(tasks)
-          .select();
-        
-        if (taskError) throw taskError;
-        console.log(`${seededTasks?.length || 0} tasks seeded.`);
-      }
-
-      console.log("Database seed complete.");
-      return {
-        clients: seededClients.length,
-        employees: seededProfiles.length,
-        tasks: seededClients.length > 0 ? 100 : 0,
-      };
-    } catch (error) {
-      console.error("Database seeding failed:", error);
-      throw error;
     }
+
+    // Seed clients
+    const {  clients } = await supabase.from("clients").insert([
+        { name: "Dev Client A", contact_person: "Mr. A", organization_id: organizationId },
+        { name: "Dev Client B", contact_person: "Ms. B", organization_id: organizationId },
+    ]).select();
+
+    // Seed tasks
+    const {  profiles } = await supabase.from("profiles").select("id, role").eq("organization_id", organizationId);
+    const adminProfile = profiles?.find(p => p.role === 'admin');
+    const employeeProfile = profiles?.find(p => p.role === 'employee');
+
+    if (adminProfile && employeeProfile && clients) {
+        await supabase.from("tasks").insert([
+            { 
+                title: "Setup development environment", 
+                description: "Install all dependencies and run the project.",
+                client_id: clients[0].id,
+                assigned_to: employeeProfile.id,
+                created_by: adminProfile.id,
+                organization_id: organizationId,
+                status: 'pending',
+                priority: 'high',
+                due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+            },
+            { 
+                title: "Review project documentation", 
+                description: "Read through the README and other docs.",
+                client_id: clients[1].id,
+                assigned_to: employeeProfile.id,
+                created_by: adminProfile.id,
+                organization_id: organizationId,
+                status: 'in_progress',
+                priority: 'medium',
+                due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            },
+        ]);
+    }
+
+    console.log("Database seeding complete.");
+    return true;
   },
 };
+
+export default devDataService;
+  

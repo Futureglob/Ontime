@@ -1,400 +1,129 @@
-import { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Users, 
-  ClipboardList, 
-  Settings, 
-  Download, 
-  RefreshCw, 
-  Shield, 
-  Phone, 
-  Calendar,
-  MoreVertical,
-  UserX,
-  UserCheck,
-  Key,
-  Trash2
-} from "lucide-react";
-import { organizationManagementService, OrganizationDetails, OrganizationUser, TaskSummary } from "@/services/organizationManagementService";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import organizationManagementService from "@/services/organizationManagementService";
+import type { OrganizationDetails, TaskSummary, OrganizationUser } from "@/services/organizationManagementService";
+import type { Organization } from "@/types/database";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 interface OrganizationDetailsModalProps {
+  organization: Organization | null;
   isOpen: boolean;
   onClose: () => void;
-  organizationId: string | null;
 }
 
-export default function OrganizationDetailsModal({ isOpen, onClose, organizationId }: OrganizationDetailsModalProps) {
-  const [orgDetails, setOrgDetails] = useState<OrganizationDetails | null>(null);
-  const [tasks, setTasks] = useState<TaskSummary[]>([]);
+export default function OrganizationDetailsModal({ organization, isOpen, onClose }: OrganizationDetailsModalProps) {
+  const { toast } = useToast();
+  const [details, setDetails] = useState<OrganizationDetails | null>(null);
+  const [users, setUsers] = useState<OrganizationUser[]>([]);
+  const [tasks, setTasks] = useState<TaskSummary | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-
-  const loadOrganizationData = useCallback(async () => {
-    if (!organizationId) return;
-    
-    try {
-      setLoading(true);
-      const [details, taskList] = await Promise.all([
-        organizationManagementService.getOrganizationDetails(organizationId),
-        organizationManagementService.getOrganizationTasks(organizationId)
-      ]);
-      
-      setOrgDetails(details);
-      setTasks(taskList);
-    } catch (error) {
-      console.error("Error loading organization ", error);
-      setOrgDetails(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId]);
 
   useEffect(() => {
-    if (isOpen && organizationId) {
-      loadOrganizationData();
-    }
-  }, [isOpen, organizationId, loadOrganizationData]);
-
-  const handlePasswordReset = async (user: OrganizationUser) => {
-    if (!user.email || user.email === "no-email@system.com") {
-        alert(`Cannot send password reset. User ${user.full_name} has no valid email address.`);
-        return;
-    }
-    try {
-      await organizationManagementService.sendPasswordResetEmail(user.email);
-      alert(`Password reset email sent to ${user.full_name} (${user.email})`);
-    } catch (error) {
-      alert("Failed to send password reset email: " + (error as Error).message);
-    }
-  };
-
-  const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
-    try {
-      await organizationManagementService.toggleUserStatus(userId, !currentStatus);
-      loadOrganizationData();
-    } catch (error) {
-      alert("Failed to update user status: " + (error as Error).message);
-    }
-  };
-
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    try {
-      await organizationManagementService.updateUserRole(userId, newRole);
-      loadOrganizationData();
-    } catch (error) {
-      alert("Failed to update user role: " + (error as Error).message);
-    }
-  };
-
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
-      try {
-        await organizationManagementService.deleteUser(userId);
-        loadOrganizationData();
-      } catch (error) {
-        alert("Failed to delete user: " + (error as Error).message);
+    const fetchDetails = async () => {
+      if (organization) {
+        setLoading(true);
+        try {
+          const [detailsData, usersData, tasksData] = await Promise.all([
+            organizationManagementService.getOrganizationDetails(organization.id),
+            organizationManagementService.getEmployees(organization.id),
+            organizationManagementService.getOrganizationTasks(organization.id),
+          ]);
+          setDetails(detailsData);
+          setUsers(usersData as OrganizationUser[]);
+          setTasks(tasksData);
+        } catch (error: any) {
+          toast({ title: "Error", description: `Failed to fetch details: ${error.message}`, variant: "destructive" });
+        } finally {
+          setLoading(false);
+        }
       }
-    }
-  };
+    };
+    fetchDetails();
+  }, [organization, toast]);
 
-  const handleExportData = async () => {
-    if (!organizationId) return;
-    
-    try {
-      const exportData = await organizationManagementService.exportOrganizationData(organizationId);
-      const blob = new Blob([exportData], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${orgDetails?.name || "organization"}_data_${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      alert("Failed to export data: " + (error as Error).message);
-    }
-  };
+  if (!organization) return null;
 
-  const filteredUsers = orgDetails?.users.filter(user => {
-    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.employee_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.designation?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
-    const matchesStatus = statusFilter === "all" || 
-                         (statusFilter === "active" && user.is_active) ||
-                         (statusFilter === "inactive" && !user.is_active);
-    
-    return matchesSearch && matchesRole && matchesStatus;
-  }) || [];
-
-  if (!isOpen) return null;
+  const renderInfoCard = (title: string, value: React.ReactNode, icon: React.ReactNode) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            {orgDetails?.name || "Organization Details"}
-          </DialogTitle>
-          <DialogDescription>
-            View and manage organization details, users, and tasks.
-          </DialogDescription>
+          <DialogTitle>Organization Details: {organization.name}</DialogTitle>
         </DialogHeader>
-
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-            Loading organization details...
-          </div>
-        ) : orgDetails ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+          <p>Loading details...</p>
+        ) : details ? (
+          <Tabs defaultValue="overview">
+            <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="users">Users ({orgDetails.user_count})</TabsTrigger>
-              <TabsTrigger value="tasks">Tasks ({orgDetails.task_count})</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="tasks">Tasks</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="overview" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Organization Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Name</Label>
-                      <p className="text-lg font-semibold">{orgDetails.name}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Contact Person</Label>
-                      <p>{orgDetails.contact_person || "Not specified"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Contact Email</Label>
-                      <p>{orgDetails.contact_email || "Not specified"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Status</Label>
-                      <Badge variant={orgDetails.is_active ? "default" : "destructive"}>
-                        {orgDetails.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Created</Label>
-                      <p>{new Date(orgDetails.created_at).toLocaleDateString()}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Statistics</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-blue-600" />
-                        <span>Total Users</span>
-                      </div>
-                      <span className="font-semibold">{orgDetails.user_count}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ClipboardList className="h-4 w-4 text-green-600" />
-                        <span>Total Tasks</span>
-                      </div>
-                      <span className="font-semibold">{orgDetails.task_count}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-purple-600" />
-                        <span>Active Users</span>
-                      </div>
-                      <span className="font-semibold">
-                        {orgDetails.users.filter(u => u.is_active).length}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+            <TabsContent value="overview" className="pt-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {renderInfoCard("Users", details.userCount, null)}
+                {renderInfoCard("Tasks", details.taskCount, null)}
+                {renderInfoCard("Completed Tasks", details.completedTasks, null)}
+                {renderInfoCard("Status", <Badge>{details.is_active ? "Active" : "Inactive"}</Badge>, null)}
               </div>
-
-              <div className="flex gap-2">
-                <Button onClick={handleExportData} variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Data
-                </Button>
-                <Button onClick={loadOrganizationData} variant="outline">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
+              <div className="mt-6">
+                <h3 className="font-semibold mb-2">Contact Information</h3>
+                <p><strong>Contact Person:</strong> {details.contact_person}</p>
+                <p><strong>Email:</strong> {details.contact_email}</p>
+                <p><strong>Phone:</strong> {details.contact_phone}</p>
+                <p><strong>Address:</strong> {details.address}</p>
               </div>
             </TabsContent>
-
-            <TabsContent value="users" className="space-y-4">
-              <div className="flex gap-4 mb-4">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+            <TabsContent value="users">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map(user => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.full_name}</TableCell>
+                      <TableCell>{user.role}</TableCell>
+                      <TableCell><Badge>{user.is_active ? "Active" : "Inactive"}</Badge></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+            <TabsContent value="tasks">
+              {tasks ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  {renderInfoCard("Total", tasks.total, null)}
+                  {renderInfoCard("Completed", tasks.completed, null)}
+                  {renderInfoCard("Pending", tasks.pending, null)}
+                  {renderInfoCard("Overdue", tasks.overdue, null)}
                 </div>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Filter by role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="org_admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="employee">Employee</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                {filteredUsers.map((user) => (
-                  <Card key={user.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Users className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{user.full_name}</h3>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>{user.designation || "No designation"}</span>
-                              <span>ID: {user.employee_id || "N/A"}</span>
-                              {user.mobile_number && (
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  {user.mobile_number}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-400">{user.email}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Select value={user.role} onValueChange={(newRole) => handleRoleChange(user.id, newRole)}>
-                            <SelectTrigger className="w-32 h-8 text-xs">
-                                <SelectValue placeholder="Role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="org_admin">Admin</SelectItem>
-                                <SelectItem value="manager">Manager</SelectItem>
-                                <SelectItem value="employee">Employee</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Badge variant={user.is_active ? "default" : "destructive"}>
-                            {user.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handlePasswordReset(user)}>
-                                <Key className="h-4 w-4 mr-2" />
-                                Reset Password
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleToggleUserStatus(user.id, user.is_active)}>
-                                {user.is_active ? (
-                                  <>
-                                    <UserX className="h-4 w-4 mr-2" />
-                                    Deactivate
-                                  </>
-                                ) : (
-                                  <>
-                                    <UserCheck className="h-4 w-4 mr-2" />
-                                    Activate
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteUser(user.id, user.full_name)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="tasks" className="space-y-4">
-              <div className="space-y-2">
-                {tasks.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No tasks found for this organization.
-                  </div>
-                ) : (
-                  tasks.map((task) => (
-                    <Card key={task.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-semibold">{task.title}</h3>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>Assigned to: {task.assigned_user_name}</span>
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {new Date(task.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={
-                              task.status === "completed" ? "default" :
-                              task.status === "in_progress" ? "secondary" : "outline"
-                            }>
-                              {task.status.replace("_", " ").toUpperCase()}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
+              ) : <p>No task summary available.</p>}
             </TabsContent>
           </Tabs>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            Failed to load organization details.
-          </div>
+          <p>Could not load organization details.</p>
         )}
       </DialogContent>
     </Dialog>

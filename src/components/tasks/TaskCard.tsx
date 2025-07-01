@@ -1,94 +1,68 @@
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { EnrichedTask } from "@/types/database";
+import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { EnrichedTask } from "@/types";
-import { Edit, Trash2, User, Calendar } from "lucide-react";
 
 interface TaskCardProps {
   task: EnrichedTask;
-  onEdit: (task: EnrichedTask) => void;
-  onDelete: (task: EnrichedTask) => void;
+  onClick: () => void;
 }
 
-export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
-  const { currentProfile } = useAuth();
-
-  const canModify =
-    currentProfile?.role === "org_admin" ||
-    currentProfile?.role === "super_admin" ||
-    (currentProfile?.role === "task_manager" && task.created_by === currentProfile.id);
-
-  const getPriorityColor = (priority: string | null) => {
-    switch (priority) {
-      case 'high':
-      case 'urgent':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+export default function TaskCard({ task, onClick }: TaskCardProps) {
+  const { profile } = useAuth();
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case "completed": return "bg-green-500";
+      case "in_progress": return "bg-blue-500";
+      case "pending": return "bg-yellow-500";
+      case "overdue": return "bg-red-500";
+      default: return "bg-gray-500";
     }
   };
 
+  const isOverdue = !task.completed_at && task.due_date && new Date(task.due_date) < new Date();
+
   return (
-    <Card className="flex flex-col">
+    <Card onClick={onClick} className="cursor-pointer hover:shadow-md transition-shadow">
       <CardHeader>
         <div className="flex justify-between items-start">
-          <CardTitle className="text-lg font-semibold pr-2">{task.title}</CardTitle>
-          <Badge className={getStatusColor(task.status)}>{task.status.replace('_', ' ')}</Badge>
-        </div>
-        <div className="flex items-center gap-2 pt-2">
-          <Badge variant="outline" className={getPriorityColor(task.priority)}>
-            {task.priority || 'No Priority'}
+          <CardTitle className="text-lg font-semibold leading-tight pr-4">{task.title}</CardTitle>
+          <Badge variant={task.priority === "high" ? "destructive" : task.priority === "medium" ? "secondary" : "outline"}>
+            {task.priority}
           </Badge>
         </div>
+        <p className="text-sm text-muted-foreground">{task.client?.name}</p>
       </CardHeader>
-      <CardContent className="flex-grow">
-        <p className="text-sm text-muted-foreground line-clamp-3">{task.description}</p>
-        
-        <div className="mt-4 space-y-2 text-sm">
-          {task.assigned_to_profile && (
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span>Assigned to: {task.assigned_to_profile.full_name}</span>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
+        <div className="flex justify-between items-center text-sm">
+          <div>
+            <p className="font-semibold">Due Date</p>
+            <p className={isOverdue ? "text-destructive font-bold" : ""}>
+              {task.due_date ? format(new Date(task.due_date), "PPP") : "Not set"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-semibold">Assigned To</p>
+            <div className="flex items-center justify-end gap-2">
+              <span>{task.assigned_to_profile?.full_name || "Unassigned"}</span>
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={task.assigned_to_profile?.avatar_url || ""} />
+                <AvatarFallback>{task.assigned_to_profile?.full_name?.charAt(0)}</AvatarFallback>
+              </Avatar>
             </div>
-          )}
-          {task.due_date && (
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
-            </div>
-          )}
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <Badge className={`${getStatusColor(task.status || 'pending')} text-white`}>{task.status}</Badge>
+          <p className="text-xs text-muted-foreground">
+            Created by: {task.created_by_profile?.full_name}
+          </p>
         </div>
       </CardContent>
-      {canModify && (
-        <CardFooter className="flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => onEdit(task)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="destructive" size="sm" onClick={() => onDelete(task)}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   );
 }

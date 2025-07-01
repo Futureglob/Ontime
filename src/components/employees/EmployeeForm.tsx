@@ -1,216 +1,120 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { profileService } from "@/services/profileService";
-import { authService } from "@/services/authService"; 
-import { Profile } from "@/types/database";
+import { useToast } from "@/hooks/use-toast";
+import type { Profile } from "@/types/database";
 
-interface EmployeeFormProps {
-  employee?: Partial<Profile> | null;
-  organizationId: string;
-  onClose: () => void;
-  onEmployeeCreated: () => void;
+const formSchema = z.object({
+  fullName: z.string().min(2, "Full name is required"),
+  email: z.string().email("Invalid email address"),
+  employeeId: z.string().min(1, "Employee ID is required"),
+  role: z.enum(["admin", "manager", "employee"]),
+  designation: z.string().optional(),
+  mobileNumber: z.string().optional(),
+});
+
+type EmployeeFormValues = z.infer<typeof formSchema>;
+
+export interface EmployeeFormProps {
+  employee?: Profile;
+  onSubmit: (values: EmployeeFormValues) => Promise<void>;
+  onCancel: () => void;
+  isSubmitting: boolean;
 }
 
-interface EmployeeFormData {
-  full_name: string;
-  employee_id: string;
-  designation: string;
-  mobile_number: string;
-  role: string; // Use string instead of UserRole enum
-  email: string;
-  password: string;
-}
-
-export default function EmployeeForm({ employee, organizationId, onClose, onEmployeeCreated }: EmployeeFormProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [formData, setFormData] = useState<EmployeeFormData>({
-    full_name: employee?.full_name || "",
-    employee_id: employee?.employee_id || "",
-    designation: employee?.designation || "",
-    mobile_number: employee?.mobile_number || "",
-    role: employee?.role || "employee",
-    email: "",
-    password: ""
+export default function EmployeeForm({ employee, onSubmit, onCancel, isSubmitting }: EmployeeFormProps) {
+  const { register, handleSubmit, control, formState: { errors }, reset } = useForm<EmployeeFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      employeeId: "",
+      role: "employee",
+      designation: "",
+      mobileNumber: "",
+    },
   });
 
-  const handleInputChange = (field: keyof EmployeeFormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    
-    if (!formData.full_name || !formData.employee_id) {
-      setError("Please fill in required fields");
-      setLoading(false);
-      return;
+  useEffect(() => {
+    if (employee) {
+      reset({
+        fullName: employee.full_name || "",
+        email: "", // Email is not part of profile, should be fetched separately if needed for editing
+        employeeId: employee.employee_id || "",
+        role: employee.role as "admin" | "manager" | "employee" || "employee",
+        designation: employee.designation || "",
+        mobileNumber: employee.mobile_number || "",
+      });
     }
-
-    if (!employee && (!formData.email || !formData.password)) {
-      setError("Email and password are required for new employees");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      if (employee && employee.id) {
-        // Update existing employee
-        await profileService.updateProfile(employee.id, {
-          full_name: formData.full_name,
-          employee_id: formData.employee_id,
-          designation: formData.designation,
-          mobile_number: formData.mobile_number,
-          role: formData.role
-        });
-      } else {
-        // Create new employee using auth service
-        await authService.signUp(formData.email, formData.password, {
-          full_name: formData.full_name,
-          organization_id: organizationId,
-          employee_id: formData.employee_id,
-          designation: formData.designation,
-          mobile_number: formData.mobile_number,
-          role: formData.role,
-          is_active: true
-        });
-      }
-      
-      onEmployeeCreated();
-    } catch (err: unknown) {
-      console.error("Employee form error:", err);
-      if (err instanceof Error) {
-        setError(err.message || "Failed to save employee");
-      } else {
-        setError("An unknown error occurred");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [employee, reset]);
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {employee ? "Edit Employee" : "Add New Employee"}
-          </DialogTitle>
-          <DialogDescription>
-            {employee ? "Update employee information below." : "Enter the details for the new employee."}
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <Label htmlFor="fullName">Full Name</Label>
+        <Input id="fullName" {...register("fullName")} />
+        {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>}
+      </div>
+      
+      <div>
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" type="email" {...register("email")} disabled={!!employee} />
+        {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+        {!!employee && <p className="text-xs text-muted-foreground mt-1">Email cannot be changed after creation.</p>}
+      </div>
 
-          <div>
-            <label className="text-sm font-medium">Full Name *</label>
-            <Input
-              value={formData.full_name}
-              onChange={(e) => handleInputChange("full_name", e.target.value)}
-              placeholder="Enter full name"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Employee ID *</label>
-            <Input
-              value={formData.employee_id}
-              onChange={(e) => handleInputChange("employee_id", e.target.value)}
-              placeholder="Enter employee ID"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Designation</label>
-            <Input
-              value={formData.designation}
-              onChange={(e) => handleInputChange("designation", e.target.value)}
-              placeholder="Enter job title/designation"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Mobile Number</label>
-            <Input
-              value={formData.mobile_number}
-              onChange={(e) => handleInputChange("mobile_number", e.target.value)}
-              placeholder="Enter mobile number"
-              type="tel"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Role</label>
-            <Select value={formData.role} onValueChange={(value) => handleInputChange("role", value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="employee">Employee</SelectItem>
-                <SelectItem value="task_manager">Task Manager</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Email {!employee ? "*" : ""}</label>
-            <Input
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange("email", e.target.value)}
-              placeholder="Enter email address"
-              required={!employee}
-              disabled={!!employee}
-            />
-            {employee && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Email cannot be changed for existing employees
-              </p>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="employeeId">Employee ID</Label>
+          <Input id="employeeId" {...register("employeeId")} />
+          {errors.employeeId && <p className="text-red-500 text-sm mt-1">{errors.employeeId.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="role">Role</Label>
+          <Controller
+            name="role"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="employee">Employee</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
             )}
-          </div>
+          />
+          {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>}
+        </div>
+      </div>
 
-          {!employee && (
-            <div>
-              <label className="text-sm font-medium">Password *</label>
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-                placeholder="Enter password (min 6 characters)"
-                required
-                minLength={6}
-              />
-            </div>
-          )}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="designation">Designation</Label>
+          <Input id="designation" {...register("designation")} />
+        </div>
+        <div>
+          <Label htmlFor="mobileNumber">Mobile Number</Label>
+          <Input id="mobileNumber" {...register("mobileNumber")} />
+        </div>
+      </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Saving..." : employee ? "Update Employee" : "Add Employee"}
-            </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save Employee"}
+        </Button>
+      </div>
+    </form>
   );
 }

@@ -1,381 +1,209 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Building2, 
-  Users, 
-  BarChart3, 
-  Shield, 
-  Plus,
-  Eye,
-  Edit,
-  Trash2
-} from "lucide-react";
-import { superAdminService, SuperAdmin, OrganizationForSuperAdminView, SystemStats } from "@/services/superAdminService";
 import { useAuth } from "@/contexts/AuthContext";
-import Image from "next/image";
+import authService from "@/services/authService";
+import superAdminService from "@/services/superAdminService";
+import type { Organization } from "@/types/database";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Eye } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import AddOrganizationModal from "./AddOrganizationModal";
 import EditOrganizationModal from "./EditOrganizationModal";
-import SystemSettingsModal from "./SystemSettingsModal";
 import OrganizationDetailsModal from "./OrganizationDetailsModal";
-import { toast } from "sonner";
-import AnalyticsDashboard from "../analytics/AnalyticsDashboard";
-
-interface DashboardDisplayStats extends SystemStats {
-  activeSuperAdmins: number;
-}
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useRouter } from "next/router";
 
 export default function SuperAdminDashboard() {
-  const { currentProfile, logout } = useAuth();
-  const [organizations, setOrganizations] = useState<OrganizationForSuperAdminView[]>([]);
+  const { profile } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
-  const [stats, setStats] = useState<DashboardDisplayStats>({
-    total_organizations: 0,
-    total_users: 0,
-    total_tasks: 0,
-    activeSuperAdmins: 0
-  });
-  
-  // Modal states
-  const [showAddOrgModal, setShowAddOrgModal] = useState(false);
-  const [showEditOrgModal, setShowEditOrgModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedOrganization, setSelectedOrganization] = useState<OrganizationForSuperAdminView | null>(null);
-  const [selectedOrgIdForDetails, setSelectedOrgIdForDetails] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
+
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [orgs, systemStats] = await Promise.all([
+        superAdminService.getOrganizations(),
+        superAdminService.getSystemStats(),
+      ]);
+      setOrganizations(orgs);
+      setStats(systemStats);
+    } catch (error) {
+      console.error("Failed to fetch super admin ", error);
+      toast({ title: "Error", description: "Could not fetch data.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    loadDashboardData();
+    fetchData();
   }, []);
 
-  const loadDashboardData = async () => {
-    setLoading(true);
-    try {
-      const orgsData = await superAdminService.getOrganizations(); 
-      const adminsData = await superAdminService.getSuperAdmins();
-      const systemStatsData = await superAdminService.getSystemStats(); 
-        
-      setOrganizations(orgsData);
-      setSuperAdmins(adminsData);
-      setStats({
-        ...systemStatsData, 
-        activeSuperAdmins: adminsData.length 
-      });
-    } catch (error: unknown) {
-      console.error("Error loading dashboard: ", error);
-      toast.error("Failed to load dashboard data.");
-    }
-    setLoading(false);
-  };
-
   const handleLogout = async () => {
+    await authService.logout();
+    router.push("/");
+  };
+
+  const handleAddSuccess = () => {
+    setAddModalOpen(false);
+    fetchData();
+  };
+
+  const handleEditSuccess = () => {
+    setEditModalOpen(false);
+    setSelectedOrg(null);
+    fetchData();
+  };
+
+  const handleDelete = async () => {
+    if (!orgToDelete) return;
     try {
-      await logout();
-      toast.success("Logged out successfully");
-    } catch (error: unknown) {
-      console.error("Logout failed:", error);
-      toast.error("Logout failed. Please try again.");
+      await superAdminService.deleteOrganization(orgToDelete.id);
+      toast({ title: "Success", description: "Organization deleted." });
+      setOrgToDelete(null);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
-  const handleViewDetails = (orgId: string) => {
-    setSelectedOrgIdForDetails(orgId);
-    setShowDetailsModal(true);
-  };
-
-  const handleEditOrganization = (org: OrganizationForSuperAdminView) => {
-    setSelectedOrganization(org);
-    setShowEditOrgModal(true);
-  };
-
-  const handleDeleteOrganization = async (orgId: string, orgName: string) => {
-    if (confirm(`Are you sure you want to delete "${orgName}"? This action cannot be undone.`)) {
-      try {
-        await superAdminService.deleteOrganization(orgId);
-        loadDashboardData(); // Refresh data
-      } catch (error: unknown) {
-        alert("Failed to delete organization: " + (error as Error).message);
-      }
-    }
-  };
-
-  if (loading) {
-    return (
-        <div className="flex items-center justify-center p-10">
-            <p>Loading dashboard data...</p>
-        </div>
-    );
-  }
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case "dashboard":
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Organizations</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.total_organizations}</p>
-                  </div>
-                  <Building2 className="h-8 w-8 text-blue-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Users</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.total_users}</p>
-                  </div>
-                  <Users className="h-8 w-8 text-green-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Tasks</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.total_tasks}</p>
-                  </div>
-                  <BarChart3 className="h-8 w-8 text-orange-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Super Admins</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.activeSuperAdmins}</p>
-                  </div>
-                  <Shield className="h-8 w-8 text-purple-600" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case "organizations":
-        return (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Organizations Management</CardTitle>
-                <Button 
-                  className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => setShowAddOrgModal(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Organization
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {organizations.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No organizations found. Create your first organization to get started.
-                  </div>
-                ) : (
-                  organizations.map((org) => (
-                    <div key={org.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative">
-                          {org.logo_url ? (
-                            <Image src={org.logo_url} alt={org.name} width={32} height={32} className="object-contain" />
-                          ) : (
-                            <Building2 className="h-6 w-6 text-gray-400" />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{org.name}</h3>
-                          <p className="text-sm text-gray-500">
-                            {org.user_count || 0} users • {org.task_count || 0} tasks
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={org.is_active ? "default" : "destructive"}>
-                          {org.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                        <Button variant="ghost" size="sm" title="View Details" onClick={() => handleViewDetails(org.id)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          title="Edit Organization"
-                          onClick={() => handleEditOrganization(org)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-red-600 hover:text-red-700"
-                          title="Delete Organization"
-                          onClick={() => handleDeleteOrganization(org.id, org.name)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      case "admins":
-        return (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Super Administrators</CardTitle>
-                <Button className="bg-purple-600 hover:bg-purple-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Super Admin
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {superAdmins.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No super administrators found.
-                  </div>
-                ) : (
-                  superAdmins.map((admin) => (
-                    <div key={admin.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                          <Shield className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{admin.user_name || `Admin (${admin.user_id})`}</h3>
-                          <p className="text-sm text-gray-500">{admin.user_email || "Email not available"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-purple-100 text-purple-800">Super Admin</Badge>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      case "analytics":
-        return (
-          <AnalyticsDashboard />
-        );
-      default:
-        return null;
-    }
-  };
-
-  if (!currentProfile) {
-    return null; // or a spinner
-  }
-
-  const navTabs = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "organizations", label: "Organizations" },
-    { id: "admins", label: "Admins" },
-    { id: "analytics", label: "Analytics" },
-  ];
+  if (loading) return <div>Loading Super Admin Dashboard...</div>;
+  if (!profile || profile.role !== 'superadmin') return <div>Access Denied.</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/ontime-logo-png-amaranth-font-740x410-mcf79fls.png"
-                alt="OnTime Logo"
-                width={72}
-                height={40}
-                className="bg-transparent mix-blend-multiply"
-              />
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
-                <p className="text-gray-600">System-wide management and oversight</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="font-medium">Welcome, {currentProfile.full_name}</span>
-              <Button onClick={() => setShowSettingsModal(true)}>
-                System Settings
-              </Button>
-              <Button onClick={handleLogout} variant="outline">
-                Logout
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            {navTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <main className="py-8">{renderContent()}</main>
+    <div className="p-4 md:p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
+        <Button onClick={handleLogout}>Logout</Button>
       </div>
 
-      {/* Modals */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card>
+          <CardHeader><CardTitle>Total Organizations</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{stats?.total_organizations || 0}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Total Users</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{stats?.total_users || 0}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Total Tasks</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{stats?.total_tasks || 0}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Active Users</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{stats?.active_users || 0}</p></CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setAddModalOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Organization
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Organizations</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created At</TableHead>
+                <TableHead><span className="sr-only">Actions</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {organizations.map((org) => (
+                <TableRow key={org.id}>
+                  <TableCell className="font-medium">{org.name}</TableCell>
+                  <TableCell>{org.contact_email}</TableCell>
+                  <TableCell><Badge>{org.is_active ? "Active" : "Inactive"}</Badge></TableCell>
+                  <TableCell>{new Date(org.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setSelectedOrg(org); setDetailsModalOpen(true); }}>
+                          <Eye className="mr-2 h-4 w-4" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setSelectedOrg(org); setEditModalOpen(true); }}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setOrgToDelete(org)} className="text-red-500">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <AddOrganizationModal
-        isOpen={showAddOrgModal}
-        onClose={() => setShowAddOrgModal(false)}
-        onOrganizationAdded={loadDashboardData}
+        isOpen={isAddModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSuccess={handleAddSuccess}
       />
-
-      <EditOrganizationModal
-        isOpen={showEditOrgModal}
-        onClose={() => setShowEditOrgModal(false)}
-        onOrganizationUpdated={loadDashboardData}
-        organization={selectedOrganization}
-      />
-
-      <SystemSettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-      />
-
+      {selectedOrg && (
+        <EditOrganizationModal
+          isOpen={isEditModalOpen}
+          onClose={() => { setEditModalOpen(false); setSelectedOrg(null); }}
+          onSuccess={handleEditSuccess}
+          organization={selectedOrg}
+        />
+      )}
       <OrganizationDetailsModal
-        isOpen={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-        organizationId={selectedOrgIdForDetails}
+        isOpen={isDetailsModalOpen}
+        onClose={() => { setDetailsModalOpen(false); setSelectedOrg(null); }}
+        organization={selectedOrg}
       />
+      <AlertDialog open={!!orgToDelete} onOpenChange={() => setOrgToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the organization and all its data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

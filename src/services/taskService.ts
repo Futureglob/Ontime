@@ -1,131 +1,112 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
+import type { EnrichedTask, Task, TaskPhoto } from "@/types/database";
 
-export type Task = Database["public"]["Tables"]["tasks"]["Row"];
-export type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
-export type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-
-export type EnrichedTask = Task & {
-  created_by_profile?: Profile | null;
-  assigned_to_profile?: Profile | null;
-};
-
-// A simplified task type until relationships are fixed
-export type SimpleTask = Task;
-
-
-export const taskService = {
+const taskService = {
   async getTasks(organizationId: string): Promise<EnrichedTask[]> {
     const { data, error } = await supabase
       .from("tasks")
-      .select(
-        `
+      .select(`
         *,
-        assigned_to_profile:profiles!tasks_assignee_id_fkey(*),
         created_by_profile:profiles!tasks_created_by_fkey(*),
+        assigned_to_profile:profiles!tasks_assigned_to_fkey(*),
         client:clients(*),
-        photos:task_photos(*)
-      `
-      )
+        task_photos(*)
+      `)
       .eq("organization_id", organizationId);
 
-    if (error) {
-      console.error("Error fetching tasks:", error);
-      throw error;
-    }
-    return data || [];
+    if (error) throw error;
+    
+    return (data?.map(task => ({
+      ...task,
+      photos: task.task_photos as TaskPhoto[]
+    })) || []) as EnrichedTask[];
   },
 
-  async getTask(taskId: string): Promise<EnrichedTask | null> {
+  async getTaskById(taskId: string): Promise<EnrichedTask | null> {
     const { data, error } = await supabase
       .from("tasks")
-      .select(
-        `
+      .select(`
         *,
-        assigned_to_profile:profiles!tasks_assignee_id_fkey(*),
         created_by_profile:profiles!tasks_created_by_fkey(*),
+        assigned_to_profile:profiles!tasks_assigned_to_fkey(*),
         client:clients(*),
-        photos:task_photos(*)
-      `
-      )
+        task_photos(*)
+      `)
       .eq("id", taskId)
       .single();
 
-    if (error) {
-      console.error("Error fetching task:", error);
-      throw error;
-    }
-    return data;
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+      ...data,
+      photos: data.task_photos as TaskPhoto[]
+    } as EnrichedTask;
   },
 
-  async getTasksForUser(userId: string): Promise<EnrichedTask[]> {
+  async getTasksByAssignee(userId: string): Promise<EnrichedTask[]> {
     const { data, error } = await supabase
       .from("tasks")
-      .select(
-        `
+      .select(`
         *,
-        assigned_to_profile:profiles!tasks_assignee_id_fkey(*),
         created_by_profile:profiles!tasks_created_by_fkey(*),
+        assigned_to_profile:profiles!tasks_assigned_to_fkey(*),
         client:clients(*),
-        photos:task_photos(*)
-      `
-      )
-      .or(`assignee_id.eq.${userId},created_by.eq.${userId}`)
-      .order("created_at", { ascending: false });
+        task_photos(*)
+      `)
+      .eq("assigned_to", userId);
 
-    if (error) {
-      console.error("Error fetching user tasks:", error);
-      throw error;
-    }
-    return data || [];
+    if (error) throw error;
+    
+    return (data?.map(task => ({
+      ...task,
+      photos: task.task_photos as TaskPhoto[]
+    })) || []) as EnrichedTask[];
   },
 
-  async createTask(task: TaskInsert): Promise<Task | null> {
+  async createTask(taskData: Omit<Task, "id" | "created_at" | "updated_at" | "completed_at">) {
     const { data, error } = await supabase
       .from("tasks")
-      .insert(task)
+      .insert(taskData)
       .select()
       .single();
 
-    if (error) {
-      console.error("Error creating task:", error.message);
-      return null;
-    }
+    if (error) throw error;
     return data;
   },
 
-  async updateTask(id: string, updates: TaskUpdate): Promise<Task | null> {
+  async updateTask(taskId: string, updates: Partial<Task>) {
     const { data, error } = await supabase
       .from("tasks")
       .update(updates)
-      .eq("id", id)
+      .eq("id", taskId)
       .select()
       .single();
 
-    if (error) {
-      console.error("Error updating task:", error.message);
-      return null;
-    }
+    if (error) throw error;
     return data;
   },
 
-  async deleteTask(id: string): Promise<void> {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (error) {
-      console.error("Error deleting task:", error.message);
-    }
-  },
-
-  async getTaskCount(): Promise<number> {
-    const { count, error } = await supabase
+  async deleteTask(taskId: string) {
+    const { error } = await supabase
       .from("tasks")
-      .select("id", { count: "exact", head: true });
+      .delete()
+      .eq("id", taskId);
 
-    if (error) {
-      console.error("Error getting task count:", error.message);
-      return 0;
-    }
-    return count || 0;
+    if (error) throw error;
+    return true;
   },
+
+  async getTaskHistory(taskId: string) {
+    // This might need a dedicated history table later
+    // For now, we can just return some basic info
+    const task = await this.getTaskById(taskId);
+    return [
+      { event: "Created", timestamp: task?.created_at, user: task?.created_by_profile?.full_name },
+      { event: "Last Updated", timestamp: task?.updated_at, user: "System" },
+    ].filter(item => item.timestamp);
+  }
 };
+
+export default taskService;

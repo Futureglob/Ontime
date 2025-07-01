@@ -1,151 +1,111 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import profileService from "@/services/profileService";
+import storageService from "@/services/storageService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/contexts/AuthContext";
-import { profileService } from "@/services/profileService";
-import { storageService } from "@/services/storageService";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const profileSchema = z.object({
-  full_name: z.string().min(1, "Full name is required"),
-  designation: z.string().optional(),
-  mobile_number: z.string().optional(),
-});
-
-type ProfileFormValues = z.infer<typeof profileSchema>;
-
 export default function ProfileSettings() {
-  const { user, currentProfile, setCurrentProfile } = useAuth();
+  const { profile, setCurrentProfile } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  
+  const [fullName, setFullName] = useState(profile?.full_name || "");
+  const [designation, setDesignation] = useState(profile?.designation || "");
+  const [mobileNumber, setMobileNumber] = useState(profile?.mobile_number || "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      full_name: "",
-      designation: "",
-      mobile_number: "",
-    },
-  });
-
-  useEffect(() => {
-    if (currentProfile) {
-      setLoading(true);
-      form.reset({
-        full_name: currentProfile.full_name,
-        designation: currentProfile.designation || "",
-        mobile_number: currentProfile.mobile_number || "",
-      });
-      setAvatarPreview(currentProfile.avatar_url);
-      setLoading(false);
-    }
-  }, [currentProfile, form]);
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const onSubmit = async (data: ProfileFormValues) => {
-    if (!user || !currentProfile) return;
-
-    try {
-      let avatar_url = currentProfile.avatar_url;
-      if (avatarFile) {
-        avatar_url = await storageService.uploadProfilePhoto(user.id, avatarFile);
-      }
-
-      const updatedProfileData = {
-        ...data,
-        avatar_url,
-      };
-
-      const updatedProfile = await profileService.updateProfile(currentProfile.id, updatedProfileData);
-      setCurrentProfile(updatedProfile);
-      toast({ title: "Success", description: "Profile updated successfully." });
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
-    }
-  };
-
-  if (loading) {
+  if (!profile) {
     return <div>Loading profile...</div>;
   }
 
-  if (!currentProfile) {
-    return <div>Could not load profile.</div>;
-  }
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setAvatarFile(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      let avatarUrl = profile.avatar_url;
+      if (avatarFile) {
+        avatarUrl = await storageService.uploadAvatar(profile.id, avatarFile);
+      }
+
+      const updates = {
+        full_name: fullName,
+        designation,
+        mobile_number: mobileNumber,
+        avatar_url: avatarUrl,
+      };
+
+      const updatedProfile = await profileService.updateProfile(profile.id, updates);
+      setCurrentProfile(updatedProfile);
+
+      toast({ title: "Success", description: "Profile updated successfully." });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <Card>
+    <Card className="max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>Profile Settings</CardTitle>
-        <CardDescription>Update your personal information.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarPreview || undefined} />
-                <AvatarFallback>{currentProfile.full_name?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <Input type="file" accept="image/*" onChange={handleAvatarChange} />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={avatarFile ? URL.createObjectURL(avatarFile) : profile.avatar_url || ""} />
+              <AvatarFallback>{profile.full_name?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <Label htmlFor="avatar">Update Profile Picture</Label>
+              <Input id="avatar" type="file" onChange={handleAvatarChange} accept="image/*" />
             </div>
-            <FormField
-              control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+
+          <div>
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
             />
-            <FormField
-              control={form.control}
-              name="designation"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Designation</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+
+          <div>
+            <Label htmlFor="designation">Designation</Label>
+            <Input
+              id="designation"
+              value={designation}
+              onChange={(e) => setDesignation(e.target.value)}
             />
-            <FormField
-              control={form.control}
-              name="mobile_number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mobile Number</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+
+          <div>
+            <Label htmlFor="mobileNumber">Mobile Number</Label>
+            <Input
+              id="mobileNumber"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
             />
-            <Button type="submit">Save Changes</Button>
-          </form>
-        </Form>
+          </div>
+
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save Changes"}
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

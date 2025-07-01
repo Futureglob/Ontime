@@ -1,28 +1,36 @@
+import { useAuth } from "@/contexts/AuthContext";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import SuperAdminDashboard from "@/components/superadmin/SuperAdminDashboard";
+import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
+import { useRouter } from "next/router";
 
-        import { useAuth } from "@/contexts/AuthContext";
-        import DashboardLayout from "@/components/layout/DashboardLayout";
-        import SuperAdminDashboard from "@/components/superadmin/SuperAdminDashboard";
-        import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
+export default function SuperAdminPage() {
+  const { user, profile, loading } = useAuth();
+  const router = useRouter();
 
-        export default function SuperAdminPage() {
-          const { user, loading, profile } = useAuth();
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
-          if (loading) {
-            return (
-              <div className="flex h-screen items-center justify-center">
-                <p>Loading...</p>
-              </div>
-            );
-          }
+  // If user is logged in and is a superadmin, show the dashboard
+  if (user && profile?.role === "superadmin") {
+    return (
+      <DashboardLayout>
+        <SuperAdminDashboard />
+      </DashboardLayout>
+    );
+  }
 
-          if (!user || profile?.role !== "super_admin") {
-            return <SuperAdminLogin />;
-          }
+  // If user is logged in but not a superadmin, redirect
+  if (user) {
+    router.replace("/tasks"); // or to a generic dashboard
+    return <div>Redirecting...</div>;
+  }
 
-          return (
-            <DashboardLayout>
-              <SuperAdminDashboard />
-            </DashboardLayout>
-          );
-        }
-      
+  // If no user, show the login form
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <SuperAdminLogin onLogin={() => router.push("/superadmin")} />
+    </div>
+  );
+}

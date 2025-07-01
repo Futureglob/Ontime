@@ -1,122 +1,98 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import organizationManagementService from "@/services/organizationManagementService";
+import type { Profile } from "@/types/database";
 import { useAuth } from "@/contexts/AuthContext";
-import { organizationManagementService } from "@/services/organizationManagementService";
-import { Profile } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import {
-  PlusCircle,
-  FileUp,
-  RefreshCw,
-  KeyRound,
-  Trash2,
-  Edit,
-  Search,
-} from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, PlusCircle, Upload } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import EmployeeForm from "./EmployeeForm";
 import BulkEmployeeImport from "./BulkEmployeeImport";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function EmployeeManagement() {
-  const { currentProfile } = useAuth();
+  const { profile } = useAuth();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Profile | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Profile | undefined>(undefined);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Profile | null>(null);
 
-  const loadEmployees = useCallback(async () => {
-    if (!currentProfile?.organization_id) return;
-    setLoading(true);
-    try {
-      const data = await organizationManagementService.getEmployees(
-        currentProfile.organization_id
-      );
-      setEmployees(data);
-    } catch (error) {
-      console.error("Error loading employees:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load employees.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentProfile?.organization_id, toast]);
-
-  useEffect(() => {
-    loadEmployees();
-  }, [loadEmployees]);
-
-  const handleFormSubmit = async (values: Partial<Profile>) => {
-    if (!currentProfile?.organization_id) return;
-
-    try {
-      if (selectedEmployee) {
-        // Update logic
-        await organizationManagementService.updateEmployee(
-          selectedEmployee.id,
-          values
-        );
-        toast({ title: "Success", description: "Employee updated successfully." });
-      } else {
-        // Create logic
-        await organizationManagementService.addEmployee(
-          currentProfile.organization_id,
-          values
-        );
-        toast({ title: "Success", description: "Employee added successfully." });
+  const fetchEmployees = async () => {
+    if (profile?.organization_id) {
+      try {
+        setLoading(true);
+        const data = await organizationManagementService.getEmployees(profile.organization_id);
+        setEmployees(data);
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+        toast({ title: "Error", description: "Could not fetch employees.", variant: "destructive" });
+      } finally {
+        setLoading(false);
       }
-      setIsFormOpen(false);
-      setSelectedEmployee(null);
-      loadEmployees();
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast({
-        title: "Error",
-        description: `Failed to ${
-          selectedEmployee ? "update" : "add"
-        } employee.`,
-        variant: "destructive",
-      });
     }
   };
 
-  const handleGeneratePin = async (employee: Profile) => {
+  useEffect(() => {
+    fetchEmployees();
+  }, [profile]);
+
+  const handleFormSubmit = async (values: any) => {
+    if (!profile?.organization_id) return;
+    setIsSubmitting(true);
     try {
-      const pin = await organizationManagementService.generatePinForEmployee(
-        employee.user_id
-      );
-      toast({
-        title: `PIN for ${employee.full_name}`,
-        description: `New PIN: ${pin}`,
-      });
-    } catch (error) {
-      console.error("Error generating PIN:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate PIN.",
-        variant: "destructive",
-      });
+      if (selectedEmployee) {
+        // Update logic
+        const updates = {
+          full_name: values.fullName,
+          employee_id: values.employeeId,
+          role: values.role,
+          designation: values.designation,
+          mobile_number: values.mobileNumber,
+        };
+        await organizationManagementService.updateEmployee(selectedEmployee.id, updates);
+        toast({ title: "Success", description: "Employee updated successfully." });
+      } else {
+        // Create logic
+        await organizationManagementService.addEmployee({
+          ...values,
+          organizationId: profile.organization_id,
+        });
+        toast({ title: "Success", description: "Employee added successfully." });
+      }
+      setIsFormOpen(false);
+      setSelectedEmployee(undefined);
+      fetchEmployees();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+    try {
+      await organizationManagementService.deleteUser(employeeToDelete.user_id);
+      toast({ title: "Success", description: "Employee deleted successfully." });
+      setEmployeeToDelete(null);
+      fetchEmployees();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
@@ -126,155 +102,112 @@ export default function EmployeeManagement() {
   };
 
   const handleAddNew = () => {
-    setSelectedEmployee(null);
+    setSelectedEmployee(undefined);
     setIsFormOpen(true);
   };
-
-  const filteredEmployees = employees.filter(
-    (employee) =>
-      employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  
+  const handleImportSuccess = () => {
+    setIsImportOpen(false);
+    fetchEmployees();
+  };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Employee Management</h1>
+    <div className="p-4 md:p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Employee Management</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadEmployees} disabled={loading}>
-            <RefreshCw
-              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-            />
-          </Button>
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">
-                <FileUp className="h-4 w-4 mr-2" />
-                Bulk Import
-              </Button>
+              <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Bulk Import</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl">
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle>Bulk Import Employees</DialogTitle>
               </DialogHeader>
-              <BulkEmployeeImport
-                onSuccess={() => {
-                  setIsImportOpen(false);
-                  loadEmployees();
-                }}
-              />
+              <BulkEmployeeImport onSuccess={handleImportSuccess} />
             </DialogContent>
           </Dialog>
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button onClick={handleAddNew}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Employee
-              </Button>
+              <Button onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4" /> Add New</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>
-                  {selectedEmployee ? "Edit Employee" : "Add New Employee"}
-                </DialogTitle>
+                <DialogTitle>{selectedEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
               </DialogHeader>
               <EmployeeForm
                 employee={selectedEmployee}
                 onSubmit={handleFormSubmit}
                 onCancel={() => setIsFormOpen(false)}
+                isSubmitting={isSubmitting}
               />
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search employees..."
-          className="pl-10"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      <Card>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Employee ID</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Designation</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead><span className="sr-only">Actions</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
+              ) : (
+                employees.map((employee) => (
+                  <TableRow key={employee.id}>
+                    <TableCell className="font-medium">{employee.full_name}</TableCell>
+                    <TableCell>{employee.employee_id}</TableCell>
+                    <TableCell>{employee.role}</TableCell>
+                    <TableCell>{employee.designation}</TableCell>
+                    <TableCell>{employee.is_active ? "Active" : "Inactive"}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(employee)}>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEmployeeToDelete(employee)} className="text-red-600">
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : filteredEmployees.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  No employees found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredEmployees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell>
-                    <div className="font-medium">{employee.full_name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {employee.designation}
-                    </div>
-                  </TableCell>
-                  <TableCell>{employee.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{employee.role.replace("_", " ")}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={employee.is_active ? "default" : "outline"}
-                      className={
-                        employee.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }
-                    >
-                      {employee.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleGeneratePin(employee)}
-                      >
-                        <KeyRound className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(employee)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-red-500">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <AlertDialog open={!!employeeToDelete} onOpenChange={() => setEmployeeToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the employee and their associated user account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteEmployee}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

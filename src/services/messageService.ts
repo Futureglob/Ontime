@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import type { MessageWithSender } from "@/types/database";
+import type { Profile } from "@/types/database";
 
 export interface ChatMessage {
   id: string;
@@ -8,7 +8,7 @@ export interface ChatMessage {
   sender: {
     full_name: string;
     designation: string;
-    avatar_url?: string;
+    avatar_url?: string | null;
   };
   created_at: string;
   is_read: boolean;
@@ -17,7 +17,7 @@ export interface ChatMessage {
 
 const messageService = {
   async getTaskMessages(taskId: string): Promise<ChatMessage[]> {
-    const { data: messages, error } = await supabase
+    const {  messages, error } = await supabase
       .from("messages")
       .select(`
         id,
@@ -36,46 +36,27 @@ const messageService = {
 
     if (error) throw error;
 
-    return messages?.map(msg => ({
-      id: msg.id,
-      content: msg.content,
-      created_at: msg.created_at,
-      is_read: msg.is_read,
-      message_type: msg.message_type,
-      sender: {
-        full_name: (msg.sender as any)?.full_name || "Unknown",
-        designation: (msg.sender as any)?.designation || "",
-        avatar_url: (msg.sender as any)?.avatar_url
+    return messages?.map(msg => {
+      const senderProfile = msg.sender as Profile | null;
+      return {
+        id: msg.id,
+        content: msg.content,
+        created_at: msg.created_at,
+        is_read: msg.is_read,
+        message_type: msg.message_type,
+        sender: {
+          full_name: senderProfile?.full_name || "Unknown",
+          designation: senderProfile?.designation || "",
+          avatar_url: senderProfile?.avatar_url
+        }
       }
-    })) || [];
+    }) || [];
   },
 
   async getTasksWithMessages(organizationId: string) {
-    const { data: tasks, error } = await supabase
+    const {  tasks, error } = await supabase
       .from("tasks")
-      .select(`
-        id,
-        title,
-        status,
-        priority,
-        assigned_to,
-        created_by,
-        due_date,
-        organization_id,
-        client_id,
-        description,
-        location_lat,
-        location_lng,
-        location_address,
-        created_at,
-        updated_at,
-        completed_at,
-        created_by_profile:profiles!tasks_created_by_fkey(
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
+      .select(`*, created_by_profile:profiles!tasks_created_by_fkey(id, full_name, avatar_url)`)
       .eq("organization_id", organizationId)
       .order("updated_at", { ascending: false });
 
@@ -83,35 +64,25 @@ const messageService = {
 
     const tasksWithLastMessage = await Promise.all(
       (tasks || []).map(async (task) => {
-        const { data: lastMessage } = await supabase
+        const {  lastMessage, error: messageError } = await supabase
           .from("messages")
-          .select(`
-            id,
-            content,
-            created_at,
-            is_read,
-            message_type,
-            sender:profiles!messages_sender_id_fkey(
-              full_name,
-              avatar_url
-            )
-          `)
+          .select(`*, sender:profiles!messages_sender_id_fkey(full_name, avatar_url)`)
           .eq("task_id", task.id)
           .order("created_at", { ascending: false })
           .limit(1)
           .single();
 
+        if (messageError && messageError.code !== 'PGRST116') { // Ignore 'exact one row not found'
+          console.error(`Error fetching last message for task ${task.id}:`, messageError);
+        }
+
         return {
           ...task,
           lastMessage: lastMessage ? {
-            id: lastMessage.id,
-            content: lastMessage.content,
-            created_at: lastMessage.created_at,
-            is_read: lastMessage.is_read,
-            message_type: lastMessage.message_type,
+            ...lastMessage,
             sender: {
-              full_name: (lastMessage.sender as any)?.full_name || "Unknown",
-              avatar_url: (lastMessage.sender as any)?.avatar_url
+              full_name: (lastMessage.sender as Profile)?.full_name || "Unknown",
+              avatar_url: (lastMessage.sender as Profile)?.avatar_url
             }
           } : null
         };
@@ -160,14 +131,14 @@ const messageService = {
   },
 
   async getUnreadMessageCount(userId: string) {
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from("messages")
-      .select("id", { count: "exact" })
+      .select("id", { count: "exact", head: true })
       .eq("is_read", false)
       .neq("sender_id", userId);
 
     if (error) throw error;
-    return data?.length || 0;
+    return count || 0;
   },
 
   async deleteMessage(messageId: string) {

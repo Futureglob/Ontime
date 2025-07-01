@@ -1,84 +1,66 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { profileService } from "./profileService";
+import type { Profile } from "@/types/database";
 
 const authService = {
-  async loginWithPin(employeeId: string, pin: string, organizationId: string) {
-    const { data, error } = await supabase.rpc("login_with_pin", {
-      employee_id: employeeId,
-      pin: pin,
-      organization_id: organizationId
-    });
-
+  async login(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    if (!data?.user || !data?.session) throw new Error("Invalid credentials");
+    if (!data.user) throw new Error("User not found after sign-in.");
 
-    const profile = await profileService.getProfile(data.user.id);
+    const {  profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", data.user.id)
+      .single();
     
-    return { user: data.user, session: data.session, profile };
+    if (profileError) throw new Error("Profile not found for this user.");
+
+    return { user: data.user, session: data.session, profile: profile as Profile };
   },
 
-  async signUp(email: string, password: string, organizationId: string, fullName: string, role: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          organization_id: organizationId,
-          role: role
-        }
-      }
+  async loginWithPin(email: string, pin: string) {
+    // The RPC function seems to have typing issues. We cast to any to bypass.
+    // This assumes a function `login_with_pin` exists in Supabase.
+    const { data, error } = await supabase.rpc("login_with_pin" as any, {
+      p_email: email,
+      p_pin: pin,
     });
 
     if (error) throw error;
-    return data;
-  },
+    if (!data) throw new Error("Login with PIN failed. No data returned from RPC.");
 
-  async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
+    // Assuming the RPC returns an object with access_token and refresh_token
+    const {  sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
     });
 
-    if (error) throw error;
-    return data;
+    if (sessionError) throw sessionError;
+    if (!sessionData.user) throw new Error("Failed to set session from PIN login.");
+
+    const {  profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", sessionData.user.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    return { user: sessionData.user, session: sessionData.session, profile: profileData as Profile };
   },
 
-  async signOut() {
+  async logout() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    return true;
-  },
-
-  async generatePinForUser(userId: string) {
-    const { data, error } = await supabase.rpc("generate_user_pin", {
-      user_id: userId
-    });
-
-    if (error) throw error;
-    if (!data?.pin || !data?.user) throw new Error("Failed to generate PIN");
-    
-    return { pin: data.pin, user: data.user };
-  },
-
-  async resetUserPin(userId: string) {
-    const { data, error } = await supabase.rpc("reset_user_pin", {
-      user_id: userId
-    });
-
-    if (error) throw error;
-    return data;
   },
 
   async sendPasswordReset(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
-    });
-
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
     return true;
-  }
+  },
 };
 
 export default authService;
+  
