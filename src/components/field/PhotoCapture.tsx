@@ -1,428 +1,306 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Camera, 
-  MapPin, 
-  Upload, 
-  X, 
-  Clock,
-  CheckCircle,
-  AlertTriangle
-} from "lucide-react";
-import Image from "next/image";
-import { EnrichedTask } from "@/services/taskService";
-
-interface PhotoData {
-  id: string;
-  url: string;
-  type: "check_in" | "progress" | "completion";
-  timestamp: string;
-  location?: {
-    latitude: number;
-    longitude: number;
-    address?: string;
-  };
-  taskId: string;
-}
+import { Camera, MapPin, Upload, X, CheckCircle, AlertCircle, WifiOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import type { EnrichedTask } from "@/types";
 
 interface PhotoCaptureProps {
   task: EnrichedTask;
-  onSuccess: () => void;
-  onCancel: () => void;
+  onPhotoUploaded?: () => void;
 }
 
-export default function PhotoCapture({ task }: PhotoCaptureProps) {
-  const [photos, setPhotos] = useState<PhotoData[]>([]);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [selectedType, setSelectedType] = useState<"check_in" | "progress" | "completion">("progress");
-  const [location, setLocation] = useState<GeolocationPosition | null>(null);
-  const [locationError, setLocationError] = useState<string>("");
-  const [uploading, setUploading] = useState(false);
+interface CapturedPhoto {
+  id: string;
+  file: File;
+  preview: string;
+  type: "check_in" | "progress" | "completion";
+  notes: string;
+  location?: { lat: number; lng: number };
+  timestamp: Date;
+  uploaded: boolean;
+  uploading: boolean;
+}
+
+export default function PhotoCapture({ task, onPhotoUploaded }: PhotoCaptureProps) {
+  const { currentProfile } = useAuth();
+  const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
+  const [showCamera, setShowCamera] = useState(false);
+  const [photoType, setPhotoType] = useState<"check_in" | "progress" | "completion">("check_in");
+  const [notes, setNotes] = useState("");
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
-  const getCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported by this browser");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation(position);
-        setLocationError("");
-      },
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationError("Location access denied by user");
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setLocationError("Location information is unavailable");
-            break;
-          case error.TIMEOUT:
-            setLocationError("Location request timed out");
-            break;
-          default:
-            setLocationError("An unknown error occurred while retrieving location");
-            break;
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
-    );
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
-  const startCamera = async () => {
-    try {
-      setIsCapturing(true);
-      getCurrentLocation();
-      
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  useEffect(() => {
+    if (isOnline) {
+      uploadPendingPhotos();
+    }
+  }, [isOnline]);
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
         },
-        audio: false
-      });
-      
-      setStream(mediaStream);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-      setIsCapturing(false);
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setIsCapturing(false);
-  };
-
-  const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
-
-    if (!context) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0);
-
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
-
-      try {
-        setUploading(true);
-        
-        // Mock photo upload - replace with actual service call
-        const photoUrl = URL.createObjectURL(blob);
-        
-        // Get address from coordinates if location is available
-        let address;
-        if (location) {
-          try {
-            address = await getAddressFromCoordinates(
-              location.coords.latitude,
-              location.coords.longitude
-            );
-          } catch (error) {
-            console.error("Error getting address:", error);
-          }
+        (error) => {
+          console.error("Error getting location:", error);
         }
-
-        const newPhoto: PhotoData = {
-          id: Date.now().toString(),
-          url: photoUrl,
-          type: selectedType,
-          timestamp: new Date().toISOString(),
-          location: location ? {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            address
-          } : undefined,
-          taskId: task.id
-        };
-
-        setPhotos(prev => [...prev, newPhoto]);
-        stopCamera();
-      } catch (error) {
-        console.error("Error uploading photo:", error);
-      } finally {
-        setUploading(false);
-      }
-    }, "image/jpeg", 0.8);
+      );
+    }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (file) {
+      capturePhoto(file);
+    }
+  };
+
+  const capturePhoto = (file: File) => {
+    const photoId = Date.now().toString();
+    const preview = URL.createObjectURL(file);
+    
+    const newPhoto: CapturedPhoto = {
+      id: photoId,
+      file,
+      preview,
+      type: photoType,
+      notes,
+      location: currentLocation || undefined,
+      timestamp: new Date(),
+      uploaded: false,
+      uploading: false
+    };
+
+    setPhotos(prev => [...prev, newPhoto]);
+    setShowCamera(false);
+    setNotes("");
+
+    if (isOnline) {
+      uploadPhoto(newPhoto);
+    }
+  };
+
+  const uploadPhoto = async (photo: CapturedPhoto) => {
+    if (!currentProfile) return;
+
+    setPhotos(prev => prev.map(p => 
+      p.id === photo.id ? { ...p, uploading: true } : p
+    ));
 
     try {
-      setUploading(true);
-      getCurrentLocation();
-
-      // Mock photo upload - replace with actual service call
-      const photoUrl = URL.createObjectURL(file);
+      const fileName = `${task.id}/${photo.id}_${photo.file.name}`;
       
-      let address;
-      if (location) {
-        try {
-          address = await getAddressFromCoordinates(
-            location.coords.latitude,
-            location.coords.longitude
-          );
-        } catch (error) {
-          console.error("Error getting address:", error);
-        }
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('task-photos')
+        .upload(fileName, photo.file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('task-photos')
+        .getPublicUrl(fileName);
+
+      const { error: dbError } = await supabase
+        .from('task_photos')
+        .insert({
+          task_id: task.id,
+          user_id: currentProfile.user_id,
+          photo_url: urlData.publicUrl,
+          photo_type: photo.type
+        });
+
+      if (dbError) throw dbError;
+
+      setPhotos(prev => prev.map(p => 
+        p.id === photo.id ? { ...p, uploaded: true, uploading: false } : p
+      ));
+
+      if (onPhotoUploaded) {
+        onPhotoUploaded();
       }
 
-      const newPhoto: PhotoData = {
-        id: Date.now().toString(),
-        url: photoUrl,
-        type: selectedType,
-        timestamp: new Date().toISOString(),
-        location: location ? {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          address
-        } : undefined,
-        taskId: task.id
-      };
-
-      setPhotos(prev => [...prev, newPhoto]);
     } catch (error) {
       console.error("Error uploading photo:", error);
-    } finally {
-      setUploading(false);
+      setPhotos(prev => prev.map(p => 
+        p.id === photo.id ? { ...p, uploading: false } : p
+      ));
     }
   };
 
-  const getAddressFromCoordinates = async (lat: number, lng: number): Promise<string> => {
-    try {
-      const response = await fetch(
-        `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=YOUR_API_KEY`
-      );
-      const data = await response.json();
-      return data.results[0]?.formatted || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-    } catch (error) {
-      console.error("Error fetching address:", error);
-      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-    }
+  const uploadPendingPhotos = () => {
+    const pendingPhotos = photos.filter(p => !p.uploaded && !p.uploading);
+    pendingPhotos.forEach(photo => uploadPhoto(photo));
   };
 
   const removePhoto = (photoId: string) => {
-    setPhotos(prev => prev.filter(p => p.id !== photoId));
+    setPhotos(prev => {
+      const photo = prev.find(p => p.id === photoId);
+      if (photo) {
+        URL.revokeObjectURL(photo.preview);
+      }
+      return prev.filter(p => p.id !== photoId);
+    });
   };
 
-  const getTypeIcon = (type: string) => {
+  const getPhotoTypeColor = (type: string) => {
     switch (type) {
-      case "check_in":
-        return <Clock className="h-4 w-4" />;
-      case "progress":
-        return <Camera className="h-4 w-4" />;
-      case "completion":
-        return <CheckCircle className="h-4 w-4" />;
-      default:
-        return <Camera className="h-4 w-4" />;
+      case "check_in": return "bg-blue-100 text-blue-800";
+      case "progress": return "bg-yellow-100 text-yellow-800";
+      case "completion": return "bg-green-100 text-green-800";
+      default: return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getTypeBadgeVariant = (type: string) => {
-    switch (type) {
-      case "check_in":
-        return "secondary";
-      case "progress":
-        return "default";
-      case "completion":
-        return "default";
-      default:
-        return "secondary";
-    }
+  const getStatusIcon = (photo: CapturedPhoto) => {
+    if (photo.uploading) return <Upload className="h-4 w-4 animate-spin" />;
+    if (photo.uploaded) return <CheckCircle className="h-4 w-4 text-green-600" />;
+    if (!isOnline) return <WifiOff className="h-4 w-4 text-orange-600" />;
+    return <AlertCircle className="h-4 w-4 text-red-600" />;
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
-            Photo Capture & Geolocation
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Photo Type Selection */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Photo Type</label>
-            <div className="flex gap-2">
-              {["check_in", "progress", "completion"].map((type) => (
-                <Button
-                  key={type}
-                  variant={selectedType === type ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedType(type as "check_in" | "progress" | "completion")}
-                  className="flex items-center gap-2"
-                >
-                  {getTypeIcon(type)}
-                  {type.replace("_", " ").toUpperCase()}
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Task Photos</CardTitle>
+            <Dialog open={showCamera} onOpenChange={setShowCamera}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Camera className="h-4 w-4 mr-2" />
+                  Take Photo
                 </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Location Status */}
-          {locationError ? (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{locationError}</AlertDescription>
-            </Alert>
-          ) : location ? (
-            <Alert>
-              <MapPin className="h-4 w-4" />
-              <AlertDescription>
-                Location captured: {location.coords.latitude.toFixed(6)}, {location.coords.longitude.toFixed(6)}
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          {/* Camera Controls */}
-          <div className="flex gap-2">
-            {!isCapturing ? (
-              <>
-                <Button onClick={startCamera} className="flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  Open Camera
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Photo
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button 
-                  onClick={capturePhoto}
-                  disabled={uploading}
-                  className="flex items-center gap-2"
-                >
-                  <Camera className="h-4 w-4" />
-                  {uploading ? "Uploading..." : "Capture Photo"}
-                </Button>
-                <Button variant="outline" onClick={stopCamera}>
-                  <X className="h-4 w-4" />
-                  Cancel
-                </Button>
-              </>
-            )}
-          </div>
-
-          {/* Camera View */}
-          {isCapturing && (
-            <div className="relative">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full max-w-md mx-auto rounded-lg"
-              />
-              <canvas ref={canvasRef} className="hidden" />
-            </div>
-          )}
-
-          {/* Hidden File Input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Photos Gallery */}
-      {photos.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Captured Photos ({photos.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {photos.map((photo) => (
-                <div key={photo.id} className="relative group">
-                  <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                    <Image
-                      src={photo.url}
-                      alt={`${photo.type} photo`}
-                      width={300}
-                      height={300}
-                      className="w-full h-full object-cover"
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Capture Photo</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Photo Type</label>
+                    <select 
+                      value={photoType} 
+                      onChange={(e) => setPhotoType(e.target.value as "check_in" | "progress" | "completion")}
+                      className="w-full mt-1 p-2 border rounded-md"
+                    >
+                      <option value="check_in">Check-in Photo</option>
+                      <option value="progress">Progress Photo</option>
+                      <option value="completion">Completion Photo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Notes (Optional)</label>
+                    <Textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Add notes about this photo..."
+                      rows={2}
                     />
                   </div>
-                  
-                  <div className="absolute top-2 left-2">
-                    <Badge variant={getTypeBadgeVariant(photo.type)} className="flex items-center gap-1">
-                      {getTypeIcon(photo.type)}
-                      {photo.type.replace("_", " ")}
-                    </Badge>
-                  </div>
-                  
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removePhoto(photo.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
-                    <div className="text-xs">
-                      <div className="flex items-center gap-1 mb-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(photo.timestamp).toLocaleString()}
-                      </div>
-                      {photo.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          <span className="truncate">
-                            {photo.location.address || 
-                             `${photo.location.latitude.toFixed(4)}, ${photo.location.longitude.toFixed(4)}`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileSelect}
+                      className="w-full p-2 border rounded-md"
+                    />
                   </div>
                 </div>
-              ))}
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <MapPin className="h-4 w-4" />
+              <span>
+                {currentLocation 
+                  ? `Location: ${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}`
+                  : "Location not available"
+                }
+              </span>
             </div>
-          </CardContent>
-        </Card>
-      )}
+
+            {!isOnline && (
+              <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                <WifiOff className="h-4 w-4 text-orange-600" />
+                <span className="text-sm text-orange-800">
+                  You're offline. Photos will be uploaded when connection is restored.
+                </span>
+              </div>
+            )}
+
+            {photos.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No photos captured yet
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {photos.map((photo) => (
+                  <div key={photo.id} className="relative group">
+                    <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                      <img
+                        src={photo.preview}
+                        alt={`${photo.type} photo`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="absolute top-2 left-2">
+                      <Badge className={getPhotoTypeColor(photo.type)}>
+                        {photo.type.replace("_", " ")}
+                      </Badge>
+                    </div>
+                    <div className="absolute top-2 right-2">
+                      {getStatusIcon(photo)}
+                    </div>
+                    <button
+                      onClick={() => removePhoto(photo.id)}
+                      className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white rounded-full p-1"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    {photo.notes && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 rounded-b-lg">
+                        {photo.notes}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

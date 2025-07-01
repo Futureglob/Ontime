@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Camera, CheckCircle, XCircle, Play, Pause, WifiOff, Calendar } from "lucide-react";
+import { MapPin, Camera, CheckCircle, Play, Pause, WifiOff, Calendar } from "lucide-react";
 import { EnrichedTask } from "@/types";
 
 interface FieldTaskCardProps {
@@ -18,7 +18,6 @@ export default function FieldTaskCard({ task, onStatusChange }: FieldTaskCardPro
   const [showCamera, setShowCamera] = useState(false);
   const [photoType, setPhotoType] = useState<"check_in" | "progress" | "completion">("check_in");
   const [notes, setNotes] = useState("");
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

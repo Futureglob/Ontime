@@ -1,128 +1,62 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { taskService } from "@/services/taskService";
-import { EnrichedTask } from "@/types";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, Map } from "lucide-react";
+import taskService from "@/services/taskService";
 import FieldTaskCard from "./FieldTaskCard";
-import PhotoCapture from "./PhotoCapture";
+import type { EnrichedTask } from "@/types";
 
 export default function FieldWork() {
   const { currentProfile } = useAuth();
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
-  const [isPhotoCaptureOpen, setIsPhotoCaptureOpen] = useState(false);
 
-  const loadTasks = useCallback(async () => {
-    if (!currentProfile) return;
-    
-    setLoading(true);
-    try {
-      const tasksData = await taskService.getTasksForUser(currentProfile.user_id);
-      const fieldTasks = tasksData.filter(task => 
-        task.assigned_to === currentProfile.user_id && 
-        ['assigned', 'in_progress'].includes(task.status)
-      );
-      setTasks(fieldTasks);
-    } catch (err) {
-      console.error('Error loading field tasks:', err);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (currentProfile?.user_id) {
+      fetchTasks();
     }
   }, [currentProfile]);
 
-  useEffect(() => {
-    if (currentProfile) {
-      loadTasks();
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const userTasks = await taskService.getTasksByAssignee(currentProfile!.user_id);
+      setTasks(userTasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [currentProfile, loadTasks]);
-
-  const handleTakePhoto = (task: EnrichedTask) => {
-    setSelectedTask(task);
-    setIsPhotoCaptureOpen(true);
   };
 
-  const handlePhotoSuccess = () => {
-    setIsPhotoCaptureOpen(false);
-    setSelectedTask(null);
-    loadTasks(); // Refresh tasks to show updated status or photos
+  const handleStatusChange = async (taskId: string, newStatus: string) => {
+    try {
+      await taskService.updateTask(taskId, { status: newStatus as any });
+      await fetchTasks();
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
   };
 
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          task.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  if (isPhotoCaptureOpen && selectedTask) {
-    return (
-      <PhotoCapture
-        task={selectedTask}
-        onSuccess={handlePhotoSuccess}
-        onCancel={() => setIsPhotoCaptureOpen(false)}
-      />
-    );
+  if (loading) {
+    return <div className="p-4">Loading tasks...</div>;
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Field Work</h1>
+    <div className="p-4 space-y-4">
+      <h1 className="text-2xl font-bold">Field Work</h1>
       
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search field tasks..." 
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-80" />)}
+      {tasks.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No tasks assigned to you.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map(task => (
-              <FieldTaskCard 
-                key={task.id} 
-                task={task} 
-                onTakePhoto={() => handleTakePhoto(task)}
-              />
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              <Map className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No field work tasks assigned to you.</p>
-            </div>
-          )}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {tasks.map((task) => (
+            <FieldTaskCard
+              key={task.id}
+              task={task}
+              onStatusChange={(status) => handleStatusChange(task.id, status)}
+            />
+          ))}
         </div>
       )}
     </div>
