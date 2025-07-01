@@ -1,7 +1,5 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import LoginForm from "@/components/auth/LoginForm";
 
 export default function HomePage() {
@@ -34,7 +32,12 @@ export default function HomePage() {
 
   return (
     <DashboardLayout>
-      <DashboardOverview />
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Welcome to OnTime</h1>
+          <p className="text-gray-600">Your task management dashboard is loading...</p>
+        </div>
+      </div>
     </DashboardLayout>
   );
 }

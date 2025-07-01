@@ -1,5 +1,3 @@
-
-import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "./Sidebar";
 
 interface DashboardLayoutProps {
@@ -7,8 +5,6 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { currentProfile } = useAuth();
-
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar />
