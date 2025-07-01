@@ -90,6 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const currentUser = data.user;
     setUser(currentUser);
+    
+    // If super admin, don't fetch profile - redirect immediately
+    if (currentUser?.user_metadata?.role === "super_admin") {
+      setCurrentProfile(null);
+      return data;
+    }
+    
     if (currentUser) {
       const profile = await profileService.getProfile(currentUser.id);
       setCurrentProfile(profile);
