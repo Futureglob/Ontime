@@ -1,6 +1,5 @@
 
-    
-import { supabase } from "@/integrations/supabase/client";
+    import { supabase } from "@/integrations/supabase/client";
 
 const BUCKETS = {
   avatars: "avatars",

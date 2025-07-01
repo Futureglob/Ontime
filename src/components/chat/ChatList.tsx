@@ -77,7 +77,7 @@ export default function ChatList({
     return (
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       otherParticipant?.full_name
-        .toLowerCase()
+        ?.toLowerCase()
         .includes(searchTerm.toLowerCase())
     );
   });

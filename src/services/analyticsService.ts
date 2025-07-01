@@ -124,7 +124,7 @@ export const analyticsService = {
       if (error) throw error;
       return { status: "ok", db_connection: true };
     } catch (error) {
-      return { status: "error", db_connection: false, message: (error as any).message };
+      return { status: "error", db_connection: false, message: (error as Error).message };
     }
   },
   

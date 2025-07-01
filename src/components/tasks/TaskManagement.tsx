@@ -98,15 +98,24 @@ export default function TaskManagement() {
     loadTasks();
   };
 
-  const handleFormSubmit = (task: EnrichedTask) => {
-    if (selectedTask) {
-      // Update existing task
-      taskService.updateTask(selectedTask.id, task);
-    } else {
-      // Create new task
-      taskService.createTask(task);
+  const handleFormSubmit = async (values: Partial<EnrichedTask>) => {
+    try {
+        if (selectedTask) {
+            await taskService.updateTask(selectedTask.id, values);
+        } else {
+            if(currentProfile?.organization_id && currentProfile?.user_id) {
+                const taskData = {
+                    ...values,
+                    organization_id: currentProfile.organization_id,
+                    created_by: currentProfile.user_id,
+                }
+                await taskService.createTask(taskData);
+            }
+        }
+        handleSuccess();
+    } catch (error) {
+        console.error("Failed to submit task:", error);
     }
-    handleSuccess();
   };
 
   const employees = useMemo(() => {
@@ -123,22 +132,21 @@ export default function TaskManagement() {
 
   if (isFormOpen) {
     return (
-      <Dialog>
-        <DialogHeader>
-          <DialogTitle>
-            {selectedTask ? "Edit Task" : "Add New Task"}
-          </DialogTitle>
-        </DialogHeader>
-        <TaskForm
-          task={selectedTask}
-          employees={employees}
-          clients={clients}
-          onSubmit={handleFormSubmit}
-          onCancel={() => {
-            setSelectedTask(null);
-            setShowForm(false);
-          }}
-        />
+      <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleSuccess()}>
+        <DialogContent>
+            <DialogHeader>
+            <DialogTitle>
+                {selectedTask ? "Edit Task" : "Add New Task"}
+            </DialogTitle>
+            </DialogHeader>
+            <TaskForm
+                task={selectedTask || undefined}
+                employees={employees}
+                clients={clients}
+                onSubmit={handleFormSubmit}
+                onCancel={handleSuccess}
+            />
+        </DialogContent>
       </Dialog>
     );
   }

@@ -1,7 +1,6 @@
 
-    
-import { supabase } from "@/integrations/supabase/client";
-import { Profile } from "@/types";
+    import { supabase } from "@/integrations/supabase/client";
+import { Organization, Profile } from "@/types";
 
 export const organizationManagementService = {
   async getEmployees(organizationId: string): Promise<Profile[]> {
@@ -87,10 +86,10 @@ export const organizationManagementService = {
     return data;
   },
 
-  async bulkImportEmployees(organizationId: string, employees: any[]) {
+  async bulkImportEmployees(organizationId: string, employees: Record<string, any>[]) {
     const results = {
-      success: [],
-      errors: [],
+      success: [] as Profile[],
+      errors: [] as { employee: Record<string, any>, error: string }[],
     };
 
     for (const emp of employees) {
@@ -126,15 +125,16 @@ export const organizationManagementService = {
       throw new Error((data as any).error);
     }
 
-    if (!data) {
-        if (typeof data === 'string') {
-            return data;
-        }
+    if (typeof data === 'string') {
+        return data;
+    }
+
+    if (!data || !(data as any).pin) {
         console.error("Invalid response from generate_user_pin RPC:", data);
         throw new Error("Failed to generate PIN: Invalid response from server.");
     }
 
-    return (data as any).pin || data;
+    return (data as any).pin;
   },
 
   async getOrganizationSettings(organizationId: string) {
@@ -147,7 +147,7 @@ export const organizationManagementService = {
     return data;
   },
 
-  async updateOrganizationSettings(organizationId: string, updates: any) {
+  async updateOrganizationSettings(organizationId: string, updates: Partial<Organization>) {
     const { data, error } = await supabase
       .from("organizations")
       .update(updates)

@@ -24,10 +24,10 @@ const taskFormSchema = z.object({
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 interface TaskFormProps {
-  task?: EnrichedTask;
+  task?: Partial<EnrichedTask>;
   employees: Profile[];
   clients: Client[];
-  onSubmit: ( TaskFormValues) => void;
+  onSubmit: (values: TaskFormValues) => void;
   onCancel: () => void;
 }
 

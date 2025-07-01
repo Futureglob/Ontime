@@ -1,6 +1,5 @@
 
-    
-import { supabase } from "@/integrations/supabase/client";
+    import { supabase } from "@/integrations/supabase/client";
 import { faker } from "@faker-js/faker";
 
 export interface SuperAdmin {

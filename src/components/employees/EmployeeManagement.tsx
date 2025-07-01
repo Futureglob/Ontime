@@ -67,7 +67,7 @@ export default function EmployeeManagement() {
     loadEmployees();
   }, [loadEmployees]);
 
-  const handleFormSubmit = async (values: any) => {
+  const handleFormSubmit = async (values: Partial<Profile>) => {
     if (!currentProfile?.organization_id) return;
 
     try {

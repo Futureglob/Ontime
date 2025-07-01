@@ -1,11 +1,10 @@
 
-    
-import { supabase } from "@/integrations/supabase/client";
+    import { supabase } from "@/integrations/supabase/client";
 import { profileService } from "./profileService";
 
 export const authService = {
   async loginWithPin(employeeId: string, pin: string, organizationId: string) {
-    const { data, error } = await supabase.rpc("login_with_pin" as any, {
+    const { data, error } = await supabase.rpc("login_with_pin", {
       p_employee_id: employeeId,
       p_pin: pin,
       p_organization_id: organizationId,
@@ -18,7 +17,7 @@ export const authService = {
     return { user: profile, session: null }; // No session from PIN login
   },
 
-  async signUp(email, password, organizationId, fullName, role) {
+  async signUp(email: string, password: string, organizationId: string, fullName: string, role: string) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -35,7 +34,7 @@ export const authService = {
     return { user: data.user, session: data.session };
   },
 
-  async signIn(email, password) {
+  async signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -50,7 +49,7 @@ export const authService = {
   },
 
   async generatePin(userId: string) {
-    const { data, error } = await supabase.rpc("generate_user_pin" as any, {
+    const { data, error } = await supabase.rpc("generate_user_pin", {
       p_user_id: userId,
     });
     if (error) throw error;
@@ -59,7 +58,7 @@ export const authService = {
   },
 
   async resetPin(userId: string) {
-    const { error } = await supabase.rpc("reset_user_pin" as any, {
+    const { error } = await supabase.rpc("reset_user_pin", {
       p_user_id: userId,
     });
     if (error) throw error;
