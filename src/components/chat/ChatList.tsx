@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import messageService from "@/services/messageService";
 import realtimeService from "@/services/realtimeService";
 import { useAuth } from "@/contexts/AuthContext";
 import taskService from "@/services/taskService";
@@ -9,16 +8,17 @@ import { formatDistanceToNow } from "date-fns";
 
 interface ChatListProps {
   onSelectChat: (taskId: string) => void;
+  selectedTaskId?: string;
 }
 
-export default function ChatList({ onSelectChat }: ChatListProps) {
+export default function ChatList({ onSelectChat, selectedTaskId }: ChatListProps) {
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const { currentProfile } = useAuth();
 
   const fetchTasks = useCallback(async () => {
     if (currentProfile) {
       try {
-        const fetchedTasks = await taskService.getTasksForUser(currentProfile.id);
+        const fetchedTasks = await taskService.getTasksByAssignee(currentProfile.id);
         setTasks(fetchedTasks);
       } catch (error) {
         console.error("Error fetching tasks:", error);
@@ -32,7 +32,7 @@ export default function ChatList({ onSelectChat }: ChatListProps) {
 
   useEffect(() => {
     if (currentProfile) {
-      const subscription = realtimeService.subscribeToTaskChanges(currentProfile.organization_id, (_payload) => {
+      const subscription = realtimeService.subscribeToTaskUpdates(currentProfile.organization_id, () => {
         fetchTasks();
       });
 
@@ -67,19 +67,11 @@ export default function ChatList({ onSelectChat }: ChatListProps) {
               </Avatar>
               <div className="flex-grow overflow-hidden">
                 <h3 className="font-semibold truncate">{task.title}</h3>
-                {task.lastMessage ? (
-                  <p className="text-sm text-muted-foreground truncate">
-                    <strong>{task.lastMessage.sender.full_name.split(" ")[0]}:</strong> {task.lastMessage.content}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">No messages yet</p>
-                )}
+                <p className="text-sm text-muted-foreground italic">Click to view messages</p>
               </div>
-              {task.lastMessage && (
-                <div className="text-xs text-muted-foreground self-start">
-                  {formatDistanceToNow(new Date(task.lastMessage.created_at), { addSuffix: true })}
-                </div>
-              )}
+              <div className="text-xs text-muted-foreground self-start">
+                {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
+              </div>
             </div>
           </div>
         ))}

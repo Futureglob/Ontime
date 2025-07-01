@@ -15,15 +15,16 @@ interface ChatInterfaceProps {
 }
 
 export default function ChatInterface({ taskId }: ChatInterfaceProps) {
-  const { user, profile } = useAuth();
+  const { user, currentProfile } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
       if (user) {
         try {
-          const fetchedMessages = await messageService.getMessages(taskId);
+          const fetchedMessages = await messageService.getTaskMessages(taskId);
           setMessages(fetchedMessages);
         } catch (error) {
           console.error("Error fetching messages:", error);
@@ -33,7 +34,7 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
 
     fetchMessages();
 
-    const subscription = realtimeService.subscribeToMessages(taskId, (newMessageData) => {
+    const subscription = realtimeService.subscribeToTaskMessages(taskId, (newMessageData) => {
       setMessages((prevMessages) => [...prevMessages, newMessageData]);
     });
 
@@ -43,7 +44,6 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
   }, [taskId, user]);
 
   useEffect(() => {
-    // Scroll to bottom when messages change
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({
         top: scrollAreaRef.current.scrollHeight,
@@ -52,32 +52,30 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
     }
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !user || !profile) return;
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !user || !currentProfile) return;
 
     try {
-      await messageService.sendMessage(taskId, profile.id, newMessage);
+      await messageService.sendMessage(taskId, currentProfile.id, newMessage);
       setNewMessage("");
-      // The realtime subscription should handle updating the message list
     } catch (error) {
       console.error("Error sending message:", error);
     }
   };
 
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-grow p-4" ref={scrollAreaRef as any}>
+      <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages.map((message) => (
             <div
               key={message.id}
               className={`flex items-end gap-2 ${
-                message.sender.full_name === profile?.full_name ? "justify-end" : ""
+                message.sender.full_name === currentProfile?.full_name ? "justify-end" : ""
               }`}
             >
-              {message.sender.full_name !== profile?.full_name && (
+              {message.sender.full_name !== currentProfile?.full_name && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={message.sender.avatar_url} />
                   <AvatarFallback>
@@ -87,7 +85,7 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
               )}
               <div
                 className={`rounded-lg p-3 max-w-xs lg:max-w-md ${
-                  message.sender.full_name === profile?.full_name
+                  message.sender.full_name === currentProfile?.full_name
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted"
                 }`}

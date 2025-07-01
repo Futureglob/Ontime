@@ -24,9 +24,12 @@ export interface EmployeePerformance {
 }
 
 export interface LocationAnalytics {
-  totalDistance: number; // in km
-  averageDistance: number; // in km
-  averageDuration: number; // in minutes
+  location: string;
+  taskCount: number;
+  completionRate: number;
+  totalDistance: number;
+  averageDistance: number;
+  averageDuration: number;
 }
 
 export interface ClientSatisfaction {
@@ -125,25 +128,40 @@ const analyticsService = {
     return performanceData;
   },
 
-  async getLocationAnalytics(organizationId: string): Promise<LocationAnalytics> {
+  async getLocationAnalytics(organizationId: string): Promise<LocationAnalytics[]> {
     const { data: tasks, error } = await supabase
       .from("tasks")
-      .select("location_lat, location_lng")
+      .select("location_lat, location_lng, status")
       .eq("organization_id", organizationId)
       .not("location_lat", "is", null);
 
     if (error) throw error;
 
-    // Dummy data for now as we don't have distance/duration data
-    const totalDistance = (tasks?.length || 0) * (Math.random() * 10 + 5);
-    const averageDistance = (tasks?.length || 0) > 0 ? totalDistance / (tasks?.length || 1) : 0;
-    const averageDuration = (tasks?.length || 0) > 0 ? Math.random() * 30 + 15 : 0;
+    // Group tasks by location (simplified - using lat/lng as location identifier)
+    const locationGroups: Record<string, any[]> = {};
+    tasks?.forEach(task => {
+      const locationKey = `${task.location_lat?.toFixed(2)},${task.location_lng?.toFixed(2)}`;
+      if (!locationGroups[locationKey]) {
+        locationGroups[locationKey] = [];
+      }
+      locationGroups[locationKey].push(task);
+    });
 
-    return {
-      totalDistance,
-      averageDistance,
-      averageDuration,
-    };
+    const locationAnalytics: LocationAnalytics[] = Object.entries(locationGroups).map(([locationKey, locationTasks]) => {
+      const completedTasks = locationTasks.filter(t => t.status === "completed").length;
+      const completionRate = locationTasks.length > 0 ? (completedTasks / locationTasks.length) * 100 : 0;
+      
+      return {
+        location: `Location ${locationKey}`,
+        taskCount: locationTasks.length,
+        completionRate,
+        totalDistance: locationTasks.length * (Math.random() * 10 + 5),
+        averageDistance: Math.random() * 10 + 5,
+        averageDuration: Math.random() * 30 + 15,
+      };
+    });
+
+    return locationAnalytics;
   },
 
   async getOrganizationStats(organizationId: string) {

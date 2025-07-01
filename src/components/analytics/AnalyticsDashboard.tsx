@@ -11,15 +11,15 @@ import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";
 
 export default function AnalyticsDashboard() {
-  const { profile } = useAuth();
+  const { currentProfile } = useAuth();
   const [taskOverview, setTaskOverview] = useState<TaskOverview | null>(null);
   const [employeePerformance, setEmployeePerformance] = useState<EmployeePerformance[]>([]);
-  const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytics | null>(null);
+  const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytics[]>([]);
   const [orgStats, setOrgStats] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (profile?.organization_id) {
+    if (currentProfile?.organization_id) {
       const fetchData = async () => {
         try {
           setLoading(true);
@@ -29,10 +29,10 @@ export default function AnalyticsDashboard() {
             locationData,
             statsData
           ] = await Promise.all([
-            analyticsService.getTaskOverview(profile.organization_id),
-            analyticsService.getEmployeePerformance(profile.organization_id),
-            analyticsService.getLocationAnalytics(profile.organization_id),
-            analyticsService.getOrganizationStats(profile.organization_id)
+            analyticsService.getTaskOverview(currentProfile.organization_id),
+            analyticsService.getEmployeePerformance(currentProfile.organization_id),
+            analyticsService.getLocationAnalytics(currentProfile.organization_id),
+            analyticsService.getOrganizationStats(currentProfile.organization_id)
           ]);
           setTaskOverview(overviewData);
           setEmployeePerformance(performanceData);
@@ -46,7 +46,7 @@ export default function AnalyticsDashboard() {
       };
       fetchData();
     }
-  }, [profile]);
+  }, [currentProfile]);
 
   if (loading) {
     return <div>Loading analytics...</div>;
@@ -141,7 +141,7 @@ export default function AnalyticsDashboard() {
             <CardTitle>Task Analytics</CardTitle>
           </CardHeader>
           <CardContent>
-            <TaskAnalyticsChart taskOverview={taskOverview} />
+            <TaskAnalyticsChart data={taskOverview} />
           </CardContent>
         </Card>
       </div>
@@ -188,7 +188,7 @@ export default function AnalyticsDashboard() {
             <CardTitle>Top Performers</CardTitle>
           </CardHeader>
           <CardContent>
-            <EmployeePerformanceChart employeePerformance={employeePerformance} />
+            <EmployeePerformanceChart data={employeePerformance} />
           </CardContent>
         </Card>
       </div>
@@ -198,7 +198,7 @@ export default function AnalyticsDashboard() {
           <CardTitle>Location Analytics</CardTitle>
         </CardHeader>
         <CardContent>
-          <LocationAnalyticsChart locationAnalytics={locationAnalytics} />
+          <LocationAnalyticsChart data={locationAnalytics} />
         </CardContent>
       </Card>
     </div>
