@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,10 +11,11 @@ export default function SuperAdminPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      // If not logged in and not on the superadmin page, do nothing (allow access to login)
+      // If not logged in, show login form
       return;
     }
     if (!isSuperAdmin) {
+      // If logged in but not super admin, redirect to home
       router.replace("/");
     }
   }, [user, loading, isSuperAdmin, router]);
@@ -25,7 +25,7 @@ export default function SuperAdminPage() {
   }
 
   if (!user) {
-    return <SuperAdminLogin onSuccess={() => router.reload()} />;
+    return <SuperAdminLogin />;
   }
 
   if (!isSuperAdmin) {
@@ -42,7 +42,7 @@ export default function SuperAdminPage() {
   return <SuperAdminDashboard />;
 }
 
-// Override the default layout for super admin page - MOVED AFTER COMPONENT
+// Override the default layout for super admin page
 SuperAdminPage.getLayout = function getLayout(page: React.ReactElement) {
   return <div className="min-h-screen bg-background">{page}</div>;
 };

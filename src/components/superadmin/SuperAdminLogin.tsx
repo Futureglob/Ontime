@@ -29,8 +29,8 @@ export default function SuperAdminLogin({ }: SuperAdminLoginProps) {
       const result = await login(email, password);
       // Check if user is super admin immediately after login
       if (result.user?.user_metadata?.role === "super_admin") {
-        // Use router instead of window.location for better control
-        window.location.replace("/superadmin");
+        // Force immediate redirect - don't wait for anything
+        window.location.href = "/superadmin";
         return;
       } else {
         setError("Access denied. Super admin credentials required.");
