@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,14 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { currentProfile } = useAuth();
+  const { currentProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !profile) {
+    if (!loading && !currentProfile) {
       router.push('/');
     }
-  }, [profile, loading, router]);
+  }, [currentProfile, loading, router]);
 
   if (loading) {
     return (
@@ -28,7 +29,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  if (!profile) {
+  if (!currentProfile) {
     return null;
   }
 
@@ -43,7 +44,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar profile={profile} onLogout={handleLogout} />
+      <Sidebar profile={currentProfile} onLogout={handleLogout} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between px-6 py-4">
@@ -54,7 +55,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
-                {profile.full_name}
+                {currentProfile.full_name}
               </span>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
