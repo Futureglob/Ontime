@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -42,20 +43,21 @@ const organizationManagementService = {
     designation?: string;
     mobileNumber?: string;
   }) {
-    const { data: { user }, error: authError } = await supabase.auth.admin.createUser({
+    const {  userResponse, error: authError } = await supabase.auth.admin.createUser({
       email: employeeData.email,
       password: Math.random().toString(36).slice(-8), // Insecure, for dev only
       email_confirm: true,
-      user_metadata: {
+      user_meta {
         full_name: employeeData.fullName,
         role: employeeData.role,
       },
     });
 
     if (authError) throw authError;
-    if (!user) throw new Error("User creation failed.");
+    if (!userResponse.user) throw new Error("User creation failed.");
+    const user = userResponse.user;
 
-    const { data: profile, error: profileError } = await supabase
+    const {  profile, error: profileError } = await supabase
       .from("profiles")
       .insert({
         user_id: user.id,
@@ -125,15 +127,17 @@ const organizationManagementService = {
   async getOrganizationDetails(organizationId: string): Promise<OrganizationDetails> {
     const [orgResult, usersResult, tasksResult] = await Promise.all([
       supabase.from("organizations").select("*").eq("id", organizationId).single(),
-      supabase.from("profiles").select("id").eq("organization_id", organizationId),
+      supabase.from("profiles").select("id", { count: "exact" }).eq("organization_id", organizationId),
       supabase.from("tasks").select("id, status").eq("organization_id", organizationId)
     ]);
 
     if (orgResult.error) throw orgResult.error;
+    if (!orgResult.data) throw new Error("Organization not found");
+    
     if (usersResult.error) throw usersResult.error;
     if (tasksResult.error) throw tasksResult.error;
 
-    const userCount = usersResult.data?.length || 0;
+    const userCount = usersResult.count || 0;
     const taskCount = tasksResult.data?.length || 0;
     const completedTasks = tasksResult.data?.filter(t => t.status === "completed").length || 0;
 
@@ -146,7 +150,7 @@ const organizationManagementService = {
   },
 
   async getOrganizationTasks(organizationId: string): Promise<TaskSummary> {
-    const { data: tasks, error } = await supabase
+    const {  tasks, error } = await supabase
       .from("tasks")
       .select("status, due_date")
       .eq("organization_id", organizationId);
@@ -158,15 +162,15 @@ const organizationManagementService = {
     const completed = tasks?.filter(t => t.status === "completed").length || 0;
     const pending = tasks?.filter(t => t.status === "pending").length || 0;
     const overdue = tasks?.filter(t => 
-      t.status !== "completed" && new Date(t.due_date) < now
+      t.status !== "completed" && t.due_date && new Date(t.due_date) < now
     ).length || 0;
 
     return { total, completed, pending, overdue };
   },
 
   async generatePinForUser(userId: string) {
-    const { data, error } = await supabase.rpc("generate_user_pin", {
-      user_id: userId
+    const { data, error } = await supabase.rpc("generate_user_pin" as any, {
+      p_user_id: userId
     });
 
     if (error) throw error;

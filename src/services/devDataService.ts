@@ -28,11 +28,11 @@ const devDataService = {
 
     for (const employee of employees) {
       try {
-        const { data: { user }, error: authError } = await supabase.auth.admin.createUser({
+        const {  userResponse, error: authError } = await supabase.auth.admin.createUser({
           email: employee.email,
           password: "password",
           email_confirm: true,
-          user_metadata: { full_name: employee.fullName },
+          user_meta { full_name: employee.fullName },
         });
 
         if (authError) {
@@ -40,21 +40,18 @@ const devDataService = {
           continue;
         }
 
-        if (user) {
-          const { data: profile, error: profileError } = await supabase
+        if (userResponse.user) {
+          const { error: profileError } = await supabase
             .from("profiles")
-            .select("id")
-            .eq("user_id", user.id)
-            .single();
-
-          if (profileError && profileError.code === 'PGRST116') {
-            await supabase.from("profiles").insert({
-              user_id: user.id,
+            .insert({
+              user_id: userResponse.user.id,
               organization_id: organizationId,
               full_name: employee.fullName,
               role: employee.role,
               employee_id: employee.employeeId,
             });
+          if (profileError) {
+            console.error(`Failed to create profile for ${employee.email}:`, profileError);
           }
         }
       } catch (error) {
@@ -63,9 +60,9 @@ const devDataService = {
     }
 
     try {
-      const { data: clients, error: clientError } = await supabase.from("clients").insert([
-        { name: "Dev Client A", contact_person: "Mr. A", organization_id: organizationId },
-        { name: "Dev Client B", contact_person: "Ms. B", organization_id: organizationId },
+      const {  clients, error: clientError } = await supabase.from("clients").insert([
+        { name: "Dev Client A", contact_person: "Mr. A", organization_id: organizationId, email: "clienta@test.com", phone: "123", address: "123 street" },
+        { name: "Dev Client B", contact_person: "Ms. B", organization_id: organizationId, email: "clientb@test.com", phone: "456", address: "456 street" },
       ]).select();
 
       if (clientError) {
@@ -73,7 +70,7 @@ const devDataService = {
         return true;
       }
 
-      const { data: profiles, error: profilesError } = await supabase
+      const {  profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, role")
         .eq("organization_id", organizationId);

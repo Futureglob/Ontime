@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/types/database";
 
@@ -7,7 +8,7 @@ const authService = {
     if (error) throw error;
     if (!data.user) throw new Error("User not found after sign-in.");
 
-    const { data: profile, error: profileError } = await supabase
+    const {  profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", data.user.id)
@@ -19,8 +20,14 @@ const authService = {
   },
 
   async loginWithPin(email: string, pin: string) {
-    // Simplified PIN login - in real implementation this would use proper RPC
-    throw new Error("PIN login not implemented yet");
+    const { data, error } = await supabase.rpc('login_with_pin' as any, {
+      p_email: email,
+      p_pin: pin
+    });
+
+    if (error) throw error;
+    // The RPC should return user, session, and profile data
+    return data;
   },
 
   async logout() {
@@ -36,4 +43,3 @@ const authService = {
 };
 
 export default authService;
-  
