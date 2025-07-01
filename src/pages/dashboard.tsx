@@ -1,9 +1,9 @@
-
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
+import type { ReactElement } from "react";
 
 export default function DashboardPage() {
   const { user, loading, isSuperAdmin } = useAuth();
@@ -26,9 +26,9 @@ export default function DashboardPage() {
     return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>;
   }
 
-  return (
-    <DashboardLayout>
-      <DashboardOverview />
-    </DashboardLayout>
-  );
+  return <DashboardOverview />;
 }
+
+DashboardPage.getLayout = function getLayout(page: ReactElement) {
+  return <DashboardLayout>{page}</DashboardLayout>;
+};
