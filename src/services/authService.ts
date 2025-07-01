@@ -35,7 +35,7 @@ const authService = {
     let profile = null;
     if (data.user) {
       try {
-        const {  profileData } = await supabase
+        const { data: profileData } = await supabase
           .from("profiles")
           .select("*")
           .eq("user_id", data.user.id)
@@ -44,7 +44,7 @@ const authService = {
         profile = profileData;
 
       } catch (err) {
-        console.error("Error fetching/creating profile:", err);
+        console.error("Error fetching profile:", err);
       }
     }
     

@@ -19,17 +19,18 @@ export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  const { signIn } = useAuth();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setError("");
     setLoading(true);
     try {
-      await authService.login(email, password);
+      await login(email, password);
       onSuccess();
-    } catch (error: any) {
-      setError(error.message || "An unknown error occurred.");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
