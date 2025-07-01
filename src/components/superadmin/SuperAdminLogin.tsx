@@ -29,11 +29,12 @@ export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {
       const result = await login(email, password);
       // Check if user is super admin immediately after login
       if (result.user?.user_metadata?.role === "super_admin") {
-        window.location.href = "/superadmin"; // Force immediate redirect
+        // Force immediate redirect without calling onSuccess
+        window.location.replace("/superadmin");
+        return;
       } else {
         setError("Access denied. Super admin credentials required.");
       }
-      onSuccess();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       setError(errorMessage);
