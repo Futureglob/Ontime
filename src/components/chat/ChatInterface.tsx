@@ -45,7 +45,6 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
             avatar_url: undefined
           },
           created_at: payload.new.created_at,
-          task_id: payload.new.task_id,
           is_read: payload.new.is_read
         };
         setMessages((prevMessages) => [...prevMessages, newMessage]);
