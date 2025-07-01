@@ -19,17 +19,11 @@ Status: ${task.status}
 Priority: ${task.priority}
 Due: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}
 
-Location: ${task.location || 'Not specified'}
+Location: ${task.location_address || 'Not specified'}
 
 Description: ${task.description || 'No description'}`;
   const [customMessage, setCustomMessage] = useState(defaultMessage);
   const [shareType, setShareType] = useState<"update" | "custom">("update");
-
-  const location = task.location_lat && task.location_lng ? {
-    lat: task.location_lat,
-    lng: task.location_lng,
-    address: task.location_address
-  } : null;
 
   const handleShare = () => {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(customMessage)}`;
@@ -76,7 +70,7 @@ Description: ${task.description || 'No description'}`;
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              📍 {task.location || "Location not specified"}
+              📍 {task.location_address || "Location not specified"}
             </p>
             {task.due_date && (
               <p className="text-xs text-muted-foreground">
@@ -85,16 +79,16 @@ Description: ${task.description || 'No description'}`;
             )}
           </div>
 
-          {location && (
+          {task.location_lat && task.location_lng && (
             <div className="p-3 bg-muted rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-medium text-sm">Location</h4>
               </div>
               <p className="text-xs text-muted-foreground">
-                📍 {location.address}
+                📍 {task.location_address}
               </p>
               <p className="text-xs text-muted-foreground">
-                {location.lat}, {location.lng}
+                {task.location_lat}, {task.location_lng}
               </p>
             </div>
           )}

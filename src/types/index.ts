@@ -17,11 +17,6 @@ export type EnrichedTask = Task & {
   client?: Client | null;
   photos?: TaskPhoto[];
   task_type?: string | null;
-  location?: {
-    lat: number;
-    lng: number;
-    address?: string;
-  } | null;
 };
 
 export interface User {

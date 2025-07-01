@@ -162,7 +162,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
     if (!newMessage.trim() || !user || !task) return;
     try {
       setSending(true);
-      const receiverId = user.id === task.created_by ? task.assignee_id : task.created_by;
+      const receiverId = user.id === task.created_by ? task.assigned_to : task.created_by;
       if (!receiverId) {
         toast({ title: "Error", description: "Cannot determine message receiver.", variant: "destructive" });
         return;
@@ -187,7 +187,11 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
   const shareViaWhatsApp = () => {
     if (!task) return;
     
-    const message = `Task Update: ${task.title}\nStatus: ${task.status}\nLocation: ${task.location || "Not specified"}\n\nView details in OnTime app.`;
+    const message = `Task Update: ${task.title}
+Status: ${task.status}
+Location: ${task.location_address || "Not specified"}
+
+View details in OnTime app.`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -207,7 +211,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
   const getOtherParticipant = () => {
     if (!task || !user) return null;
     
-    if (user.id === task.assignee_id) {
+    if (user.id === task.assigned_to) {
       return task.assigned_by_profile;
     } else {
       return task.assigned_to_profile;
@@ -215,8 +219,6 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
   };
 
   const otherParticipant = getOtherParticipant();
-
-  const isCurrentUserAssigned = task.assigned_to === user?.id;
 
   if (!task) {
     return (
