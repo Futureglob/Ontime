@@ -23,86 +23,46 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ profile, onLogout }: SidebarProps) {
-  const router = useRouter();
-  const { pathname } = router;
-
-  const getNavLinks = () => {
-    switch (profile.role) {
-      case "super_admin":
-        return [
-          { href: "/superadmin", label: "Dashboard", icon: Home },
-          { href: "/settings", label: "System Settings", icon: Settings },
-        ];
-      case "admin":
-        return [
-          { href: "/tasks", label: "Tasks", icon: CheckSquare },
-          { href: "/employees", label: "Employees", icon: Users },
-          { href: "/clients", label: "Clients", icon: Users },
-          { href: "/chat", label: "Chat", icon: MessageSquare },
-          { href: "/analytics", label: "Analytics", icon: BarChart3 },
-          { href: "/organization", label: "Organization", icon: Building2 },
-        ];
-      case "manager":
-        return [
-            { href: "/tasks", label: "Tasks", icon: CheckSquare },
-            { href: "/employees", label: "Employees", icon: Users },
-            { href: "/clients", label: "Clients", icon: Users },
-            { href: "/chat", label: "Chat", icon: MessageSquare },
-            { href: "/analytics", label: "Analytics", icon: BarChart3 },
-        ];
-      case "employee":
-        return [
-          { href: "/tasks", label: "My Tasks", icon: CheckSquare },
-          { href: "/field", label: "Field Work", icon: MapPin },
-          { href: "/chat", label: "Chat", icon: MessageSquare },
-        ];
-      default:
-        return [];
-    }
-  };
-
-  const navLinks = getNavLinks();
+  const menuItems = [
+    { icon: Home, label: "Dashboard", href: "/" },
+    { icon: CheckSquare, label: "Tasks", href: "/tasks" },
+    { icon: MapPin, label: "Field Work", href: "/field" },
+    { icon: MessageSquare, label: "Chat", href: "/chat" },
+    { icon: BarChart3, label: "Analytics", href: "/analytics" },
+    { icon: Users, label: "Employees", href: "/employees" },
+    { icon: Building2, label: "Clients", href: "/clients" },
+    { icon: Settings, label: "Settings", href: "/settings" },
+  ];
 
   return (
-    <aside className="w-64 bg-background border-r flex flex-col">
-      <div className="p-4 border-b">
-        <h1 className="text-2xl font-bold text-primary">OnTime</h1>
+    <div className="w-64 bg-white dark:bg-gray-800 shadow-lg">
+      <div className="p-6">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white">OnTime</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-300">{profile.full_name}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{profile.role}</p>
       </div>
-      <nav className="flex-grow p-4 space-y-2">
-        {navLinks.map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href}>
-            <Button
-              variant={pathname.startsWith(href) ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <Icon className="mr-2 h-4 w-4" />
-              {label}
-            </Button>
+      
+      <nav className="mt-6">
+        {menuItems.map((item) => (
+          <Link key={item.href} href={item.href}>
+            <div className="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+              <item.icon className="h-5 w-5 mr-3" />
+              {item.label}
+            </div>
           </Link>
         ))}
       </nav>
-      <div className="p-4 border-t">
-        <div className="flex items-center gap-4 mb-4">
-          <Avatar>
-            <AvatarImage src={profile.avatar_url || ""} />
-            <AvatarFallback>{profile.full_name?.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold">{profile.full_name}</p>
-            <p className="text-sm text-muted-foreground">{profile.designation}</p>
-          </div>
-        </div>
-        <Link href="/profile">
-          <Button variant="ghost" className="w-full justify-start mb-2">
-            <UserCircle className="mr-2 h-4 w-4" />
-            Profile Settings
-          </Button>
-        </Link>
-        <Button variant="ghost" onClick={onLogout} className="w-full justify-start text-red-500 hover:text-red-600">
-          <LogOut className="mr-2 h-4 w-4" />
+      
+      <div className="absolute bottom-0 w-64 p-6">
+        <Button 
+          onClick={onLogout}
+          variant="outline" 
+          className="w-full flex items-center justify-center"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
           Logout
         </Button>
       </div>
-    </aside>
+    </div>
   );
 }
