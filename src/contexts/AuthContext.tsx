@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -8,13 +9,17 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   currentProfile: Profile | null;
+  setCurrentProfile: (profile: Profile | null) => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
-  currentProfile: null
+  currentProfile: null,
+  setCurrentProfile: () => {},
+  refreshProfile: async () => {}
 });
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -53,22 +58,64 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Try different column names to handle schema variations
+      let data, error;
+      
+      // First try with user_id
+      const result1 = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
-        .single();
-
-      if (error) throw error;
-      setCurrentProfile(data as Profile);
+        .maybeSingle();
+      
+      if (result1.error && result1.error.code !== "42703") {
+        throw result1.error;
+      }
+      
+      if (result1.data) {
+        setCurrentProfile(result1.data as Profile);
+        return;
+      }
+      
+      // If user_id doesn't exist, try with id
+      const result2 = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+        
+      if (result2.error && result2.error.code !== "42703") {
+        throw result2.error;
+      }
+      
+      if (result2.data) {
+        setCurrentProfile(result2.data as Profile);
+        return;
+      }
+      
+      // If no profile found, set to null
+      setCurrentProfile(null);
     } catch (error) {
       console.error("Error fetching profile:", error);
       setCurrentProfile(null);
     }
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, currentProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      currentProfile, 
+      setCurrentProfile,
+      refreshProfile 
+    }}>
       {children}
     </AuthContext.Provider>
   );
