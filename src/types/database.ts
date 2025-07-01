@@ -51,19 +51,14 @@ export interface Client {
 
 export interface Task {
   id: string;
-  organization_id: string;
-  client_id?: string;
   title: string;
-  description?: string;
+  description: string;
   status: TaskStatus;
   priority: TaskPriority;
-  assigned_to?: string;
+  assigned_to: string;
+  organization_id: string;
   created_by: string;
-  location_lat?: number;
-  location_lng?: number;
-  location_address?: string;
-  estimated_hours?: number;
-  actual_hours?: number;
+  location: string;
   created_at: string;
   updated_at: string;
 }

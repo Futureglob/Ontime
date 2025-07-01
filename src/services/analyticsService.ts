@@ -44,6 +44,16 @@ export interface CreditUsage {
   usagePercentage: number;
 }
 
+export interface TaskAnalytics {
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  inProgressTasks: number;
+  tasksByStatus: Record<string, number>;
+  tasksByPriority: Record<string, number>;
+  completionRate: number;
+}
+
 const analyticsService = {
   async getTaskOverview(organizationId: string): Promise<TaskOverview> {
     if (!organizationId) {
