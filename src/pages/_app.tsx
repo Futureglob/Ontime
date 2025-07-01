@@ -2,7 +2,6 @@ import type { AppProps } from "next/app";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import "@/styles/globals.css";
 import { useEffect } from "react";
-import { useRouter } from "next/router";
 
 function AppContent({ Component, pageProps, router }: AppProps) {
   const { user, loading, isSuperAdmin } = useAuth();
