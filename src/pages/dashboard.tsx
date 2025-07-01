@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,14 +20,14 @@ export default function DashboardPage() {
   }, [user, loading, isSuperAdmin, router]);
 
   if (loading) {
-    return Loading...;
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
   if (!user || isSuperAdmin) {
-    return Redirecting...;
+    return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>;
   }
 
-  return ;
+  return <DashboardOverview />;
 }
 
 // Conditionally apply layout based on user type
@@ -39,5 +40,5 @@ DashboardPage.getLayout = function getLayout(page: ReactElement) {
     return page;
   }
   
-  return {page};
+  return <DashboardLayout>{page}</DashboardLayout>;
 };
