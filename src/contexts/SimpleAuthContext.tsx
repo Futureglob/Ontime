@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+
+    import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 interface User {
   id: string;
@@ -13,14 +14,23 @@ interface AuthContextType {
   login: (email: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // In a real app, this is where you might check for a session token.
+    // For our mock setup, we'll just finish the loading state.
+    setLoading(false);
+  }, []);
 
   const login = async (email: string) => {
+    setLoading(true);
     // Mock login - in real app this would call Supabase
     const mockUser: User = {
       id: "1",
@@ -32,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organization_id: "org1"
     };
     setUser(mockUser);
+    setLoading(false);
   };
 
   const logout = () => {
@@ -43,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       login,
       logout,
-      isAuthenticated: !!user
+      isAuthenticated: !!user,
+      loading
     }}>
       {children}
     </AuthContext.Provider>
@@ -57,3 +69,4 @@ export const useAuth = () => {
   }
   return context;
 };
+  
