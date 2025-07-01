@@ -77,3 +77,18 @@ export interface Photo {
   url: string;
   created_at: string;
 }
+
+export interface Credits {
+  id: string;
+  organization_id: string;
+  total_credits: number;
+  used_credits: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreditTransaction {
+  amount: number;
+  operation: 'add' | 'subtract';
+  description: string;
+}
