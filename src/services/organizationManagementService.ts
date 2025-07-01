@@ -43,7 +43,7 @@ const organizationManagementService = {
     designation?: string;
     mobileNumber?: string;
   }) {
-    const {  userResponse, error: authError } = await supabase.auth.admin.createUser({
+    const {  { user }, error: authError } = await supabase.auth.admin.createUser({
       email: employeeData.email,
       password: Math.random().toString(36).slice(-8), // Insecure, for dev only
       email_confirm: true,
@@ -54,8 +54,7 @@ const organizationManagementService = {
     });
 
     if (authError) throw authError;
-    if (!userResponse.user) throw new Error("User creation failed.");
-    const user = userResponse.user;
+    if (!user) throw new Error("User creation failed.");
 
     const {  profile, error: profileError } = await supabase
       .from("profiles")
@@ -169,7 +168,7 @@ const organizationManagementService = {
   },
 
   async generatePinForUser(userId: string) {
-    const { data, error } = await supabase.rpc("generate_user_pin" as any, {
+    const { data, error } = await supabase.rpc("generate_user_pin", {
       p_user_id: userId
     });
 

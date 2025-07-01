@@ -28,7 +28,7 @@ const devDataService = {
 
     for (const employee of employees) {
       try {
-        const {  userResponse, error: authError } = await supabase.auth.admin.createUser({
+        const {  { user }, error: authError } = await supabase.auth.admin.createUser({
           email: employee.email,
           password: "password",
           email_confirm: true,
@@ -40,11 +40,11 @@ const devDataService = {
           continue;
         }
 
-        if (userResponse.user) {
+        if (user) {
           const { error: profileError } = await supabase
             .from("profiles")
             .insert({
-              user_id: userResponse.user.id,
+              user_id: user.id,
               organization_id: organizationId,
               full_name: employee.fullName,
               role: employee.role,
