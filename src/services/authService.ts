@@ -35,28 +35,14 @@ const authService = {
     let profile = null;
     if (data.user) {
       try {
-        const { data: profileData } = await supabase
+        const {  profileData } = await supabase
           .from("profiles")
           .select("*")
-          .eq("id", data.user.id)
+          .eq("user_id", data.user.id)
           .maybeSingle();
         
-        // If user has no profile but is a super admin (based on metadata), create profile
-        if (!profileData && data.user.user_metadata?.role === "super_admin") {
-          const { data: newProfile } = await supabase
-            .from("profiles")
-            .insert([{
-              id: data.user.id,
-              role: "super_admin",
-              email: data.user.email
-            }])
-            .select()
-            .single();
-          
-          profile = newProfile;
-        } else {
-          profile = profileData;
-        }
+        profile = profileData;
+
       } catch (err) {
         console.error("Error fetching/creating profile:", err);
       }

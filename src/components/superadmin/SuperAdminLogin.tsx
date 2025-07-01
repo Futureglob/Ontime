@@ -21,20 +21,15 @@ export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {
   
   const { signIn } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    setError("");
-
     try {
-      const { error } = await signIn(email, password);
-      if (error) {
-        setError(error.message);
-      } else {
-        onSuccess();
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
+      await authService.login(email, password);
+      onSuccess();
+    } catch (error: any) {
+      setError(error.message || "An unknown error occurred.");
     } finally {
       setLoading(false);
     }
@@ -61,7 +56,7 @@ export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {
           </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input

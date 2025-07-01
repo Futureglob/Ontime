@@ -1,43 +1,47 @@
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import LoginForm from "@/components/auth/LoginForm";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
+  const router = useRouter();
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && user) {
+      if (isSuperAdmin) {
+        router.push("/superadmin");
+      } else {
+        router.push("/profile");
+      }
+    }
+  }, [user, loading, isSuperAdmin, router]);
+
+  if (loading || user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8 p-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900">OnTime</h2>
-            <p className="mt-2 text-gray-600">Sign in to your account</p>
-          </div>
-          <LoginForm />
-        </div>
+        Loading...
       </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Welcome to OnTime</h1>
-          <p className="text-gray-600">Your task management dashboard is loading...</p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold">Welcome to OnTime</h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          Your field service management solution.
+        </p>
+        <div className="mt-8 space-x-4">
+          <Button asChild>
+            <Link href="/api/auth/login">Login</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/superadmin">Super Admin Login</Link>
+          </Button>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
