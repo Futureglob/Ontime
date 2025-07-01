@@ -74,7 +74,6 @@ export default function FieldTaskCard({ task, onStatusChange }: FieldTaskCardPro
 
   const hasLocation = task.location_lat && task.location_lng;
   const locationText = hasLocation ? task.location_address || `${task.location_lat}, ${task.location_lng}` : "No location";
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date();
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-lg">
@@ -103,14 +102,10 @@ export default function FieldTaskCard({ task, onStatusChange }: FieldTaskCardPro
               <span>{locationText}</span>
             </div>
           )}
-          {task.due_date && (
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className={isOverdue ? 'text-red-600 font-semibold' : ''}>
-                Due: {new Date(task.due_date).toLocaleDateString()}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span>Created: {new Date(task.created_at).toLocaleDateString()}</span>
+          </div>
         </div>
       </CardContent>
       

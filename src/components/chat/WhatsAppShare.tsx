@@ -17,7 +17,7 @@ export default function WhatsAppShare({ task, onClose }: WhatsAppShareProps) {
 
 Status: ${task.status}
 Priority: ${task.priority}
-Due: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}
+Created: ${new Date(task.created_at).toLocaleDateString()}
 
 Location: ${task.location_address || 'Not specified'}
 
@@ -72,11 +72,9 @@ Description: ${task.description || 'No description'}`;
             <p className="text-xs text-muted-foreground">
               📍 {task.location_address || "Location not specified"}
             </p>
-            {task.due_date && (
-              <p className="text-xs text-muted-foreground">
-                ⏰ Due: {new Date(task.due_date).toLocaleDateString()}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              📅 Created: {new Date(task.created_at).toLocaleDateString()}
+            </p>
           </div>
 
           {task.location_lat && task.location_lng && (

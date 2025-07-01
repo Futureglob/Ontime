@@ -30,7 +30,6 @@ export default function TaskForm({
     priority: task?.priority || "medium",
     assigned_to: task?.assigned_to || "",
     client_id: task?.client_id || "",
-    due_date: task?.due_date ? task.due_date.split('T')[0] : "",
     location_address: task?.location_address || ""
   });
 
@@ -130,26 +129,14 @@ export default function TaskForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="due_date">Due Date</Label>
-          <Input
-            id="due_date"
-            type="date"
-            value={formData.due_date}
-            onChange={(e) => handleChange("due_date", e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="location_address">Location</Label>
-          <Input
-            id="location_address"
-            value={formData.location_address}
-            onChange={(e) => handleChange("location_address", e.target.value)}
-            placeholder="Task location"
-          />
-        </div>
+      <div>
+        <Label htmlFor="location_address">Location</Label>
+        <Input
+          id="location_address"
+          value={formData.location_address}
+          onChange={(e) => handleChange("location_address", e.target.value)}
+          placeholder="Task location"
+        />
       </div>
 
       <div className="flex justify-end gap-2">

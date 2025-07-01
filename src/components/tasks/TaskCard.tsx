@@ -40,11 +40,9 @@ export default function TaskCard({ task }: TaskCardProps) {
             Assigned to: {task.assigned_to_profile.full_name}
           </p>
         )}
-        {task.due_date && (
-          <p className="text-sm text-gray-500">
-            Due: {new Date(task.due_date).toLocaleDateString()}
-          </p>
-        )}
+        <p className="text-sm text-gray-500">
+          Created: {new Date(task.created_at).toLocaleDateString()}
+        </p>
       </CardContent>
     </Card>
   );
