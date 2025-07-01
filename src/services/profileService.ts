@@ -6,14 +6,14 @@ const profileService = {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", userId)
+      .eq("user_id", userId)
       .single();
 
     if (error) {
       console.error("Error fetching profile:", error);
       return null;
     }
-    return data;
+    return data as Profile;
   },
 
   async updateProfile(profileId: string, updates: Partial<Profile>): Promise<Profile> {
@@ -25,7 +25,7 @@ const profileService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as Profile;
   },
 };
 
