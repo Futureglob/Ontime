@@ -82,6 +82,23 @@ const organizationManagementService = {
     return this.transformProfileData(profile);
   },
 
+  async createEmployee(organizationId: string, employeeData: {
+    email: string;
+    full_name: string;
+    role: string;
+    employee_id: string;
+    mobile_number?: string;
+  }) {
+    return this.addEmployee({
+      email: employeeData.email,
+      fullName: employeeData.full_name,
+      role: employeeData.role as Profile["role"],
+      employeeId: employeeData.employee_id,
+      organizationId,
+      mobileNumber: employeeData.mobile_number,
+    });
+  },
+
   async updateEmployee(profileId: string, updates: Partial<Profile>): Promise<Profile> {
     const { data, error } = await supabase
       .from("profiles")
