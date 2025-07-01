@@ -174,7 +174,7 @@ const analyticsService = {
     if (error) throw error;
 
     // Group tasks by location (simplified - using lat/lng as location identifier)
-    const locationGroups: Record<string, any[]> = {};
+    const locationGroups: Record<string, unknown[]> = {};
     tasks?.forEach(task => {
       const locationKey = `${task.location_lat?.toFixed(2)},${task.location_lng?.toFixed(2)}`;
       if (!locationGroups[locationKey]) {

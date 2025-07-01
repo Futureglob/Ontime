@@ -59,6 +59,10 @@ export interface Task {
   organization_id: string;
   created_by: string;
   location: string;
+  client_id?: string;
+  location_lat?: number;
+  location_lng?: number;
+  location_address?: string;
   created_at: string;
   updated_at: string;
 }

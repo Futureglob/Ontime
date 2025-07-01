@@ -14,7 +14,7 @@ export const clientService = {
     // Add default is_active if missing and cast to proper type
     return (data || []).map(client => ({
       ...client,
-      is_active: (client as any).is_active ?? true
+      is_active: (client as unknown).is_active ?? true
     })) as Client[];
   },
 

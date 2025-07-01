@@ -26,7 +26,6 @@ export default function DashboardPage() {
     return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>;
   }
 
-  // Apply layout directly in the component for non-super admin users
   return (
     <DashboardLayout>
       <DashboardOverview />
