@@ -1,15 +1,35 @@
 import { useAuth } from "@/contexts/SimpleAuthContext";
 import RoleBasedSidebar from "@/components/layout/RoleBasedSidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, login } = useAuth();
+  const [email, setEmail] = useState("");
+
+  const handleLogin = async () => {
+    if (email) {
+      await login(email);
+    }
+  };
 
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow">
+        <div className="bg-white p-8 rounded-lg shadow max-w-md w-full">
           <h1 className="text-2xl font-bold mb-4">OnTime Login</h1>
-          <p>Please log in to continue</p>
+          <div className="space-y-4">
+            <Input
+              type="email"
+              placeholder="Enter email (try: super@test.com)"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Button onClick={handleLogin} className="w-full">
+              Login
+            </Button>
+          </div>
         </div>
       </div>
     );
