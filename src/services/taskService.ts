@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Task, EnrichedTask, Client, Profile } from "@/types/database";
+import type { Task, EnrichedTask } from "@/types/database";
 
 const taskService = {
   async getTasks(organizationId: string): Promise<EnrichedTask[]> {

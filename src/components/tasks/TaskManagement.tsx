@@ -1,38 +1,42 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import taskService from "@/services/taskService";
 import clientService from "@/services/clientService";
 import organizationManagementService from "@/services/organizationManagementService";
 import type { EnrichedTask, Client, Profile } from "@/types/database";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import TaskForm from "./TaskForm";
 import TaskCard from "./TaskCard";
-import { useToast } from "@/hooks/use-toast";
 
 export default function TaskManagement() {
   const { currentProfile } = useAuth();
-  const { toast } = useToast();
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<EnrichedTask | undefined>(undefined);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetchTasks = useCallback(async () => {
-    if (currentProfile) {
-      try {
-        const fetchedTasks = await taskService.getTasksForOrganization(currentProfile.organization_id);
-        setTasks(fetchedTasks);
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "An unknown error occurred";
-        toast({ title: "Error", description: `Failed to fetch tasks: ${message}`, variant: "destructive" });
-      }
+  useEffect(() => {
+    if (currentProfile?.organization_id) {
+      fetchTasks();
     }
-  }, [currentProfile, toast]);
+  }, [currentProfile]);
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const organizationTasks = await taskService.getTasks(currentProfile!.organization_id);
+      setTasks(organizationTasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchDropdownData = useCallback(async () => {
     if (currentProfile) {
@@ -50,80 +54,104 @@ export default function TaskManagement() {
     }
   }, [currentProfile, toast]);
 
-  useEffect(() => {
-    fetchTasks();
-    fetchDropdownData();
-  }, [fetchTasks, fetchDropdownData]);
-
-  const handleFormSubmit = async (values: any) => {
-    if (!currentProfile) return;
-    setIsSubmitting(true);
+  const handleCreateTask = async (values: Record<string, unknown>) => {
     try {
-      const taskData = {
+      setSubmitting(true);
+      await taskService.createTask({
         ...values,
-        organization_id: currentProfile.organization_id,
-        created_by: currentProfile.id,
-      };
-
-      if (selectedTask) {
-        await taskService.updateTask(selectedTask.id, taskData);
-        toast({ title: "Success", description: "Task updated successfully." });
-      } else {
-        await taskService.createTask(taskData);
-        toast({ title: "Success", description: "Task created successfully." });
-      }
-      setIsFormOpen(false);
-      setSelectedTask(undefined);
-      fetchTasks();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+        organization_id: currentProfile!.organization_id,
+        created_by: currentProfile!.user_id
+      } as any);
+      await fetchTasks();
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error("Error creating task:", error);
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  const handleCardClick = (task: EnrichedTask) => {
-    setSelectedTask(task);
-    setIsFormOpen(true);
+  const handleEditTask = async (values: Record<string, unknown>) => {
+    if (!selectedTask) return;
+    
+    try {
+      setSubmitting(true);
+      await taskService.updateTask(selectedTask.id, values as any);
+      await fetchTasks();
+      setIsEditModalOpen(false);
+      setSelectedTask(null);
+    } catch (error) {
+      console.error("Error updating task:", error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleAddNew = () => {
-    setSelectedTask(undefined);
-    setIsFormOpen(true);
+  const handleTaskClick = (task: EnrichedTask) => {
+    setSelectedTask(task);
+    setIsEditModalOpen(true);
   };
+
+  if (loading) {
+    return <div className="p-4">Loading tasks...</div>;
+  }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 space-y-4">
+      <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Task Management</h1>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4" /> Add New Task</Button>
+            <Button>Create Task</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{selectedTask ? "Edit Task" : "Add New Task"}</DialogTitle>
+              <DialogTitle>Create New Task</DialogTitle>
             </DialogHeader>
             <TaskForm
-              task={selectedTask}
               clients={clients}
               employees={employees}
-              onSubmit={handleFormSubmit}
-              onCancel={() => setIsFormOpen(false)}
-              isSubmitting={isSubmitting}
+              onSubmit={handleCreateTask}
+              onCancel={() => setIsCreateModalOpen(false)}
+              submitting={submitting}
             />
           </DialogContent>
         </Dialog>
       </div>
 
-      {loading ? (
-        <p>Loading tasks...</p>
+      {tasks.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No tasks found.</p>
+        </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onClick={() => handleCardClick(task)} />
+            <div key={task.id} onClick={() => handleTaskClick(task)} className="cursor-pointer">
+              <TaskCard task={task} />
+            </div>
           ))}
         </div>
+      )}
+
+      {selectedTask && (
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Task</DialogTitle>
+            </DialogHeader>
+            <TaskForm
+              task={selectedTask}
+              clients={clients}
+              employees={employees}
+              onSubmit={handleEditTask}
+              onCancel={() => {
+                setIsEditModalOpen(false);
+                setSelectedTask(null);
+              }}
+              submitting={submitting}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

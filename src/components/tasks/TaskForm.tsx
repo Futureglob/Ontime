@@ -1,212 +1,165 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { EnrichedTask, Profile, Client } from "@/types";
-
-const taskFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  client_id: z.string().optional(),
-  assigned_to: z.string().optional(),
-  due_date: z.string().optional(),
-  priority: z.string().optional(),
-  status: z.string(),
-  location_address: z.string().optional(),
-  location_lat: z.number().optional(),
-  location_lng: z.number().optional(),
-});
-
-type TaskFormValues = z.infer<typeof taskFormSchema>;
+import { Label } from "@/components/ui/label";
+import type { EnrichedTask, Client, Profile } from "@/types";
 
 interface TaskFormProps {
-  task?: Partial<EnrichedTask>;
-  employees: Profile[];
+  task?: EnrichedTask;
   clients: Client[];
-  onSubmit: (values: TaskFormValues) => void;
+  employees: Profile[];
+  onSubmit: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
+  submitting?: boolean;
 }
 
-export default function TaskForm({ task, employees, clients, onSubmit, onCancel }: TaskFormProps) {
-  const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskFormSchema),
-    defaultValues: {
-      title: task?.title || "",
-      description: task?.description || "",
-      client_id: task?.client_id || "",
-      assigned_to: task?.assigned_to || "",
-      due_date: task?.due_date || "",
-      priority: task?.priority || "medium",
-      status: task?.status || "assigned",
-      location_address: task?.location_address || "",
-      location_lat: task?.location_lat || undefined,
-      location_lng: task?.location_lng || undefined,
-    },
+export default function TaskForm({ 
+  task, 
+  clients, 
+  employees, 
+  onSubmit, 
+  onCancel,
+  submitting = false
+}: TaskFormProps) {
+  const [formData, setFormData] = useState({
+    title: task?.title || "",
+    description: task?.description || "",
+    status: task?.status || "pending",
+    priority: task?.priority || "medium",
+    assigned_to: task?.assigned_to || "",
+    client_id: task?.client_id || "",
+    due_date: task?.due_date ? task.due_date.split('T')[0] : "",
+    location_address: task?.location_address || ""
   });
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onSubmit(formData);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input placeholder="Task title" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          value={formData.title}
+          onChange={(e) => handleChange("title", e.target.value)}
+          required
         />
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Task description" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      </div>
+
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => handleChange("description", e.target.value)}
+          rows={3}
         />
-        <FormField
-          control={form.control}
-          name="assigned_to"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Assign To</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an employee" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.user_id}>
-                      {employee.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="client_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Client</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="due_date"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Due Date</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="priority"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Priority</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="accepted">Accepted</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="on_hold">On Hold</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="returned">Returned</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="location_address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location Address</FormLabel>
-              <FormControl>
-                <Input placeholder="Location Address" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            {task ? "Update Task" : "Create Task"}
-          </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="status">Status</Label>
+          <Select value={formData.status} onValueChange={(value) => handleChange("status", value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </form>
-    </Form>
+
+        <div>
+          <Label htmlFor="priority">Priority</Label>
+          <Select value={formData.priority} onValueChange={(value) => handleChange("priority", value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="assigned_to">Assigned To</Label>
+          <Select value={formData.assigned_to} onValueChange={(value) => handleChange("assigned_to", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select employee" />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.map((employee) => (
+                <SelectItem key={employee.user_id} value={employee.user_id}>
+                  {employee.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="client_id">Client</Label>
+          <Select value={formData.client_id} onValueChange={(value) => handleChange("client_id", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select client" />
+            </SelectTrigger>
+            <SelectContent>
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="due_date">Due Date</Label>
+          <Input
+            id="due_date"
+            type="date"
+            value={formData.due_date}
+            onChange={(e) => handleChange("due_date", e.target.value)}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="location_address">Location</Label>
+          <Input
+            id="location_address"
+            value={formData.location_address}
+            onChange={(e) => handleChange("location_address", e.target.value)}
+            placeholder="Task location"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Saving..." : task ? "Update Task" : "Create Task"}
+        </Button>
+      </div>
+    </form>
   );
 }
