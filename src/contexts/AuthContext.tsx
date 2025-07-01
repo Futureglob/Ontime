@@ -40,15 +40,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        // Immediate redirect for super admin on session check
+        
+        // Check for super admin FIRST before setting user state
         if (currentUser?.user_metadata?.role === "super_admin") {
+          setUser(currentUser);
           setCurrentProfile(null);
           setLoading(false);
-          window.location.replace("/superadmin");
+          // Only redirect if not already on superadmin page
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/superadmin')) {
+            window.location.replace("/superadmin");
+          }
           return;
         }
+        
+        setUser(currentUser);
 
         if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
           const profile = await profileService.getProfile(currentUser.id);
@@ -72,15 +77,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (_event, session) => {
         setSession(session);
         const currentUser = session?.user ?? null;
-        setUser(currentUser);
 
-        // Immediate redirect for super admin on auth state change
+        // Check for super admin FIRST before setting user state
         if (currentUser?.user_metadata?.role === "super_admin") {
+          setUser(currentUser);
           setCurrentProfile(null);
           setLoading(false);
-          window.location.replace("/superadmin");
+          // Only redirect if not already on superadmin page
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/superadmin')) {
+            window.location.replace("/superadmin");
+          }
           return;
         }
+
+        setUser(currentUser);
 
         if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
           const profile = await profileService.getProfile(currentUser.id);
@@ -105,18 +115,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
     
     const currentUser = data.user;
-    setUser(currentUser);
     
     // If super admin, don't fetch profile and force immediate redirect
     if (currentUser?.user_metadata?.role === "super_admin") {
+      setUser(currentUser);
       setCurrentProfile(null);
       // Force immediate redirect to super admin page
-      setTimeout(() => {
-        window.location.replace("/superadmin");
-      }, 100);
+      window.location.replace("/superadmin");
       return data;
     }
     
+    setUser(currentUser);
     if (currentUser) {
       const profile = await profileService.getProfile(currentUser.id);
       setCurrentProfile(profile);

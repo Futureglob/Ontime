@@ -11,7 +11,10 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading && user) {
       if (isSuperAdmin) {
-        window.location.replace("/superadmin");
+        // Only redirect if not already on superadmin page
+        if (!window.location.pathname.includes('/superadmin')) {
+          window.location.replace("/superadmin");
+        }
       } else {
         router.replace("/profile");
       }
@@ -22,6 +25,14 @@ export default function HomePage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         Loading...
+      </div>
+    );
+  }
+
+  if (user && isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Redirecting to Super Admin...
       </div>
     );
   }
