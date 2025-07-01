@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Database } from "@/integrations/supabase/types";
 import { EnrichedTask, Task } from "@/types";
+import { Dialog, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -97,14 +98,48 @@ export default function TaskManagement() {
     loadTasks();
   };
 
-  if (showForm) {
+  const handleFormSubmit = (task: EnrichedTask) => {
+    if (selectedTask) {
+      // Update existing task
+      taskService.updateTask(selectedTask.id, task);
+    } else {
+      // Create new task
+      taskService.createTask(task);
+    }
+    handleSuccess();
+  };
+
+  const employees = useMemo(() => {
+    return users.filter(user => user.role === "employee");
+  }, [users]);
+
+  const clients = useMemo(() => {
+    return users.filter(user => user.role === "client");
+  }, [users]);
+
+  const isFormOpen = useMemo(() => {
+    return showForm && (selectedTask || employees.length > 0 && clients.length > 0);
+  }, [showForm, selectedTask, employees, clients]);
+
+  if (isFormOpen) {
     return (
-      <TaskForm
-        task={selectedTask}
-        users={users}
-        onSuccess={handleSuccess}
-        onCancel={() => setShowForm(false)}
-      />
+      <Dialog>
+        <DialogHeader>
+          <DialogTitle>
+            {selectedTask ? "Edit Task" : "Add New Task"}
+          </DialogTitle>
+        </DialogHeader>
+        <TaskForm
+          task={selectedTask}
+          employees={employees}
+          clients={clients}
+          onSubmit={handleFormSubmit}
+          onCancel={() => {
+            setSelectedTask(null);
+            setShowForm(false);
+          }}
+        />
+      </Dialog>
     );
   }
 

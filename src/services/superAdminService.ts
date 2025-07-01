@@ -433,22 +433,33 @@ export const superAdminService = {
       const { data: authResult, error: authError } = await supabase.auth.signUp(signUpData);
 
       if (authError) {
-        console.error("Auth signup error:", authError);
-        // Clean up the organization if user creation fails
-        await supabase.from("organizations").delete().eq("id", orgResult.id);
-        
-        // Provide more specific error messages based on common Supabase auth errors
-        if (authError.message.includes("already registered") || authError.message.includes("already been registered")) {
-          throw new Error(`Email ${orgData.admin_email} is already registered. Please use a different email.`);
-        } else if (authError.message.includes("password") || authError.message.includes("Password")) {
-          throw new Error("Password must be at least 6 characters long and contain valid characters.");
-        } else if (authError.message.includes("email") || authError.message.includes("Email")) {
-          throw new Error("Please enter a valid email address.");
-        } else if (authError.message.includes("rate limit") || authError.message.includes("too many")) {
-          throw new Error("Too many signup attempts. Please wait a moment and try again.");
-        } else {
-          throw new Error(`Failed to create admin user: ${authError.message}`);
-        }
+        throw new Error(`Failed to create auth user: ${authError.message}`);
+      }
+      if (!authData.user) {
+        throw new Error("Auth user not created.");
+      }
+      const adminUser = authData.user;
+
+      // 2. Create the admin's profile
+      const {  profile, error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: adminUser.id, // FIX: Added missing user_id
+          full_name: admin.fullName,
+          role: "org_admin",
+          organization_id: newOrg.id,
+          employee_id: `ADMIN-${faker.string.alphanumeric(4).toUpperCase()}`,
+          designation: "Organization Admin",
+          mobile_number: admin.mobileNumber,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        // Cleanup created auth user if profile creation fails
+        await supabase.auth.admin.deleteUser(adminUser.id);
+        throw new Error(`Failed to create admin profile: ${profileError.message}`);
       }
 
       console.log("Auth user created successfully:", authResult.user?.id);
