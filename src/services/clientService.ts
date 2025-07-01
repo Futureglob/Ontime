@@ -1,51 +1,51 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import type { Client } from "@/types/database";
+    import { supabase } from "@/integrations/supabase/client";
+    import type { Client } from "@/types/database";
 
-const clientService = {
-  async getClients(organizationId: string): Promise<Client[]> {
-    const { data, error } = await supabase
-      .from("clients")
-      .select("*")
-      .eq("organization_id", organizationId);
+    const clientService = {
+      async getClients(organizationId: string): Promise<Client[]> {
+        const { data, error } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("organization_id", organizationId);
 
-    if (error) throw error;
-    return data || [];
-  },
+        if (error) throw error;
+        return data || [];
+      },
 
-  async createClient(clientData: Omit<Client, "id" | "created_at" | "updated_at">) {
-    const { data, error } = await supabase
-      .from("clients")
-      .insert(clientData)
-      .select()
-      .single();
+      async createClient(clientData: Omit<Client, "id" | "created_at" | "updated_at" | "is_active">): Promise<Client> {
+        const { data, error } = await supabase
+          .from("clients")
+          .insert({ ...clientData, is_active: true })
+          .select()
+          .single();
 
-    if (error) throw error;
-    return data;
-  },
+        if (error) throw error;
+        return data;
+      },
 
-  async updateClient(clientId: string, updates: Partial<Client>) {
-    const { data, error } = await supabase
-      .from("clients")
-      .update(updates)
-      .eq("id", clientId)
-      .select()
-      .single();
+      async updateClient(clientId: string, updates: Partial<Omit<Client, "id" | "created_at" | "updated_at">>): Promise<Client> {
+        const { data, error } = await supabase
+          .from("clients")
+          .update(updates)
+          .eq("id", clientId)
+          .select()
+          .single();
 
-    if (error) throw error;
-    return data;
-  },
+        if (error) throw error;
+        return data;
+      },
 
-  async deleteClient(clientId: string) {
-    const { error } = await supabase
-      .from("clients")
-      .delete()
-      .eq("id", clientId);
+      async deleteClient(clientId: string): Promise<boolean> {
+        const { error } = await supabase
+          .from("clients")
+          .delete()
+          .eq("id", clientId);
 
-    if (error) throw error;
-    return true;
-  },
-};
+        if (error) throw error;
+        return true;
+      },
+    };
 
-export default clientService;
+    export default clientService;
   
