@@ -2,7 +2,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import RoleSwitcher from "@/components/dev/RoleSwitcher";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 import { useState, useEffect, useCallback } from "react";
 import { profileService } from "@/services/profileService";
 import { UserRole } from "@/types/database";

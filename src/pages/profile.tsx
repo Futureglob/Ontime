@@ -1,7 +1,6 @@
-
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ProfileSettings from "@/components/profile/ProfileSettings";
 

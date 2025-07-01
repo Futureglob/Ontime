@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ChatList from "@/components/chat/ChatList";
 import ChatInterface from "@/components/chat/ChatInterface";
