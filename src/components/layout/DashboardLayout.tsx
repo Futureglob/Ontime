@@ -11,7 +11,7 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { profile, loading } = useAuth();
+  const { currentProfile } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -34,10 +34,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleLogout = async () => {
     try {
-      await authService.logout();
-      router.push('/');
+      await authService.signOut();
+      router.push("/");
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout error:", error);
     }
   };
 

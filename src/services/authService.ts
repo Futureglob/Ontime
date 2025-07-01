@@ -1,8 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 const authService = {
-  async signUp(email: string, password: string, metadata?: Record<string, any>) {
+  async signUp(email: string, password: string, metadata?: Record<string, unknown>) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

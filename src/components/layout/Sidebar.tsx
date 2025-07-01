@@ -1,20 +1,24 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
-import { Button } from "@/components/ui/button";
-import {
-  Users,
-  Briefcase,
-  Settings,
-  LogOut,
-  MessageSquare,
-  Map,
-  BarChart2,
-  Building,
-  Shield,
-  User,
-  Users2,
-} from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import authService from "@/services/authService";
+import {
+  Home,
+  Users,
+  CheckSquare,
+  MessageSquare,
+  BarChart3,
+  MapPin,
+  Settings,
+  Building2,
+  UserCircle,
+  LogOut,
+  Menu,
+  X
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Profile } from "@/types/database";
 
@@ -31,30 +35,30 @@ export default function Sidebar({ profile, onLogout }: SidebarProps) {
     switch (profile.role) {
       case "super_admin":
         return [
-          { href: "/superadmin", label: "Dashboard", icon: Shield },
+          { href: "/superadmin", label: "Dashboard", icon: Home },
           { href: "/settings", label: "System Settings", icon: Settings },
         ];
       case "admin":
         return [
-          { href: "/tasks", label: "Tasks", icon: Briefcase },
+          { href: "/tasks", label: "Tasks", icon: CheckSquare },
           { href: "/employees", label: "Employees", icon: Users },
-          { href: "/clients", label: "Clients", icon: Users2 },
+          { href: "/clients", label: "Clients", icon: Users },
           { href: "/chat", label: "Chat", icon: MessageSquare },
-          { href: "/analytics", label: "Analytics", icon: BarChart2 },
-          { href: "/organization", label: "Organization", icon: Building },
+          { href: "/analytics", label: "Analytics", icon: BarChart3 },
+          { href: "/organization", label: "Organization", icon: Building2 },
         ];
       case "manager":
         return [
-            { href: "/tasks", label: "Tasks", icon: Briefcase },
+            { href: "/tasks", label: "Tasks", icon: CheckSquare },
             { href: "/employees", label: "Employees", icon: Users },
-            { href: "/clients", label: "Clients", icon: Users2 },
+            { href: "/clients", label: "Clients", icon: Users },
             { href: "/chat", label: "Chat", icon: MessageSquare },
-            { href: "/analytics", label: "Analytics", icon: BarChart2 },
+            { href: "/analytics", label: "Analytics", icon: BarChart3 },
         ];
       case "employee":
         return [
-          { href: "/tasks", label: "My Tasks", icon: Briefcase },
-          { href: "/field", label: "Field Work", icon: Map },
+          { href: "/tasks", label: "My Tasks", icon: CheckSquare },
+          { href: "/field", label: "Field Work", icon: MapPin },
           { href: "/chat", label: "Chat", icon: MessageSquare },
         ];
       default:
@@ -95,7 +99,7 @@ export default function Sidebar({ profile, onLogout }: SidebarProps) {
         </div>
         <Link href="/profile">
           <Button variant="ghost" className="w-full justify-start mb-2">
-            <User className="mr-2 h-4 w-4" />
+            <UserCircle className="mr-2 h-4 w-4" />
             Profile Settings
           </Button>
         </Link>
