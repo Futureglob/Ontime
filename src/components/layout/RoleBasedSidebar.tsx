@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/SimpleAuthContext";
 import { Button } from "@/components/ui/button";
 import { 
