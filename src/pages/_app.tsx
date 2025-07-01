@@ -4,9 +4,8 @@ import "@/styles/globals.css";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 
-function AppContent({ Component, pageProps }: AppProps) {
+function AppContent({ Component, pageProps, router }: AppProps) {
   const { user, loading, isSuperAdmin } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     if (!loading && user && isSuperAdmin) {
@@ -33,10 +32,10 @@ function AppContent({ Component, pageProps }: AppProps) {
   return <Component {...pageProps} />;
 }
 
-export default function App({ Component, pageProps }: AppProps) {
+export default function App(props: AppProps) {
   return (
     <AuthProvider>
-      <AppContent Component={Component} pageProps={pageProps} />
+      <AppContent {...props} />
     </AuthProvider>
   );
 }
