@@ -10,7 +10,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { profileService } from "@/services/profileService";
 import { storageService } from "@/services/storageService";
 import { useToast } from "@/hooks/use-toast";
-import { Profile } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const profileSchema = z.object({

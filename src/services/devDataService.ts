@@ -1,4 +1,5 @@
 
+    
 import { supabase } from "@/integrations/supabase/client";
 import { faker } from "@faker-js/faker";
 
@@ -122,7 +123,7 @@ export const devDataService = {
             });
           }
         }
-        const { data: seededTasks, error: taskError } = await supabase
+        const {  seededTasks, error: taskError } = await supabase
           .from("tasks")
           .insert(tasks)
           .select();
@@ -142,3 +143,4 @@ export const devDataService = {
     }
   },
 };
+  

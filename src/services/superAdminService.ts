@@ -1,4 +1,5 @@
 
+    
 import { supabase } from "@/integrations/supabase/client";
 import { faker } from "@faker-js/faker";
 
@@ -278,3 +279,4 @@ export const superAdminService = {
 };
 
 export default superAdminService;
+  

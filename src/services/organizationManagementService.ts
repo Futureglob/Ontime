@@ -1,4 +1,5 @@
 
+    
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types";
 
@@ -125,7 +126,7 @@ export const organizationManagementService = {
       throw new Error((data as any).error);
     }
 
-    if (!data || !(data as any).pin) {
+    if (!data) {
         if (typeof data === 'string') {
             return data;
         }
@@ -133,7 +134,7 @@ export const organizationManagementService = {
         throw new Error("Failed to generate PIN: Invalid response from server.");
     }
 
-    return (data as any).pin;
+    return (data as any).pin || data;
   },
 
   async getOrganizationSettings(organizationId: string) {
@@ -157,3 +158,4 @@ export const organizationManagementService = {
     return data;
   },
 };
+  

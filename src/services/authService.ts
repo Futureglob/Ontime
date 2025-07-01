@@ -1,4 +1,5 @@
 
+    
 import { supabase } from "@/integrations/supabase/client";
 import { profileService } from "./profileService";
 
@@ -69,3 +70,4 @@ export const authService = {
     if (error) throw error;
   },
 };
+  

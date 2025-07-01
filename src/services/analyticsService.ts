@@ -120,11 +120,11 @@ export const analyticsService = {
     // This is a conceptual function.
     // It might involve checking DB connection, API response times, etc.
     try {
-      const { data, error } = await supabase.from("organizations").select("id").limit(1);
+      const { error } = await supabase.from("organizations").select("id").limit(1);
       if (error) throw error;
       return { status: "ok", db_connection: true };
-    } catch (error: any) {
-      return { status: "error", db_connection: false, message: error.message };
+    } catch (error) {
+      return { status: "error", db_connection: false, message: (error as any).message };
     }
   },
   

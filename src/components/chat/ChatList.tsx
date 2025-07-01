@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { Message } from "@/types";
 
 interface ChatListProps {
   selectedConversationId: string | null;

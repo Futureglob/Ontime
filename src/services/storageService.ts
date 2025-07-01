@@ -1,4 +1,5 @@
 
+    
 import { supabase } from "@/integrations/supabase/client";
 
 const BUCKETS = {
@@ -71,3 +72,4 @@ export const storageService = {
     return publicUrl;
   },
 };
+  
