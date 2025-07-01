@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { AuthTokenResponsePassword, AuthResponse, AuthError, PostgrestError } from "@supabase/supabase-js";
 
@@ -58,12 +57,12 @@ export const authService = {
     return supabase.auth.signUp({ email, password, options });
   },
 
-  async generatePinForUser(userId: string): Promise<{ error: AuthError | null }> {
-    const { error } = await supabase.rpc('generate_user_pin', { p_user_id: userId });
+  async generatePinForUser(userId: string): Promise<{ pin?: string, error: AuthError | null }> {
+    const { data, error } = await supabase.rpc('generate_user_pin', { p_user_id: userId });
     if (error) {
       return { error: new AuthError(error.message, 500) };
     }
-    return { error: null };
+    return { pin: (data as any)?.pin, error: null };
   },
 
   async resetUserPin(userId: string): Promise<{ error: AuthError | null }> {

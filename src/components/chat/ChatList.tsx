@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { messageService } from "@/services/messageService";
 import { realtimeService } from "@/services/realtimeService";
-import { Task } from "@/types/database";
+import { Task, Profile } from "@/types";
 
 interface ChatConversation {
   task_id: string;
@@ -132,11 +132,11 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
 
   const filteredConversations = conversations.filter(conv =>
     conv.task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getOtherParticipant(conv.task)?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    getOtherParticipant(conv.task)?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false
   );
 
   const getGroupedChats = () => {
-    return filteredConversations.reduce((acc, chat) => {
+    const groups = filteredConversations.reduce((acc, chat) => {
       const key = chat.task.assignee_id === user?.id ? chat.task.created_by : chat.task.assignee_id;
       if (key && !acc[key]) {
         acc[key] = {
@@ -149,6 +149,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
       }
       return acc;
     }, {} as Record<string, { profile: { full_name: string; designation: string; avatar_url?: string } | null; tasks: ChatConversation[] }>);
+    return Object.values(groups);
   };
 
   const handleSelectChat = (task: Task) => {
@@ -212,7 +213,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
           ) : (
             <div className="space-y-1 p-2">
               {getGroupedChats().map((group) => {
-                const { profile, tasks } = group;
+                const { profile, tasks } = group as { profile: Profile | null; tasks: ChatConversation[] };
                 const isSelected = selectedTaskId === tasks[0].task_id;
                 
                 return (

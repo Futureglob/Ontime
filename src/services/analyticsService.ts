@@ -77,13 +77,7 @@ export const analyticsService = {
       const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
       const inProgressTasks = tasks?.filter(t => t.status === "in_progress").length || 0;
       const pendingTasks = tasks?.filter(t => t.status === "assigned").length || 0;
-      const completedOnTime = tasks.filter(
-        (task) =>
-          task.completed_at &&
-          task.due_date &&
-          new Date(task.completed_at) <= new Date(task.due_date)
-      ).length;
-
+      
       const overdueTasks = tasks.filter(
         (task) =>
           task.status !== "completed" &&
@@ -152,7 +146,7 @@ export const analyticsService = {
           let taskQuery = supabase
             .from("tasks")
             .select("*")
-            .eq("assigned_to", employee.id);
+            .eq("assignee_id", employee.id);
 
           if (dateRange?.start && dateRange?.end) {
             taskQuery = taskQuery

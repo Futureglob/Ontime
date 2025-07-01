@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { Profile } from "@/types";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
 type Task = Database["public"]["Tables"]["tasks"]["Row"];
@@ -11,6 +12,13 @@ export interface MessageWithSender extends Message {
     designation: string;
     avatar_url?: string;
   };
+}
+
+export interface ChatListItem {
+  task: Task;
+  lastMessage: Message | null;
+  unreadCount: number;
+  participants: Profile[];
 }
 
 export const messageService = {
@@ -54,7 +62,7 @@ export const messageService = {
         `
         *,
         messages(count),
-        participants:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url)
+        participants:profiles!tasks_assignee_id_fkey(id, full_name)
       `
       )
       .or(`created_by.eq.${userId},assignee_id.eq.${userId}`)
@@ -65,9 +73,9 @@ export const messageService = {
       throw error;
     }
 
-    return data.map((task: any) => ({
+    return (data || []).map((task: Record<string, any>) => ({
       task,
-      lastMessage: null, // This would require another query or a more complex one
+      lastMessage: null,
       unreadCount: task.messages[0]?.count || 0,
       participants: [task.participants].filter(Boolean),
     }));
@@ -75,7 +83,7 @@ export const messageService = {
 
   subscribeToTaskMessages(
     taskId: string,
-    onMessage: (payload: any) => void
+    onMessage: (payload: Record<string, any>) => void
   ) {
     return supabase
       .channel(`messages:task=${taskId}`)
@@ -102,17 +110,16 @@ export const messageService = {
 
   async getUnreadMessageCount(userId: string): Promise<number> {
     try {
-      // Simplified approach - get tasks first, then count messages
-      const {  userTasks } = await supabase
+      const { data: userTasks, error: tasksError } = await supabase
         .from("tasks")
         .select("id")
         .or(`assignee_id.eq.${userId},created_by.eq.${userId}`);
 
+      if (tasksError) throw tasksError;
       if (!userTasks || userTasks.length === 0) return 0;
 
       const taskIds = userTasks.map(t => t.id);
 
-      // Count unread messages for these tasks
       const { count } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
@@ -129,19 +136,17 @@ export const messageService = {
 
   async getTaskConversations(userId: string) {
     try {
-      // Get user's tasks with simplified query
-      const {  userTasks } = await supabase
+      const { data: userTasks, error: tasksError } = await supabase
         .from("tasks")
         .select("*, assigned_to_profile:profiles!tasks_assignee_id_fkey(*), created_by_profile:profiles!tasks_created_by_fkey(*)")
         .or(`assignee_id.eq.${userId},created_by.eq.${userId}`);
 
+      if (tasksError) throw tasksError;
       if (!userTasks || userTasks.length === 0) return [];
 
-      // Process each task to get conversation data
       const conversations = await Promise.all(
         userTasks.map(async (task) => {
-          // Get last message for this task
-          const {  lastMessage } = await supabase
+          const { data: lastMessage, error: messageError } = await supabase
             .from("messages")
             .select("content, created_at, sender_id")
             .eq("task_id", task.id)
@@ -149,13 +154,16 @@ export const messageService = {
             .limit(1)
             .maybeSingle();
 
-          // Get unread count for this task
-          const { count: unreadCount } = await supabase
+          if(messageError) console.error("Error fetching last message:", messageError);
+
+          const { count: unreadCount, error: countError } = await supabase
             .from("messages")
             .select("id", { count: "exact", head: true })
             .eq("task_id", task.id)
             .eq("is_read", false)
             .neq("sender_id", userId);
+
+          if(countError) console.error("Error fetching unread count:", countError);
 
           return {
             task_id: task.id,

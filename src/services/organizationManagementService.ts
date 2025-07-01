@@ -137,7 +137,7 @@
               title,
               status,
               created_at,
-              assigned_to_profile:profiles!tasks_assigned_to_fkey(full_name)
+              assigned_to_profile:profiles!tasks_assignee_id_fkey(full_name)
             `)
             .eq("organization_id", organizationId)
             .order("created_at", { ascending: false });
@@ -155,16 +155,19 @@
             title: string;
             status: string;
             created_at: string;
-            assigned_to_profile: { full_name: string; } | null;
+            assigned_to_profile: { full_name: string; } | { full_name: string; }[] | null;
           };
 
-          return (data as RawTask[] || []).map((task) => ({
-            id: task.id,
-            title: task.title,
-            status: task.status,
-            assigned_user_name: task.assigned_to_profile?.full_name || "Unassigned",
-            created_at: task.created_at,
-          }));
+          return (data as RawTask[] || []).map((task) => {
+            const profile = Array.isArray(task.assigned_to_profile) ? task.assigned_to_profile[0] : task.assigned_to_profile;
+            return {
+              id: task.id,
+              title: task.title,
+              status: task.status,
+              assigned_user_name: profile?.full_name || "Unassigned",
+              created_at: task.created_at,
+            }
+          });
         } catch (error) {
           console.error("Error fetching organization tasks:", error);
           return [];
@@ -186,7 +189,9 @@
 
       async generateUserPin(userId: string): Promise<string> {
         try {
-          const { pin } = await authService.generatePinForUser(userId);
+          const { pin, error } = await authService.generatePinForUser(userId);
+          if (error) throw error;
+          if (!pin) throw new Error("PIN was not generated.");
           return pin;
         } catch (error) {
           console.error("Error generating PIN:", error);
@@ -194,12 +199,12 @@
         }
       },
 
-      async resetUserPin(employeeId: string): Promise<string> {
-        if (!employeeId) {
-          throw new Error("Employee ID is required to reset a PIN.");
+      async resetUserPin(userId: string): Promise<void> {
+        if (!userId) {
+          throw new Error("User ID is required to reset a PIN.");
         }
         try {
-          await authService.resetUserPin(employeeId);
+          await authService.resetUserPin(userId);
         } catch (error) {
           console.error("Error resetting user PIN:", error);
           throw new Error("Failed to reset PIN for user.");
@@ -280,7 +285,7 @@
 
       async signUpUser(email: string, password: string, organizationId: string): Promise<{ user: any; error: any }> {
         try {
-          const { data: signUpData, error } = await supabase.auth.signUp({
+          const { data, error } = await supabase.auth.signUp({
             email: email,
             password: password,
             options: {
@@ -291,18 +296,14 @@
           });
 
           if (error) {
-            throw error;
+            return { user: null, error };
           }
 
-          if (signUpData.error) {
-            throw signUpData.error;
+          if (data.user) {
+            await authService.generatePinForUser(data.user.id);
           }
 
-          if (signUpData.data.user) {
-            await authService.generatePinForUser(signUpData.data.user.id);
-          }
-
-          return { user: signUpData.data.user, error: null };
+          return { user: data.user, error: null };
         } catch (error) {
           console.error("Error signing up user:", error);
           return { user: null, error: error };

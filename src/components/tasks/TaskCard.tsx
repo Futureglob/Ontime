@@ -2,13 +2,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Task } from "@/services/taskService";
+import { EnrichedTask } from "@/types";
 import { Edit, Trash2, User, Calendar } from "lucide-react";
 
 interface TaskCardProps {
-  task: Task;
-  onEdit: (task: Task) => void;
-  onDelete: (task: Task) => void;
+  task: EnrichedTask;
+  onEdit: (task: EnrichedTask) => void;
+  onDelete: (task: EnrichedTask) => void;
 }
 
 export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {

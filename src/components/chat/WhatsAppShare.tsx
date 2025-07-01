@@ -11,35 +11,23 @@ import { messageService } from "@/services/messageService";
 
 interface WhatsAppShareProps {
   task: Task;
-  customMessage?: string;
+  onClose: () => void;
 }
 
-export default function WhatsAppShare({ task, customMessage }: WhatsAppShareProps) {
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [message, setMessage] = useState(customMessage || messageService.generateTaskUpdateMessage(task));
-  const [copied, setCopied] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+export default function WhatsAppShare({ task, onClose }: WhatsAppShareProps) {
+  const [customMessage, setCustomMessage] = useState("");
+  const [shareType, setShareType] = useState<"update" | "custom">("update");
+
+  const defaultMessage = messageService.generateTaskUpdateMessage(task);
 
   const handleShare = () => {
-    const whatsappUrl = messageService.generateWhatsAppLink(phoneNumber, message);
+    const message = shareType === "update" ? defaultMessage : customMessage;
+    const whatsappUrl = messageService.generateWhatsAppLink(
+      task.assigned_to_profile?.mobile_number,
+      message
+    );
     window.open(whatsappUrl, "_blank");
-    setIsOpen(false);
-  };
-
-  const handleShareGeneral = () => {
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
-    setIsOpen(false);
-  };
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(message);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy:", error);
-    }
+    onClose();
   };
 
   const getStatusColor = (status: string) => {
@@ -75,7 +63,7 @@ export default function WhatsAppShare({ task, customMessage }: WhatsAppShareProp
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={true} onOpenChange={() => {}}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700">
           <Share2 className="h-4 w-4 mr-2" />
@@ -110,27 +98,13 @@ export default function WhatsAppShare({ task, customMessage }: WhatsAppShareProp
             )}
           </div>
 
-          {/* Phone Number Input */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number (Optional)</Label>
-            <Input
-              id="phone"
-              placeholder="+1234567890"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Leave empty to share without a specific contact
-            </p>
-          </div>
-
           {/* Message Preview */}
           <div className="space-y-2">
             <Label htmlFor="message">Message</Label>
             <Textarea
               id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
               rows={6}
               className="text-sm"
             />
@@ -138,28 +112,21 @@ export default function WhatsAppShare({ task, customMessage }: WhatsAppShareProp
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-2">
-            {phoneNumber ? (
-              <Button onClick={handleShare} className="w-full bg-green-600 hover:bg-green-700">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Send to {phoneNumber}
-              </Button>
-            ) : (
-              <Button onClick={handleShareGeneral} className="w-full bg-green-600 hover:bg-green-700">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Open WhatsApp
-              </Button>
-            )}
+            <Button onClick={handleShare} className="w-full bg-green-600 hover:bg-green-700">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Send to {task.assigned_to_profile?.mobile_number}
+            </Button>
             
-            <Button variant="outline" onClick={copyToClipboard} className="w-full">
-              {copied ? (
+            <Button variant="outline" onClick={() => setShareType("custom")} className="w-full">
+              {shareType === "custom" ? (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  Copied!
+                  Custom Message
                 </>
               ) : (
                 <>
                   <Copy className="h-4 w-4 mr-2" />
-                  Copy Message
+                  Use Custom Message
                 </>
               )}
             </Button>

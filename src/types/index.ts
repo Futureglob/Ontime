@@ -8,7 +8,9 @@ export type Client = Database["public"]["Tables"]["clients"]["Row"];
 export type TaskPhoto = Database["public"]["Tables"]["task_photos"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 
-export type Task = Database["public"]["Tables"]["tasks"]["Row"] & {
+export type Task = Database["public"]["Tables"]["tasks"]["Row"];
+
+export type EnrichedTask = Task & {
   assigned_to_profile?: Profile | null;
   created_by_profile?: Profile | null;
   client?: Client | null;

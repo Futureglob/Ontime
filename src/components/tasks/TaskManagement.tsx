@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { taskService, Task } from "@/services/taskService";
+import { taskService } from "@/services/taskService";
 import { profileService } from "@/services/profileService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,12 +17,13 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Database } from "@/integrations/supabase/types";
+import { EnrichedTask, Task } from "@/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 export default function TaskManagement() {
   const { currentProfile } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -64,8 +65,9 @@ export default function TaskManagement() {
     fetchUsers();
   }, [loadTasks, fetchUsers]);
 
-  const handleEditTask = (task: Task) => {
-    setSelectedTask(task);
+  const handleEditTask = (task: EnrichedTask) => {
+    const { assigned_to_profile, created_by_profile, client, photos, ...rest } = task;
+    setSelectedTask(rest);
     setShowForm(true);
   };
 

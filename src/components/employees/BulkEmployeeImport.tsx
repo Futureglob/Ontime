@@ -137,69 +137,52 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
     setStep("importing");
     setProgress(0);
     
-    const results: ImportResult[] = [];
-    let createdCount = 0;
-    
-    for (let i = 0; i < employees.length; i++) {
-      const employee = employees[i];
-      
-      try {
-        const validationError = validateEmployeeData(employee);
-        if (validationError) {
-          results.push({
-            success: false,
-            employee,
-            error: validationError
-          });
-          continue;
-        }
+    const validEmployees = employees.filter(e => !validateEmployeeData(e));
+    const results = await Promise.all(
+      validEmployees.map(async (employee) => {
+        try {
+          const { user, error } = await organizationManagementService.signUpUser(
+            employee.email,
+            employee.password,
+            currentProfile.organization_id
+          );
 
-        const signUpData = await authService.signUp(
-          // Since email is optional, we create a placeholder email and the user can update it later.
-          employee.email || `${employee.employee_id.toUpperCase()}@${organizationId}.ontime`, 
-          crypto.randomUUID(), // Generate a random password
-          {
-            full_name: employee.full_name,
-            employee_id: employee.employee_id.toUpperCase(),
-            designation: employee.designation,
-            mobile_number: employee.mobile_number,
-            role: employee.role as UserRole,
-            organization_id: organizationId,
-            is_active: true
+          if (error || !user) {
+            return { success: false, employee, error: error?.message || "Unknown error" };
           }
-        );
-        
-        if (signUpData.error) {
-          throw signUpData.error;
-        }
 
-        if (signUpData.data.user) {
-          const pinResult = await authService.generatePinForUser(signUpData.data.user.id);
-          if(pinResult.error) {
-            throw new Error(`Failed to generate PIN: ${pinResult.error.message}`);
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .update({
+              full_name: employee.full_name,
+              employee_id: employee.employee_id,
+              designation: employee.designation,
+              mobile_number: employee.mobile_number,
+              role: employee.role,
+            })
+            .eq("id", user.id);
+
+          if (profileError) {
+            return { success: false, employee, error: profileError.message };
           }
-        } else {
-          throw new Error("User not created");
+
+          return { success: true, employee };
+        } catch (error) {
+          return { success: false, employee, error: (error as Error).message };
         }
-        
-        results.push({
-          success: true,
-          employee,
-          pin: "Check admin panel"
-        });
+      })
+    );
 
-      } catch (error) {
-        results.push({
-          success: false,
-          employee,
-          error: error instanceof Error ? error.message : "Unknown error occurred"
-        });
-      }
+    const successCount = results.filter(r => r.success).length;
+    const failedResults = results.filter(r => !r.success);
 
-      setProgress(((i + 1) / employees.length) * 100);
-    }
+    setImportResults({
+      total: validEmployees.length,
+      successful: successCount,
+      failed: failedResults.length,
+      errors: failedResults.map(r => `${r.employee.email}: ${r.error}`)
+    });
 
-    setImportResults(results);
     setStep("results");
     onImportComplete();
   };
@@ -355,25 +338,25 @@ ${successfulImports.map(result =>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {importResults.filter(r => r.success).length}
+                  {importResults.successful}
                 </div>
                 <div className="text-sm text-gray-600">Successful</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">
-                  {importResults.filter(r => !r.success).length}
+                  {importResults.failed}
                 </div>
                 <div className="text-sm text-gray-600">Failed</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {importResults.length}
+                  {importResults.total}
                 </div>
                 <div className="text-sm text-gray-600">Total</div>
               </div>
             </div>
 
-            {importResults.filter(r => !r.success).length > 0 && (
+            {importResults.failed > 0 && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
@@ -392,35 +375,22 @@ ${successfulImports.map(result =>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {importResults.map((result, index) => (
+                  {importResults.errors.map((error, index) => (
                     <TableRow key={index}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{result.employee.full_name}</div>
-                          <div className="text-sm text-gray-500">{result.employee.employee_id}</div>
+                          <div className="font-medium">N/A</div>
+                          <div className="text-sm text-gray-500">N/A</div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {result.success ? (
-                          <Badge variant="default">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Success
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Failed
-                          </Badge>
-                        )}
+                        <Badge variant="destructive">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Failed
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        {result.success ? (
-                          <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                            {result.pin}
-                          </code>
-                        ) : (
-                          <span className="text-red-600 text-sm">{result.error}</span>
-                        )}
+                        <span className="text-red-600 text-sm">{error}</span>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -433,7 +403,7 @@ ${successfulImports.map(result =>
                 Import More
               </Button>
               <div className="flex gap-2">
-                {importResults.filter(r => r.success).length > 0 && (
+                {importResults.successful > 0 && (
                   <Button variant="outline" onClick={downloadResults}>
                     <Download className="h-4 w-4 mr-2" />
                     Download PINs

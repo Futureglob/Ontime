@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { MapPin, Camera, CheckCircle, XCircle, Play, Pause, WifiOff, Briefcase, Calendar } from "lucide-react";
-import { EnrichedTask } from "@/services/taskService";
+import { EnrichedTask } from "@/types";
 
 interface FieldTaskCardProps {
   task: EnrichedTask;
