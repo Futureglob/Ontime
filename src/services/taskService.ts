@@ -1,86 +1,116 @@
+import { supabase } from "@/integrations/supabase/client";
+import { Task, EnrichedTask, Profile, Client } from "@/types/database";
 
-    import { supabase } from "@/integrations/supabase/client";
-    import type { Task, EnrichedTask } from "@/types/database";
+export const taskService = {
+  async getTasks(organizationId: string): Promise<EnrichedTask[]> {
+    try {
+      // Get tasks first
+      const { data: tasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
 
-    const taskService = {
-      async getTasks(organizationId: string): Promise<EnrichedTask[]> {
-        const { data, error } = await supabase
-          .from("tasks")
-          .select(`
-            *,
-            assigned_to_profile:profiles!tasks_assigned_to_fkey(*),
-            created_by_profile:profiles!tasks_created_by_fkey(*),
-            client:clients(*)
-          `)
-          .eq("organization_id", organizationId);
+      if (tasksError) throw tasksError;
+      if (!tasks) return [];
 
-        if (error) throw error;
-        return (data as unknown) as EnrichedTask[];
-      },
+      // Get all unique profile IDs
+      const profileIds = [...new Set([
+        ...tasks.map(t => t.assigned_to).filter(Boolean),
+        ...tasks.map(t => t.created_by).filter(Boolean)
+      ])];
 
-      async getTaskById(taskId: string): Promise<EnrichedTask> {
-        const { data, error } = await supabase
-          .from("tasks")
-          .select(`
-            *,
-            assigned_to_profile:profiles!tasks_assigned_to_fkey(*),
-            created_by_profile:profiles!tasks_created_by_fkey(*),
-            client:clients(*)
-          `)
-          .eq("id", taskId)
-          .single();
+      // Get profiles separately
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', profileIds);
 
-        if (error) throw error;
-        return (data as unknown) as EnrichedTask;
-      },
+      // Get all unique client IDs
+      const clientIds = [...new Set(tasks.map(t => t.client_id).filter(Boolean))];
+      
+      // Get clients separately
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('*')
+        .in('id', clientIds);
 
-      async getTasksByAssignee(userId: string): Promise<EnrichedTask[]> {
-        const { data, error } = await supabase
-          .from("tasks")
-          .select(`
-            *,
-            assigned_to_profile:profiles!tasks_assigned_to_fkey(*),
-            created_by_profile:profiles!tasks_created_by_fkey(*),
-            client:clients(*)
-          `)
-          .eq("assigned_to", userId);
+      // Combine the data
+      const enrichedTasks: EnrichedTask[] = tasks.map(task => ({
+        ...task,
+        assigned_to_profile: profiles?.find(p => p.id === task.assigned_to),
+        created_by_profile: profiles?.find(p => p.id === task.created_by),
+        client: clients?.find(c => c.id === task.client_id)
+      }));
 
-        if (error) throw error;
-        return (data as unknown) as EnrichedTask[];
-      },
+      return enrichedTasks;
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      return [];
+    }
+  },
 
-      async createTask(taskData: Omit<Task, "id" | "created_at" | "updated_at">): Promise<Task> {
-        const { data, error } = await supabase
-          .from("tasks")
-          .insert([taskData])
-          .select()
-          .single();
+  async getTaskById(taskId: string): Promise<EnrichedTask> {
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', taskId)
+      .single();
 
-        if (error) throw error;
-        return data as Task;
-      },
+    if (error) throw error;
 
-      async updateTask(taskId: string, updates: Partial<Task>): Promise<Task> {
-        const { data, error } = await supabase
-          .from("tasks")
-          .update(updates)
-          .eq("id", taskId)
-          .select()
-          .single();
+    // Get related data separately
+    const [assignedProfile, createdByProfile, client] = await Promise.all([
+      task.assigned_to ? supabase.from('profiles').select('*').eq('id', task.assigned_to).single() : null,
+      task.created_by ? supabase.from('profiles').select('*').eq('id', task.created_by).single() : null,
+      task.client_id ? supabase.from('clients').select('*').eq('id', task.client_id).single() : null
+    ]);
 
-        if (error) throw error;
-        return data as Task;
-      },
-
-      async deleteTask(taskId: string): Promise<void> {
-        const { error } = await supabase
-          .from("tasks")
-          .delete()
-          .eq("id", taskId);
-
-        if (error) throw error;
-      }
+    return {
+      ...task,
+      assigned_to_profile: assignedProfile?.data || undefined,
+      created_by_profile: createdByProfile?.data || undefined,
+      client: client?.data || undefined
     };
+  },
 
-    export default taskService;
-  
+  async getTasksByAssignee(userId: string): Promise<EnrichedTask[]> {
+    return this.getTasks('').then(tasks => 
+      tasks.filter(task => task.assigned_to === userId)
+    );
+  },
+
+  async createTask(taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>): Promise<Task> {
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([taskData])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateTask(taskId: string, updates: Partial<Task>): Promise<Task> {
+    const { data, error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', taskId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteTask(taskId: string): Promise<void> {
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId);
+
+    if (error) throw error;
+  }
+};
+
+export default taskService;

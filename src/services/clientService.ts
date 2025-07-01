@@ -1,51 +1,54 @@
+import { supabase } from "@/integrations/supabase/client";
+import { Client } from "@/types/database";
 
-    import { supabase } from "@/integrations/supabase/client";
-    import type { Client } from "@/types/database";
+export const clientService = {
+  async getClients(organizationId: string): Promise<Client[]> {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .order('name');
 
-    const clientService = {
-      async getClients(organizationId: string): Promise<Client[]> {
-        const { data, error } = await supabase
-          .from("clients")
-          .select("*")
-          .eq("organization_id", organizationId);
+    if (error) throw error;
+    
+    // Add default is_active if missing
+    return (data || []).map(client => ({
+      ...client,
+      is_active: client.is_active ?? true
+    })) as Client[];
+  },
 
-        if (error) throw error;
-        return data || [];
-      },
+  async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
+    const { data, error } = await supabase
+      .from('clients')
+      .insert([{ ...clientData, is_active: true }])
+      .select()
+      .single();
 
-      async createClient(clientData: Omit<Client, "id" | "created_at" | "updated_at" | "is_active">): Promise<Client> {
-        const { data, error } = await supabase
-          .from("clients")
-          .insert({ ...clientData, is_active: true })
-          .select()
-          .single();
+    if (error) throw error;
+    return { ...data, is_active: data.is_active ?? true } as Client;
+  },
 
-        if (error) throw error;
-        return data;
-      },
+  async updateClient(clientId: string, updates: Partial<Client>): Promise<Client> {
+    const { data, error } = await supabase
+      .from('clients')
+      .update(updates)
+      .eq('id', clientId)
+      .select()
+      .single();
 
-      async updateClient(clientId: string, updates: Partial<Omit<Client, "id" | "created_at" | "updated_at">>): Promise<Client> {
-        const { data, error } = await supabase
-          .from("clients")
-          .update(updates)
-          .eq("id", clientId)
-          .select()
-          .single();
+    if (error) throw error;
+    return { ...data, is_active: data.is_active ?? true } as Client;
+  },
 
-        if (error) throw error;
-        return data;
-      },
+  async deleteClient(clientId: string): Promise<void> {
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', clientId);
 
-      async deleteClient(clientId: string): Promise<boolean> {
-        const { error } = await supabase
-          .from("clients")
-          .delete()
-          .eq("id", clientId);
+    if (error) throw error;
+  }
+};
 
-        if (error) throw error;
-        return true;
-      },
-    };
-
-    export default clientService;
-  
+export default clientService;
