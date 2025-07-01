@@ -59,13 +59,11 @@ export interface Task {
   priority: TaskPriority;
   assigned_to?: string;
   created_by: string;
-  due_date?: string;
   location_lat?: number;
   location_lng?: number;
   location_address?: string;
   estimated_hours?: number;
   actual_hours?: number;
-  completed_at?: string;
   created_at: string;
   updated_at: string;
 }

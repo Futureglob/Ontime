@@ -1,16 +1,53 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import type { Organization, OrganizationDetails, Profile } from "@/types/database";
+import type { Organization, OrganizationDetails, Profile, UserRole } from "@/types/database";
 
 const organizationManagementService = {
+  transformProfileData(data: any): Profile {
+    return {
+      id: data.id,
+      user_id: data.user_id || data.id,
+      organization_id: data.organization_id || undefined,
+      employee_id: data.employee_id || undefined,
+      full_name: data.full_name,
+      designation: data.designation || undefined,
+      mobile_number: data.mobile_number,
+      bio: data.bio || null,
+      skills: data.skills || null,
+      address: data.address || null,
+      emergency_contact: data.emergency_contact || null,
+      role: data.role as UserRole,
+      is_active: data.is_active,
+      pin: data.pin || undefined,
+      avatar_url: data.avatar_url || undefined,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  },
+
+  transformOrganizationData(data: any): Organization {
+    return {
+      id: data.id,
+      name: data.name,
+      logo_url: data.logo_url,
+      primary_color: data.primary_color,
+      secondary_color: data.secondary_color,
+      owner_id: data.owner_id || "",
+      is_active: data.is_active !== false,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  },
+
   async getEmployees(organizationId: string): Promise<Profile[]> {
+    if (!organizationId) return [];
+    
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("organization_id", organizationId);
 
     if (error) throw error;
-    return (data as Profile[]) || [];
+    return (data || []).map(item => this.transformProfileData(item));
   },
 
   async addEmployee(employeeData: {
@@ -22,40 +59,27 @@ const organizationManagementService = {
     designation?: string;
     mobileNumber?: string;
   }) {
-    // This function has admin privileges. Use with caution.
-    const { data: { user }, error: authError } = await supabase.auth.admin.createUser({
-      email: employeeData.email,
-      password: Math.random().toString(36).slice(-8), // auto-generates a random password
-      email_confirm: true,
-      user_metadata: {
-        full_name: employeeData.fullName,
-        role: employeeData.role,
-      },
-    });
-
-    if (authError) throw authError;
-    if (!user) throw new Error("User creation failed.");
-
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .insert({
-        id: user.id, // Ensure profile id matches user id
+        user_id: employeeData.email, // Use email as temporary user_id
         organization_id: employeeData.organizationId,
         full_name: employeeData.fullName,
         employee_id: employeeData.employeeId,
         role: employeeData.role,
         designation: employeeData.designation,
         mobile_number: employeeData.mobileNumber,
+        bio: null,
+        skills: null,
+        address: null,
+        emergency_contact: null,
+        is_active: true
       })
       .select()
       .single();
 
-    if (profileError) {
-      // If profile creation fails, delete the created auth user
-      await supabase.auth.admin.deleteUser(user.id);
-      throw profileError;
-    }
-    return profile;
+    if (profileError) throw profileError;
+    return this.transformProfileData(profile);
   },
 
   async updateEmployee(profileId: string, updates: Partial<Profile>): Promise<Profile> {
@@ -67,12 +91,10 @@ const organizationManagementService = {
       .single();
 
     if (error) throw error;
-    return data as Profile;
+    return this.transformProfileData(data);
   },
 
   async deleteEmployee(profileId: string): Promise<boolean> {
-    // Note: This only deletes the profile, not the auth user.
-    // You might want to delete the auth user separately.
     const { error } = await supabase
       .from("profiles")
       .delete()
@@ -83,6 +105,8 @@ const organizationManagementService = {
   },
 
   async getOrganizationSettings(organizationId: string): Promise<Organization | null> {
+    if (!organizationId) return null;
+    
     const { data, error } = await supabase
       .from("organizations")
       .select("*")
@@ -90,7 +114,7 @@ const organizationManagementService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return this.transformOrganizationData(data);
   },
 
   async updateOrganizationSettings(organizationId: string, updates: Partial<Organization>): Promise<Organization> {
@@ -102,10 +126,12 @@ const organizationManagementService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return this.transformOrganizationData(data);
   },
 
   async getOrganizationDetails(organizationId: string): Promise<OrganizationDetails> {
+    if (!organizationId) throw new Error("Organization ID is required");
+    
     const { data: orgData, error: orgError } = await supabase
       .from("organizations")
       .select("*")
@@ -132,12 +158,14 @@ const organizationManagementService = {
     const taskCount = tasksData?.length || 0;
     const completedTasks = tasksData?.filter(t => t.status === "completed").length || 0;
 
-    return {
-      ...orgData,
+    const orgDetails: OrganizationDetails = {
+      ...this.transformOrganizationData(orgData),
       userCount: userCount || 0,
       taskCount,
       completedTasks,
     };
+
+    return orgDetails;
   },
 
   async sendPasswordResetEmail(email: string): Promise<boolean> {
@@ -155,7 +183,7 @@ const organizationManagementService = {
       .single();
 
     if (error) throw error;
-    return data as Profile;
+    return this.transformProfileData(data);
   },
 
   async updateUserRole(userId: string, role: Profile["role"]): Promise<Profile> {
@@ -167,11 +195,10 @@ const organizationManagementService = {
       .single();
 
     if (error) throw error;
-    return data as Profile;
+    return this.transformProfileData(data);
   },
 
   async deleteUserAndProfile(userId: string): Promise<boolean> {
-    // This function has admin privileges. Use with caution.
     const { error: profileError } = await supabase
       .from("profiles")
       .delete()
@@ -179,11 +206,8 @@ const organizationManagementService = {
 
     if (profileError) {
       console.error("Error deleting profile:", profileError);
-      // Decide if you want to proceed with auth user deletion
+      throw profileError;
     }
-
-    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-    if (authError) throw authError;
 
     return true;
   },
