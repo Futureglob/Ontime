@@ -26,21 +26,17 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error } = isPinLogin
+      const result = isPinLogin
         ? await authService.loginWithPin(email, pin)
         : await authService.login(email, password);
 
-      if (error) {
-        throw error;
-      }
-
-      if (data.profile) {
-        setCurrentProfile(data.profile);
+      if (result.profile) {
+        setCurrentProfile(result.profile);
         toast({ title: "Login successful!" });
         if (onLoginSuccess) {
           onLoginSuccess();
         } else {
-          if (data.profile.role === "superadmin") {
+          if (result.profile.role === "superadmin") {
             router.push("/superadmin");
           } else {
             router.push("/tasks");
@@ -49,10 +45,11 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
       } else {
         throw new Error("Profile not found.");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         title: "Login failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -80,10 +77,11 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
         title: "Dev data seeded",
         description: "Test employees and tasks have been created.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         title: "Dev setup failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

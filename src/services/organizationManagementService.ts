@@ -38,11 +38,11 @@ const organizationManagementService = {
     fullName: string;
     role: string;
     employeeId: string;
-    organizationId: string; // Added organizationId
+    organizationId: string;
     designation?: string;
     mobileNumber?: string;
   }) {
-    const {  authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: { user }, error: authError } = await supabase.auth.admin.createUser({
       email: employeeData.email,
       password: Math.random().toString(36).slice(-8), // Insecure, for dev only
       email_confirm: true,
@@ -53,13 +53,13 @@ const organizationManagementService = {
     });
 
     if (authError) throw authError;
-    if (!authData.user) throw new Error("User creation failed.");
+    if (!user) throw new Error("User creation failed.");
 
-    const {  profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .insert({
-        user_id: authData.user.id,
-        organization_id: employeeData.organizationId, // Use it here
+        user_id: user.id,
+        organization_id: employeeData.organizationId,
         full_name: employeeData.fullName,
         employee_id: employeeData.employeeId,
         role: employeeData.role,
@@ -71,7 +71,7 @@ const organizationManagementService = {
 
     if (profileError) {
       // Clean up created user if profile creation fails
-      await supabase.auth.admin.deleteUser(authData.user.id);
+      await supabase.auth.admin.deleteUser(user.id);
       throw profileError;
     }
     return profile;

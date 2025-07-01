@@ -44,7 +44,7 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
 
     const subscription = realtimeService.subscribeToTaskMessages(
       taskId,
-      (payload) => {
+      () => {
         // This is a simplified handler. A real implementation would need to
         // fetch the full message details as the payload only contains the new data.
         // For now, we'll just refetch all messages.

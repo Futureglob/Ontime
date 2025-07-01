@@ -5,7 +5,7 @@ import type { TaskOverview, EmployeePerformance, LocationAnalytics } from "@/ser
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Users, CheckCircle, Clock, AlertTriangle, BarChart, Map, TrendingUp, Package } from "lucide-react";
+import { Users, Clock, Map, TrendingUp, Package } from "lucide-react";
 import EmployeePerformanceChart from "./EmployeePerformanceChart";
 import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";
@@ -15,7 +15,7 @@ export default function AnalyticsDashboard() {
   const [taskOverview, setTaskOverview] = useState<TaskOverview | null>(null);
   const [employeePerformance, setEmployeePerformance] = useState<EmployeePerformance[]>([]);
   const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytics | null>(null);
-  const [orgStats, setOrgStats] = useState<any>(null);
+  const [orgStats, setOrgStats] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
