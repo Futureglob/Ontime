@@ -1,9 +1,47 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Task, EnrichedTask } from "@/types/database";
+import { Task, EnrichedTask, TaskStatus, TaskPriority, Profile, Client } from "@/types/database";
 
-export const taskService = {
+const taskService = {
+  transformProfileData(data: any): Profile {
+    return {
+      id: data.id,
+      user_id: data.user_id || data.id,
+      organization_id: data.organization_id || undefined,
+      employee_id: data.employee_id || undefined,
+      full_name: data.full_name,
+      designation: data.designation || undefined,
+      mobile_number: data.mobile_number,
+      bio: data.bio || null,
+      skills: data.skills || null,
+      address: data.address || null,
+      emergency_contact: data.emergency_contact || null,
+      role: data.role,
+      is_active: data.is_active,
+      pin: data.pin || undefined,
+      avatar_url: data.avatar_url || undefined,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  },
+
+  transformClientData(data: any): Client {
+    return {
+      id: data.id,
+      organization_id: data.organization_id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      is_active: data.is_active !== false,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  },
+
   async getTasks(organizationId: string): Promise<EnrichedTask[]> {
     try {
+      if (!organizationId) return [];
+
       // Get tasks first
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
@@ -38,20 +76,17 @@ export const taskService = {
       // Combine the data with proper type casting
       const enrichedTasks: EnrichedTask[] = tasks.map(task => ({
         ...task,
-        status: task.status as any,
-        priority: task.priority as any,
-        assigned_to_profile: profiles?.find(p => p.id === task.assigned_to) ? {
-          ...profiles.find(p => p.id === task.assigned_to)!,
-          role: profiles.find(p => p.id === task.assigned_to)!.role as any
-        } : undefined,
-        created_by_profile: profiles?.find(p => p.id === task.created_by) ? {
-          ...profiles.find(p => p.id === task.created_by)!,
-          role: profiles.find(p => p.id === task.created_by)!.role as any
-        } : undefined,
-        client: clients?.find(c => c.id === task.client_id) ? {
-          ...clients.find(c => c.id === task.client_id)!,
-          is_active: clients.find(c => c.id === task.client_id)!.is_active ?? true
-        } : undefined
+        status: task.status as TaskStatus,
+        priority: task.priority as TaskPriority,
+        assigned_to_profile: profiles?.find(p => p.id === task.assigned_to) 
+          ? this.transformProfileData(profiles.find(p => p.id === task.assigned_to)!)
+          : undefined,
+        created_by_profile: profiles?.find(p => p.id === task.created_by) 
+          ? this.transformProfileData(profiles.find(p => p.id === task.created_by)!)
+          : undefined,
+        client: clients?.find(c => c.id === task.client_id) 
+          ? this.transformClientData(clients.find(c => c.id === task.client_id)!)
+          : undefined
       }));
 
       return enrichedTasks;
@@ -79,27 +114,62 @@ export const taskService = {
 
     return {
       ...task,
-      status: task.status as any,
-      priority: task.priority as any,
-      assigned_to_profile: assignedProfile?.data ? {
-        ...assignedProfile.data,
-        role: assignedProfile.data.role as any
-      } : undefined,
-      created_by_profile: createdByProfile?.data ? {
-        ...createdByProfile.data,
-        role: createdByProfile.data.role as any
-      } : undefined,
-      client: client?.data ? {
-        ...client.data,
-        is_active: client.data.is_active ?? true
-      } : undefined
+      status: task.status as TaskStatus,
+      priority: task.priority as TaskPriority,
+      assigned_to_profile: assignedProfile?.data 
+        ? this.transformProfileData(assignedProfile.data)
+        : undefined,
+      created_by_profile: createdByProfile?.data 
+        ? this.transformProfileData(createdByProfile.data)
+        : undefined,
+      client: client?.data 
+        ? this.transformClientData(client.data)
+        : undefined
     };
   },
 
   async getTasksByAssignee(userId: string): Promise<EnrichedTask[]> {
-    return this.getTasks('').then(tasks => 
-      tasks.filter(task => task.assigned_to === userId)
-    );
+    try {
+      const { data: tasks, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('assigned_to', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!tasks) return [];
+
+      // Get related data for enrichment
+      const profileIds = [...new Set([
+        ...tasks.map(t => t.assigned_to).filter(Boolean),
+        ...tasks.map(t => t.created_by).filter(Boolean)
+      ])];
+
+      const clientIds = [...new Set(tasks.map(t => t.client_id).filter(Boolean))];
+
+      const [profiles, clients] = await Promise.all([
+        profileIds.length > 0 ? supabase.from('profiles').select('*').in('id', profileIds) : { data: [] },
+        clientIds.length > 0 ? supabase.from('clients').select('*').in('id', clientIds) : { data: [] }
+      ]);
+
+      return tasks.map(task => ({
+        ...task,
+        status: task.status as TaskStatus,
+        priority: task.priority as TaskPriority,
+        assigned_to_profile: profiles.data?.find(p => p.id === task.assigned_to) 
+          ? this.transformProfileData(profiles.data.find(p => p.id === task.assigned_to)!)
+          : undefined,
+        created_by_profile: profiles.data?.find(p => p.id === task.created_by) 
+          ? this.transformProfileData(profiles.data.find(p => p.id === task.created_by)!)
+          : undefined,
+        client: clients.data?.find(c => c.id === task.client_id) 
+          ? this.transformClientData(clients.data.find(c => c.id === task.client_id)!)
+          : undefined
+      }));
+    } catch (error) {
+      console.error('Error fetching tasks by assignee:', error);
+      return [];
+    }
   },
 
   async createTask(taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>): Promise<Task> {
@@ -112,8 +182,8 @@ export const taskService = {
     if (error) throw error;
     return {
       ...data,
-      status: data.status as any,
-      priority: data.priority as any
+      status: data.status as TaskStatus,
+      priority: data.priority as TaskPriority
     };
   },
 
@@ -128,8 +198,8 @@ export const taskService = {
     if (error) throw error;
     return {
       ...data,
-      status: data.status as any,
-      priority: data.priority as any
+      status: data.status as TaskStatus,
+      priority: data.priority as TaskPriority
     };
   },
 
