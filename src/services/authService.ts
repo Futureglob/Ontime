@@ -38,8 +38,7 @@ const authService = {
     return this.signIn(email, password);
   },
 
-  async loginWithPin(pin: string) {
-    // This would need to be implemented based on your PIN authentication logic
+  async loginWithPin(_pin: string) {
     throw new Error("PIN authentication not implemented yet");
   }
 };
