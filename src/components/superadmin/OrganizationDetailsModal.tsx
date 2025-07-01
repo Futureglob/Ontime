@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { OrganizationDetails } from "@/types/database";
+import type { Organization } from "@/types/database";
 
 interface OrganizationDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  organization: OrganizationDetails | null;
+  organization: Organization | null;
 }
 
 export default function OrganizationDetailsModal({
@@ -36,18 +36,18 @@ export default function OrganizationDetailsModal({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-500">Total Users</label>
-              <p className="text-sm">{organization.userCount}</p>
+              <label className="text-sm font-medium text-gray-500">Owner ID</label>
+              <p className="text-sm">{organization.owner_id || "N/A"}</p>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-500">Total Tasks</label>
-              <p className="text-sm">{organization.taskCount}</p>
+              <label className="text-sm font-medium text-gray-500">Logo URL</label>
+              <p className="text-sm">{organization.logo_url || "No logo"}</p>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-500">Completed Tasks</label>
-              <p className="text-sm">{organization.completedTasks}</p>
+              <label className="text-sm font-medium text-gray-500">Primary Color</label>
+              <p className="text-sm">{organization.primary_color || "Default"}</p>
             </div>
 
             <div>
