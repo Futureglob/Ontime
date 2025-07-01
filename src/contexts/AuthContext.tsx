@@ -65,7 +65,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", userId)
+        .eq("user_id", userId)
         .maybeSingle();
       
       if (error && error.code !== "PGRST116") {
