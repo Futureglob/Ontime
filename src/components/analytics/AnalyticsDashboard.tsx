@@ -11,49 +11,82 @@ import TaskAnalyticsChart from "./TaskAnalyticsChart";
 import LocationAnalyticsChart from "./LocationAnalyticsChart";
 
 export default function AnalyticsDashboard() {
-  const { currentProfile } = useAuth();
+  const { user } = useAuth();
   const [taskOverview, setTaskOverview] = useState<TaskOverview | null>(null);
   const [employeePerformance, setEmployeePerformance] = useState<EmployeePerformance[]>([]);
   const [locationAnalytics, setLocationAnalytics] = useState<LocationAnalytics[]>([]);
   const [orgStats, setOrgStats] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (currentProfile?.organization_id) {
+    if (user?.id) {
       const fetchData = async () => {
         try {
           setLoading(true);
+          setError(null);
+          
+          // For now, use a mock organization ID or get it from user metadata
+          const organizationId = user.user_metadata?.organization_id || "4fc5e6fc-96df-4687-be4b-c0f033cc553f";
+          
           const [
             overviewData,
             performanceData,
             locationData,
             statsData
           ] = await Promise.all([
-            analyticsService.getTaskOverview(currentProfile.organization_id),
-            analyticsService.getEmployeePerformance(currentProfile.organization_id),
-            analyticsService.getLocationAnalytics(currentProfile.organization_id),
-            analyticsService.getOrganizationStats(currentProfile.organization_id)
+            analyticsService.getTaskOverview(organizationId),
+            analyticsService.getEmployeePerformance(organizationId),
+            analyticsService.getLocationAnalytics(organizationId),
+            analyticsService.getOrganizationStats(organizationId)
           ]);
+          
           setTaskOverview(overviewData);
           setEmployeePerformance(performanceData);
           setLocationAnalytics(locationData);
           setOrgStats(statsData);
         } catch (error) {
           console.error("Error fetching analytics data:", error);
+          setError("Failed to load analytics data. Please try again.");
         } finally {
           setLoading(false);
         }
       };
       fetchData();
+    } else {
+      setLoading(false);
+      setError("Please log in to view analytics.");
     }
-  }, [currentProfile]);
+  }, [user]);
 
   if (loading) {
-    return <div>Loading analytics...</div>;
+    return (
+      <div className="p-4 md:p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading analytics...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 md:p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-red-600">{error}</div>
+        </div>
+      </div>
+    );
   }
 
   if (!taskOverview || !employeePerformance || !locationAnalytics || !orgStats) {
-    return <div>Could not load analytics data.</div>;
+    return (
+      <div className="p-4 md:p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">No analytics data available.</div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -67,8 +100,8 @@ export default function AnalyticsDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orgStats.totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">{orgStats.activeEmployees} active</p>
+            <div className="text-2xl font-bold">{orgStats.totalEmployees || 0}</div>
+            <p className="text-xs text-muted-foreground">{orgStats.activeEmployees || 0} active</p>
           </CardContent>
         </Card>
         <Card>
@@ -87,8 +120,8 @@ export default function AnalyticsDashboard() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orgStats.totalWorkingHours.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">Avg {orgStats.averageTasksPerEmployee.toFixed(1)} tasks/employee</p>
+            <div className="text-2xl font-bold">{(orgStats.totalWorkingHours || 0).toFixed(1)}</div>
+            <p className="text-xs text-muted-foreground">Avg {(orgStats.averageTasksPerEmployee || 0).toFixed(1)} tasks/employee</p>
           </CardContent>
         </Card>
         <Card>
@@ -97,7 +130,7 @@ export default function AnalyticsDashboard() {
             <Map className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orgStats.totalTravelDistance.toFixed(1)} km</div>
+            <div className="text-2xl font-bold">{(orgStats.totalTravelDistance || 0).toFixed(1)} km</div>
           </CardContent>
         </Card>
       </div>

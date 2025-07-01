@@ -17,8 +17,17 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 export default function Sidebar() {
-  const { currentProfile } = useAuth();
+  const { currentProfile, signOut } = useAuth();
   const router = useRouter();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   const menuItems = [
     { icon: Home, label: "Dashboard", href: "/" },
@@ -66,7 +75,11 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t">
-        <Button variant="ghost" className="w-full justify-start text-red-600">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-red-600"
+          onClick={handleSignOut}
+        >
           <LogOut className="mr-3 h-4 w-4" />
           Sign Out
         </Button>
