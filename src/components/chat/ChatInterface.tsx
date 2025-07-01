@@ -34,9 +34,19 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
 
     fetchMessages();
 
-    const subscription = realtimeService.subscribeToTaskMessages(taskId, (newMessageData: ChatMessage) => {
-      setMessages((prevMessages) => [...prevMessages, newMessageData]);
-    });
+    const subscription = realtimeService.subscribeToTaskMessages(taskId, (payload) => {
+  if (payload.eventType === 'INSERT' && payload.new) {
+    const newMessage: ChatMessage = {
+      id: payload.new.id,
+      content: payload.new.content,
+      sender: payload.new.sender_id,
+      created_at: payload.new.created_at,
+      task_id: payload.new.task_id,
+      is_read: payload.new.is_read
+    };
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  }
+});
 
     return () => {
       subscription.unsubscribe();
