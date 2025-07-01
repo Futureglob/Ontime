@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import SuperAdminDashboard from "@/components/superadmin/SuperAdminDashboard";
 import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
-import authService from "@/services/authService";
 
 export default function SuperAdminPage() {
   const { user, loading, currentProfile } = useAuth();
@@ -20,11 +19,6 @@ export default function SuperAdminPage() {
     // and the useEffect above will trigger the redirect to the dashboard.
   };
 
-  const handleLogout = async () => {
-    await authService.signOut();
-    router.push("/superadmin");
-  };
-
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -33,5 +27,5 @@ export default function SuperAdminPage() {
     return <SuperAdminLogin onSuccess={handleLoginSuccess} />;
   }
 
-  return <SuperAdminDashboard onLogout={handleLogout} />;
+  return <SuperAdminDashboard />;
 }
