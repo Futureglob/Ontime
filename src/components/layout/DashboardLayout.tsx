@@ -7,9 +7,13 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, loading } = useAuth();
 
-  // Prevent layout rendering for super admin
+  // Prevent layout rendering for super admin - show loading instead
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
   if (isSuperAdmin) {
     return <div className="flex items-center justify-center min-h-screen">Redirecting to Super Admin...</div>;
   }

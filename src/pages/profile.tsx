@@ -12,9 +12,9 @@ export default function ProfilePage() {
     if (!loading && !user) {
       router.replace("/");
     }
-    // Redirect super admin to their dashboard
+    // Redirect super admin to their dashboard immediately
     if (!loading && user && isSuperAdmin) {
-      router.replace("/superadmin");
+      window.location.replace("/superadmin");
     }
   }, [user, loading, isSuperAdmin, router]);
 
@@ -34,11 +34,7 @@ export default function ProfilePage() {
   return <ProfileSettings />;
 }
 
+// Don't apply layout for super admin users
 ProfilePage.getLayout = function getLayout(page: React.ReactElement) {
-  // Check if this is a super admin user and don't apply layout
-  const pageProps = page.props;
-  if (pageProps?.isSuperAdmin) {
-    return page;
-  }
   return <DashboardLayout>{page}</DashboardLayout>;
 };
