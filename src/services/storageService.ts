@@ -1,5 +1,5 @@
 
-    import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 const BUCKETS = {
   avatars: "avatars",
@@ -24,9 +24,7 @@ export const storageService = {
       throw error;
     }
 
-    const {
-       { publicUrl },
-    } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path);
 
     return publicUrl;
   },
@@ -65,10 +63,7 @@ export const storageService = {
   },
 
   getPublicUrl(bucket: string, path: string): string {
-    const {
-       { publicUrl },
-    } = supabase.storage.from(bucket).getPublicUrl(path);
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
     return publicUrl;
   },
 };
-  

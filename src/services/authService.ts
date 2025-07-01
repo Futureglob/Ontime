@@ -1,5 +1,5 @@
 
-    import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { profileService } from "./profileService";
 
 export const authService = {
@@ -14,7 +14,7 @@ export const authService = {
     if (data.error) throw new Error(data.error);
 
     const profile = await profileService.getProfileByEmployeeId(employeeId, organizationId);
-    return { user: profile, session: null }; // No session from PIN login
+    return { user: profile, session: null };
   },
 
   async signUp(email: string, password: string, organizationId: string, fullName: string, role: string) {
@@ -22,7 +22,7 @@ export const authService = {
       email,
       password,
       options: {
-         {
+        data: {
           organization_id: organizationId,
           full_name: fullName,
           role: role,
@@ -69,4 +69,3 @@ export const authService = {
     if (error) throw error;
   },
 };
-  
