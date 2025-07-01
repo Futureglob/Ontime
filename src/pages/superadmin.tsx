@@ -1,13 +1,9 @@
+
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import SuperAdminDashboard from "@/components/superadmin/SuperAdminDashboard";
 import SuperAdminLogin from "@/components/superadmin/SuperAdminLogin";
-
-// Override the default layout for super admin page
-SuperAdminPage.getLayout = function getLayout(page: React.ReactElement) {
-  return <div className="min-h-screen bg-background">{page}</div>;
-};
 
 export default function SuperAdminPage() {
   const { user, loading, isSuperAdmin } = useAuth();
@@ -45,3 +41,8 @@ export default function SuperAdminPage() {
 
   return <SuperAdminDashboard />;
 }
+
+// Override the default layout for super admin page - MOVED AFTER COMPONENT
+SuperAdminPage.getLayout = function getLayout(page: React.ReactElement) {
+  return <div className="min-h-screen bg-background">{page}</div>;
+};
