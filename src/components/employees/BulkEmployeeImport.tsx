@@ -65,7 +65,9 @@ export default function BulkEmployeeImport({ onSuccess }: BulkEmployeeImportProp
       const employeesToImport = data.map((row) => ({
         email: row.email,
         full_name: row.full_name,
-        phone: row.phone || null,
+        role: "employee",
+        employee_id: `EMP${Date.now()}`,
+        mobile_number: row.phone || "",
       }));
 
       const result = await organizationManagementService.bulkImportEmployees(

@@ -1,135 +1,162 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import type { Organization, Profile, Client, Task } from "@/types/database";
 
 const devDataService = {
-  async seedDatabase(organizationId: string) {
-    console.log("Seeding database for organization:", organizationId);
+  async createSampleOrganization(): Promise<Organization> {
+    const organizationData = {
+      name: "Sample Organization",
+      owner_id: "sample-owner-id",
+      is_active: true,
+      address: "123 Sample Street, Sample City",
+      contact_person: "John Doe",
+      contact_email: "john@sample.com",
+      contact_phone: "+1234567890",
+      credits: 1000,
+    };
 
-    const employees = [
+    const { data, error } = await supabase
+      .from("organizations")
+      .insert(organizationData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async createSampleProfiles(organizationId: string): Promise<Profile[]> {
+    const profilesData = [
       {
-        email: "manager@ontime.com",
-        fullName: "Manager Mike",
-        role: "manager",
-        employeeId: "MGR001",
+        organization_id: organizationId,
+        full_name: "Admin User",
+        role: "admin" as const,
+        employee_id: "EMP001",
+        designation: "Administrator",
+        mobile_number: "+1234567890",
+        is_active: true,
+        user_id: "admin-user-id",
       },
       {
-        email: "employee1@ontime.com",
-        fullName: "Employee Eric",
-        role: "employee",
-        employeeId: "EMP001",
+        organization_id: organizationId,
+        full_name: "Manager User",
+        role: "manager" as const,
+        employee_id: "EMP002",
+        designation: "Project Manager",
+        mobile_number: "+1234567891",
+        is_active: true,
+        user_id: "manager-user-id",
       },
       {
-        email: "employee2@ontime.com",
-        fullName: "Employee Eve",
-        role: "employee",
-        employeeId: "EMP002",
+        organization_id: organizationId,
+        full_name: "Employee User",
+        role: "employee" as const,
+        employee_id: "EMP003",
+        designation: "Developer",
+        mobile_number: "+1234567892",
+        is_active: true,
+        user_id: "employee-user-id",
       },
     ];
 
-    for (const employee of employees) {
-      try {
-        const {  { user }, error: authError } = await supabase.auth.admin.createUser({
-          email: employee.email,
-          password: "password",
-          email_confirm: true,
-          user_meta { full_name: employee.fullName },
-        });
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert(profilesData)
+      .select();
 
-        if (authError) {
-          console.error(`Failed to create user ${employee.email}:`, authError);
-          continue;
-        }
+    if (error) throw error;
+    return data;
+  },
 
-        if (user) {
-          const {  existingProfile, error: profileError } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", user.id)
-            .single();
+  async createSampleClients(organizationId: string): Promise<Client[]> {
+    const clientsData = [
+      {
+        organization_id: organizationId,
+        name: "Client A",
+        email: "clienta@example.com",
+        phone: "+1234567893",
+        address: "456 Client Street, Client City",
+      },
+      {
+        organization_id: organizationId,
+        name: "Client B",
+        email: "clientb@example.com",
+        phone: "+1234567894",
+        address: "789 Client Avenue, Client Town",
+      },
+    ];
 
-          if (profileError && profileError.code !== "PGRST116") { // Ignore "no rows found"
-            console.error("Error checking for existing profile:", profileError);
-            return;
-          }
+    const { data, error } = await supabase
+      .from("clients")
+      .insert(clientsData)
+      .select();
 
-          if (existingProfile) {
-            console.log(`Profile for user ${user.id} already exists.`);
-            return;
-          }
+    if (error) throw error;
+    return data;
+  },
 
-          const { error: insertError } = await supabase
-            .from("profiles")
-            .insert({
-              user_id: user.id,
-              organization_id: organizationId,
-              full_name: employee.fullName,
-              role: employee.role,
-              employee_id: employee.employeeId,
-            });
-          if (insertError) {
-            console.error(`Failed to create profile for ${employee.email}:`, insertError);
-          }
-        }
-      } catch (error) {
-        console.error(`Error processing employee ${employee.email}:`, error);
-      }
-    }
+  async createSampleTasks(organizationId: string, clientId: string, assignedTo: string): Promise<Task[]> {
+    const tasksData = [
+      {
+        organization_id: organizationId,
+        title: "Sample Task 1",
+        description: "This is a sample task for testing purposes",
+        status: "pending" as const,
+        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        assigned_to: assignedTo,
+        client_id: clientId,
+      },
+      {
+        organization_id: organizationId,
+        title: "Sample Task 2",
+        description: "Another sample task for testing",
+        status: "in_progress" as const,
+        due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        assigned_to: assignedTo,
+        client_id: clientId,
+      },
+    ];
 
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert(tasksData)
+      .select();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async setupSampleData() {
     try {
-      const {  clients, error: clientError } = await supabase.from("clients").insert([
-        { name: "Dev Client A", contact_person: "Mr. A", organization_id: organizationId, email: "clienta@test.com", phone: "123", address: "123 street" },
-        { name: "Dev Client B", contact_person: "Ms. B", organization_id: organizationId, email: "clientb@test.com", phone: "456", address: "456 street" },
-      ]).select();
-
-      if (clientError) {
-        console.error("Failed to create clients:", clientError);
-        return true;
+      const organization = await this.createSampleOrganization();
+      const profiles = await this.createSampleProfiles(organization.id);
+      const clients = await this.createSampleClients(organization.id);
+      
+      if (clients.length > 0 && profiles.length > 0) {
+        const tasks = await this.createSampleTasks(
+          organization.id,
+          clients[0].id,
+          profiles[0].id
+        );
+        
+        return {
+          organization,
+          profiles,
+          clients,
+          tasks,
+        };
       }
 
-      const {  profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, role")
-        .eq("organization_id", organizationId);
-
-      if (profilesError) {
-        console.error("Failed to fetch profiles:", profilesError);
-        return true;
-      }
-
-      const adminProfile = profiles?.find(p => p.role === 'admin');
-      const employeeProfile = profiles?.find(p => p.role === 'employee');
-
-      if (adminProfile && employeeProfile && clients && clients.length > 0) {
-        await supabase.from("tasks").insert([
-          { 
-            title: "Setup development environment", 
-            description: "Install all dependencies and run the project.",
-            client_id: clients[0].id,
-            assigned_to: employeeProfile.id,
-            created_by: adminProfile.id,
-            organization_id: organizationId,
-            status: 'pending',
-            priority: 'high',
-            due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          { 
-            title: "Review project documentation", 
-            description: "Read through the README and other docs.",
-            client_id: clients[1]?.id || clients[0].id,
-            assigned_to: employeeProfile.id,
-            created_by: adminProfile.id,
-            organization_id: organizationId,
-            status: 'in_progress',
-            priority: 'medium',
-            due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-          },
-        ]);
-      }
+      return {
+        organization,
+        profiles,
+        clients,
+        tasks: [],
+      };
     } catch (error) {
-      console.error("Error seeding clients and tasks:", error);
+      console.error("Error setting up sample data:", error);
+      throw error;
     }
-
-    console.log("Database seeding complete.");
-    return true;
   },
 };
 
