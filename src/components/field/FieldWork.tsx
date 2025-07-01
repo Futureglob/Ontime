@@ -1,21 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import taskService from "@/services/taskService";
 import FieldTaskCard from "./FieldTaskCard";
-import type { EnrichedTask } from "@/types";
+import type { EnrichedTask, TaskStatus } from "@/types";
 
 export default function FieldWork() {
   const { currentProfile } = useAuth();
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (currentProfile?.user_id) {
-      fetchTasks();
-    }
-  }, [currentProfile]);
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       const userTasks = await taskService.getTasksByAssignee(currentProfile!.user_id);
@@ -25,11 +19,17 @@ export default function FieldWork() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentProfile]);
+
+  useEffect(() => {
+    if (currentProfile?.user_id) {
+      fetchTasks();
+    }
+  }, [currentProfile, fetchTasks]);
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     try {
-      await taskService.updateTask(taskId, { status: newStatus as any });
+      await taskService.updateTask(taskId, { status: newStatus as TaskStatus });
       await fetchTasks();
     } catch (error) {
       console.error("Error updating task status:", error);

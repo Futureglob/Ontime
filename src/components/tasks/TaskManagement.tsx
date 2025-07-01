@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import taskService from "@/services/taskService";
 import clientService from "@/services/clientService";
 import organizationManagementService from "@/services/organizationManagementService";
-import type { EnrichedTask, Client, Profile } from "@/types/database";
+import type { EnrichedTask, Client, Profile, Task } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import TaskForm from "./TaskForm";
@@ -19,13 +19,6 @@ export default function TaskManagement() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (currentProfile?.organization_id) {
-      fetchTasks();
-      fetchDropdownData();
-    }
-  }, [currentProfile]);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -54,6 +47,13 @@ export default function TaskManagement() {
       }
     }
   }, [currentProfile]);
+
+  useEffect(() => {
+    if (currentProfile?.organization_id) {
+      fetchTasks();
+      fetchDropdownData();
+    }
+  }, [currentProfile, fetchTasks, fetchDropdownData]);
 
   const handleCreateTask = async (values: Record<string, unknown>) => {
     try {
