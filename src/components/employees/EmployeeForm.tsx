@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormMessage } from "@/components/ui/form";
 import { Profile } from "@/types/database";
 
 const formSchema = z.object({
@@ -45,7 +43,7 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, isSubmittin
     if (employee) {
       reset({
         full_name: employee.full_name || "",
-        email: "", // Email is not part of profile, should be fetched separately if needed for editing
+        email: "",
         employee_id: employee.employee_id || "",
         role: employee.role as "admin" | "manager" | "employee" || "employee",
         designation: employee.designation || "",

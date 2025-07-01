@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,13 +76,9 @@ export default function BulkEmployeeImport({ onSuccess }: BulkEmployeeImportProp
         employeesToImport
       );
 
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-
       toast({
         title: "Import Complete",
-        description: `${result.data.length} employees imported successfully.`,
+        description: `${result.length} employees imported successfully.`,
       });
 
       onSuccess();

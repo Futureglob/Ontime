@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Users, CheckCircle, Clock } from "lucide-react";
 
 export default function DashboardOverview() {
   const { currentProfile } = useAuth();
