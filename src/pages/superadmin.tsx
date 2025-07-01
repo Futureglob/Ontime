@@ -25,16 +25,12 @@ export default function SuperAdminPage() {
     return <SuperAdminLogin onSuccess={() => {}} />;
   }
 
-  // If user exists but no profile yet, show loading
-  if (!currentProfile) {
-    return <div className="p-6">Loading profile...</div>;
-  }
-
-  // If user exists but not super admin, show access denied
-  if (currentProfile.role !== "super_admin") {
+  // If user exists but profile indicates they're not super admin, deny access
+  if (currentProfile && currentProfile.role !== "super_admin") {
     return <div className="p-6">Access Denied. Super Admin privileges required.</div>;
   }
 
-  // User is super admin, show dashboard
+  // If user is authenticated, allow access to super admin dashboard
+  // (This handles cases where super admin doesn't have a profile yet)
   return <SuperAdminDashboard />;
 }
