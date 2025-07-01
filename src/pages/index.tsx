@@ -14,7 +14,7 @@ export default function HomePage() {
         // Force immediate redirect for super admin
         window.location.replace("/superadmin");
       } else {
-        router.replace("/profile");
+        router.replace("/dashboard");
       }
     }
   }, [user, loading, isSuperAdmin, router]);
