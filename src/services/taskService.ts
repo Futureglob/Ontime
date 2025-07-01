@@ -92,7 +92,7 @@ const taskService = {
       // Combine the data with proper type casting
       const enrichedTasks: EnrichedTask[] = tasks.map(task => ({
         ...task,
-        location: task.location || "",
+        location: task.location_address || task.location || "",
         status: task.status as TaskStatus,
         priority: task.priority as TaskPriority,
         assigned_to_profile: profiles?.find(p => p.id === task.assigned_to) 
@@ -131,7 +131,7 @@ const taskService = {
 
     return {
       ...task,
-      location: task.location || "",
+      location: task.location_address || task.location || "",
       status: task.status as TaskStatus,
       priority: task.priority as TaskPriority,
       assigned_to_profile: assignedProfile?.data 
@@ -172,7 +172,7 @@ const taskService = {
 
       return tasks.map(task => ({
         ...task,
-        location: task.location || "",
+        location: task.location_address || task.location || "",
         status: task.status as TaskStatus,
         priority: task.priority as TaskPriority,
         assigned_to_profile: profiles.data?.find(p => p.id === task.assigned_to) 
@@ -213,7 +213,7 @@ const taskService = {
     if (error) throw error;
     return {
       ...data,
-      location: data.location || "",
+      location: data.location_address || data.location || "",
       status: data.status as TaskStatus,
       priority: data.priority as TaskPriority
     };

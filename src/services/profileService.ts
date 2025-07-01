@@ -72,7 +72,7 @@ const profileService = {
       .single();
 
     if (error) throw error;
-    return data as Profile;
+    return this.transformProfileData(data);
   },
 };
 

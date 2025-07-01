@@ -12,9 +12,9 @@ export const clientService = {
     if (error) throw error;
     
     // Add default is_active if missing and cast to proper type
-    return (data || []).map(client => ({
+    return (data || []).map((client: Record<string, unknown>) => ({
       ...client,
-      is_active: (client as unknown).is_active ?? true
+      is_active: client.is_active ?? true
     })) as Client[];
   },
 
