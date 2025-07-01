@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { startOfDay, startOfWeek, startOfMonth } from "date-fns";
 
 export const analyticsService = {
   async getDashboardStats(organizationId: string) {
@@ -23,13 +23,7 @@ export const analyticsService = {
   },
 
   async getTaskStatusDistribution(organizationId: string) {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("status, count:id")
-      .eq("organization_id", organizationId)
-      .rpc('count', { group: 'status' }); // This is a pseudo-RPC call, actual implementation might differ
-
-    // The above RPC is conceptual. The actual implementation would be:
+    // The rpc call is conceptual. The actual implementation would be:
     const {  statusData, error: statusError } = await supabase
       .from("tasks")
       .select("status")
@@ -129,7 +123,7 @@ export const analyticsService = {
       const { data, error } = await supabase.from("organizations").select("id").limit(1);
       if (error) throw error;
       return { status: "ok", db_connection: true };
-    } catch (error) {
+    } catch (error: any) {
       return { status: "error", db_connection: false, message: error.message };
     }
   },

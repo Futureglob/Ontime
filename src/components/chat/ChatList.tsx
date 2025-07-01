@@ -20,7 +20,7 @@ export default function ChatList({
   selectedConversationId,
   onSelectConversation,
 }: ChatListProps) {
-  const { user, currentProfile } = useAuth();
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,7 +43,7 @@ export default function ChatList({
   }, [loadConversations]);
 
   const handleRealtimeUpdate = useCallback(
-    (payload: RealtimePostgresChangesPayload<any>) => {
+    (payload: RealtimePostgresChangesPayload<Message>) => {
       // A new message should trigger a reload of conversations
       // to get updated last message and unread counts.
       if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {

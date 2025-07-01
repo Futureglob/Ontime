@@ -1,11 +1,13 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { faker } from "@faker-js/faker";
 
 export interface SuperAdmin {
-  id: string; 
-  user_id: string; 
-  user_name?: string; 
-  user_email?: string; 
-  permissions?: Record<string, boolean>; 
+  id: string;
+  user_id: string;
+  user_name?: string;
+  user_email?: string;
+  permissions?: Record<string, boolean>;
   created_at: string;
 }
 
@@ -39,14 +41,14 @@ export const superAdminService = {
       const { data, error } = await supabase
         .from("profiles")
         .select("role")
-        .eq("id", userId)
+        .eq("user_id", userId)
         .single();
-      
+
       if (error) {
         console.error("Error fetching profile for super admin check:", error);
         return false;
       }
-      
+
       return data?.role === "super_admin";
     } catch (error) {
       console.error("Error checking super admin status:", error);
@@ -58,30 +60,27 @@ export const superAdminService = {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select(`
+        .select(
+          `
           id,
+          user_id,
           full_name,
           role,
           created_at
-        `)
+        `
+        )
         .eq("role", "super_admin");
 
       if (error) throw error;
 
-      // Get user emails from auth.users (this requires RLS to be properly configured)
-      const superAdmins: SuperAdmin[] = [];
-      
-      for (const profile of data || []) {
-        // For now, we'll use the profile data without email since we can't easily access auth.users
-        superAdmins.push({
-          id: profile.id,
-          user_id: profile.id,
-          user_name: profile.full_name || "Super Admin",
-          user_email: "admin@system.com", // Placeholder - would need service role to get real email
-          permissions: { can_manage_all: true },
-          created_at: profile.created_at || new Date().toISOString(),
-        });
-      }
+      const superAdmins: SuperAdmin[] = (data || []).map((profile) => ({
+        id: profile.id,
+        user_id: profile.user_id,
+        user_name: profile.full_name || "Super Admin",
+        user_email: "admin@system.com", // Placeholder
+        permissions: { can_manage_all: true },
+        created_at: profile.created_at || new Date().toISOString(),
+      }));
 
       return superAdmins;
     } catch (error) {
@@ -90,20 +89,23 @@ export const superAdminService = {
     }
   },
 
-  async addSuperAdmin(userId: string, permissions: Record<string, boolean> = {}): Promise<SuperAdmin> {
+  async addSuperAdmin(
+    userId: string,
+    permissions: Record<string, boolean> = {}
+  ): Promise<SuperAdmin> {
     try {
       const { data, error } = await supabase
         .from("profiles")
         .update({ role: "super_admin" })
-        .eq("id", userId)
-        .select("id, full_name, role, created_at")
+        .eq("user_id", userId)
+        .select("id, user_id, full_name, role, created_at")
         .single();
 
       if (error) throw error;
-      
+
       return {
-        id: data.id, 
-        user_id: data.id,
+        id: data.id,
+        user_id: data.user_id,
         user_name: data.full_name || "Super Admin",
         user_email: "admin@system.com", // Placeholder
         permissions,
@@ -119,8 +121,8 @@ export const superAdminService = {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ role: "manager" })
-        .eq("id", userIdToRemove);
+        .update({ role: "org_admin" }) // Demote to org_admin
+        .eq("user_id", userIdToRemove);
 
       if (error) throw error;
     } catch (error) {
@@ -129,81 +131,9 @@ export const superAdminService = {
     }
   },
 
-  async updateSuperAdminPermissions(superAdminId: string, permissions: Record<string, boolean>): Promise<void> {
-    try {
-      // Since super_admins table is not in generated types, we'll store permissions in profiles table
-      // or handle this functionality differently
-      console.log("Super admin permissions would be updated:", { superAdminId, permissions });
-      // For now, we'll just log this - in a real implementation, you might want to:
-      // 1. Add a permissions column to profiles table
-      // 2. Create the super_admins table and regenerate types
-      // 3. Use a different approach for permissions
-    } catch (error) {
-      console.error("Error updating super admin permissions:", error);
-      throw error;
-    }
-  },
-
-  async getSystemSettings(): Promise<SystemSettings[]> {
-    try {
-      // Since system_settings table is not in generated types, return default settings
-      console.warn("System settings table not available, returning defaults");
-      return [
-        {
-          id: "1",
-          key: "app_name",
-          value: { name: "OnTime" },
-          description: "Application name",
-          updated_by: "system",
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: "2",
-          key: "maintenance_mode",
-          value: { enabled: false },
-          description: "System Maintenance Mode",
-          updated_by: "system",
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: "3",
-          key: "user_registration",
-          value: { enabled: true },
-          description: "Allow new user registration",
-          updated_by: "system",
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: "4",
-          key: "email_notifications",
-          value: { enabled: true },
-          description: "Send email notifications",
-          updated_by: "system",
-          updated_at: new Date().toISOString()
-        }
-      ];
-    } catch (error) {
-      console.error("Error fetching system settings:", error);
-      return [];
-    }
-  },
-
-  async updateSystemSetting(key: string, newValue: Record<string, unknown>, newDescription?: string): Promise<void> {
-    try {
-      // Since system_settings table is not in generated types, we'll just log this
-      console.log("System setting would be updated:", { key, newValue, newDescription });
-      // For now, we'll just log this - in a real implementation, you might want to:
-      // 1. Create the system_settings table and regenerate types
-      // 2. Use a different approach for system settings
-    } catch (error) {
-      console.error("Error updating system setting:", error);
-      throw error;
-    }
-  },
-
   async getOrganizations(): Promise<OrganizationForSuperAdminView[]> {
     try {
-      const { data: orgs, error: orgsError } = await supabase
+      const {  orgs, error: orgsError } = await supabase
         .from("organizations")
         .select("*")
         .order("created_at", { ascending: false });
@@ -213,13 +143,11 @@ export const superAdminService = {
       const organizationsWithStats: OrganizationForSuperAdminView[] = [];
 
       for (const org of orgs || []) {
-        // Get user count for this organization
         const { count: userCount } = await supabase
           .from("profiles")
           .select("*", { count: "exact", head: true })
           .eq("organization_id", org.id);
 
-        // Get task count for this organization
         const { count: taskCount } = await supabase
           .from("tasks")
           .select("*", { count: "exact", head: true })
@@ -231,7 +159,7 @@ export const superAdminService = {
           user_count: userCount || 0,
           task_count: taskCount || 0,
           logo_url: org.logo_url,
-          is_active: true // Default to true since field doesn't exist in current schema
+          is_active: true, // Assuming active, schema doesn't have this field
         });
       }
 
@@ -241,20 +169,17 @@ export const superAdminService = {
       return [];
     }
   },
-  
+
   async getSystemStats(): Promise<SystemStats> {
     try {
-      // Get total organizations count
       const { count: totalOrgs } = await supabase
         .from("organizations")
         .select("*", { count: "exact", head: true });
 
-      // Get total users count
       const { count: totalUsers } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true });
 
-      // Get total tasks count
       const { count: totalTasks } = await supabase
         .from("tasks")
         .select("*", { count: "exact", head: true });
@@ -274,314 +199,82 @@ export const superAdminService = {
     }
   },
 
-  async loginSuperAdmin(email: string, password: string): Promise<{ user: { id: string; email: string; name?: string }; isSuperAdmin: boolean }> {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        const isSuperAdmin = await this.isSuperAdmin(data.user.id);
-        return {
-          user: {
-            id: data.user.id,
-            email: data.user.email!,
-            name: data.user.user_metadata?.full_name
-          },
-          isSuperAdmin
-        };
-      }
-
-      throw new Error("Login failed");
-    } catch (error) {
-      console.error("Super admin login error:", error);
-      throw error;
-    }
-  },
-  
-  async getOrganizationStats(): Promise<OrganizationForSuperAdminView[]> {
-    return this.getOrganizations(); 
-  },
-
-  async getSystemOverallStats(): Promise<SystemStats> {
-    return this.getSystemStats(); 
-  },
-
-  async createOrganization(orgData: { 
-    name: string; 
-    logo_url?: string; 
-    primary_color?: string; 
-    secondary_color?: string;
-    contact_person?: string;
-    contact_email?: string;
-  }): Promise<OrganizationForSuperAdminView> {
-    try {
-      const { data, error } = await supabase
-        .from("organizations")
-        .insert([{
-          name: orgData.name,
-          logo_url: orgData.logo_url,
-          primary_color: orgData.primary_color || "#3B82F6",
-          secondary_color: orgData.secondary_color || "#1E40AF",
-          contact_person: orgData.contact_person,
-          contact_email: orgData.contact_email,
-          is_active: true
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return {
-        id: data.id,
-        name: data.name,
-        user_count: 0,
-        task_count: 0,
-        logo_url: data.logo_url,
-        is_active: true
-      };
-    } catch (error) {
-      console.error("Error creating organization:", error);
-      throw error;
-    }
-  },
-
-  async createOrganizationWithAdmin(orgData: { 
-    name: string; 
-    logo_url?: string; 
-    primary_color?: string; 
-    secondary_color?: string;
-    contact_person?: string;
-    contact_email?: string;
+  async createOrganizationWithAdmin(orgData: {
+    name: string;
+    logo_url?: string;
     admin_name: string;
     admin_email: string;
     admin_password: string;
-    admin_employee_id?: string;
     admin_mobile?: string;
   }): Promise<OrganizationForSuperAdminView> {
-    try {
-      // Validate inputs first
-      if (!orgData.name.trim()) {
-        throw new Error("Organization name is required");
-      }
-      
-      if (!orgData.admin_email.trim() || !orgData.admin_password.trim()) {
-        throw new Error("Admin email and password are required");
-      }
-      
-      if (orgData.admin_password.length < 6) {
-        throw new Error("Password must be at least 6 characters long");
-      }
-      
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(orgData.admin_email)) {
-        throw new Error("Please enter a valid email address");
-      }
+    // 1. Create the organization
+    const {  newOrg, error: orgError } = await supabase
+      .from("organizations")
+      .insert({ name: orgData.name, logo_url: orgData.logo_url })
+      .select()
+      .single();
 
-      console.log("Creating organization with data:", {
-        name: orgData.name,
-        admin_email: orgData.admin_email,
-        password_length: orgData.admin_password.length
-      });
+    if (orgError) {
+      throw new Error(`Failed to create organization: ${orgError.message}`);
+    }
 
-      // First, create the organization
-      const { data: orgResult, error: orgError } = await supabase
-        .from("organizations")
-        .insert([{
-          name: orgData.name.trim(),
-          logo_url: orgData.logo_url?.trim() || null,
-          primary_color: orgData.primary_color || "#3B82F6",
-          secondary_color: orgData.secondary_color || "#1E40AF",
-          contact_person: orgData.contact_person?.trim() || null,
-          contact_email: orgData.contact_email?.trim() || null,
-          is_active: true
-        }])
-        .select()
-        .single();
-
-      if (orgError) {
-        console.error("Organization creation error:", orgError);
-        throw new Error(`Failed to create organization: ${orgError.message}`);
-      }
-
-      console.log("Organization created successfully:", orgResult);
-
-      // Create the organization admin user with improved error handling
-      const signUpData = {
-        email: orgData.admin_email.trim(),
-        password: orgData.admin_password,
-        options: {
-          emailRedirectTo: undefined,
-          data: {
-            full_name: orgData.admin_name.trim(),
-            role: 'org_admin',
-            organization_id: orgResult.id
-          }
-        }
-      };
-
-      console.log("Attempting to create auth user with:", {
-        email: signUpData.email,
-        password_length: signUpData.password.length,
-        metadata: signUpData.options.data
-      });
-
-      const { data: authResult, error: authError } = await supabase.auth.signUp(signUpData);
-
-      if (authError) {
-        throw new Error(`Failed to create auth user: ${authError.message}`);
-      }
-      if (!authData.user) {
-        throw new Error("Auth user not created.");
-      }
-      const adminUser = authData.user;
-
-      // 2. Create the admin's profile
-      const {  profile, error: profileError } = await supabase
-        .from("profiles")
-        .insert({
-          user_id: adminUser.id, // FIX: Added missing user_id
-          full_name: admin.fullName,
+    // 2. Create the admin user
+    const {  authData, error: authError } = await supabase.auth.signUp({
+      email: orgData.admin_email,
+      password: orgData.admin_password,
+      options: {
+         {
+          full_name: orgData.admin_name,
           role: "org_admin",
           organization_id: newOrg.id,
-          employee_id: `ADMIN-${faker.string.alphanumeric(4).toUpperCase()}`,
-          designation: "Organization Admin",
-          mobile_number: admin.mobileNumber,
-          is_active: true,
-        })
-        .select()
-        .single();
+        },
+      },
+    });
 
-      if (profileError) {
-        // Cleanup created auth user if profile creation fails
-        await supabase.auth.admin.deleteUser(adminUser.id);
-        throw new Error(`Failed to create admin profile: ${profileError.message}`);
-      }
-
-      console.log("Auth user created successfully:", authResult.user?.id);
-
-      if (authResult.user) {
-        // Wait for the auth user to be fully created
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Create the admin profile with retry logic
-        const profileData = {
-          id: authResult.user.id,
-          full_name: orgData.admin_name.trim(),
-          role: "org_admin" as const,
-          organization_id: orgResult.id,
-          employee_id: orgData.admin_employee_id?.trim() || `ADMIN-${Date.now()}`,
-          designation: "Organization Administrator",
-          mobile_number: orgData.admin_mobile?.trim() || null,
-          is_active: true,
-        };
-
-        console.log("Creating profile with data:", profileData);
-
-        let profileCreated = false;
-        let retryCount = 0;
-        const maxRetries = 3;
-
-        while (!profileCreated && retryCount < maxRetries) {
-          try {
-            const { data: profileResult, error: profileError } = await supabase
-              .from("profiles")
-              .insert(profileData)
-              .select()
-              .single();
-
-            if (profileError) {
-              console.error(`Profile creation error (attempt ${retryCount + 1}):`, profileError);
-              
-              if (retryCount === maxRetries - 1) {
-                // Final attempt failed, clean up
-                await supabase.from("organizations").delete().eq("id", orgResult.id);
-                throw new Error(`Failed to create admin profile after ${maxRetries} attempts: ${profileError.message}`);
-              }
-              
-              retryCount++;
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-            } else {
-              console.log("Profile created successfully:", profileResult);
-              profileCreated = true;
-            }
-          } catch (error) {
-            console.error(`Profile creation attempt ${retryCount + 1} failed:`, error);
-            retryCount++;
-            
-            if (retryCount >= maxRetries) {
-              await supabase.from("organizations").delete().eq("id", orgResult.id);
-              throw new Error(`Failed to create admin profile after ${maxRetries} attempts: ${error}`);
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-          }
-        }
-
-        // Show success message with email confirmation info
-        console.log("Organization and admin created successfully. Admin needs to confirm email before login.");
-      }
-
-      return {
-        id: orgResult.id,
-        name: orgResult.name,
-        user_count: 1, // The admin we just created
-        task_count: 0,
-        logo_url: orgResult.logo_url,
-        is_active: true
-      };
-    } catch (error) {
-      console.error("Error creating organization with admin:", error);
-      throw error;
+    if (authError) {
+      // Clean up created organization if admin creation fails
+      await supabase.from("organizations").delete().eq("id", newOrg.id);
+      throw new Error(`Failed to create admin user: ${authError.message}`);
     }
+
+    if (!authData.user) {
+      await supabase.from("organizations").delete().eq("id", newOrg.id);
+      throw new Error("Admin user was not created in authentication system.");
+    }
+    const adminUser = authData.user;
+
+    // 3. Create the admin's profile
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .insert({
+        user_id: adminUser.id,
+        full_name: orgData.admin_name,
+        role: "org_admin",
+        organization_id: newOrg.id,
+        employee_id: `ADMIN-${faker.string.alphanumeric(4).toUpperCase()}`,
+        designation: "Organization Admin",
+        mobile_number: orgData.admin_mobile,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (profileError) {
+      // Cleanup created auth user and organization if profile creation fails
+      await supabase.auth.admin.deleteUser(adminUser.id);
+      await supabase.from("organizations").delete().eq("id", newOrg.id);
+      throw new Error(`Failed to create admin profile: ${profileError.message}`);
+    }
+
+    return {
+      id: newOrg.id,
+      name: newOrg.name,
+      user_count: 1,
+      task_count: 0,
+      logo_url: newOrg.logo_url,
+      is_active: true,
+    };
   },
-
-  async updateOrganization(orgId: string, updates: Partial<{ name: string; logo_url: string; is_active: boolean }>): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from("organizations")
-        .update(updates)
-        .eq("id", orgId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error updating organization:", error);
-      throw error;
-    }
-  },
-
-  async deleteOrganization(orgId: string): Promise<void> {
-    try {
-      // First, check if organization has users or tasks
-      const { count: userCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("organization_id", orgId);
-
-      const { count: taskCount } = await supabase
-        .from("tasks")
-        .select("*", { count: "exact", head: true })
-        .eq("organization_id", orgId);
-
-      if ((userCount || 0) > 0 || (taskCount || 0) > 0) {
-        throw new Error("Cannot delete organization with existing users or tasks. Please transfer or remove them first.");
-      }
-
-      const { error } = await supabase
-        .from("organizations")
-        .delete()
-        .eq("id", orgId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error deleting organization:", error);
-      throw error;
-    }
-  }
 };
 
 export default superAdminService;

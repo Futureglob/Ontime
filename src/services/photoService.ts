@@ -7,8 +7,7 @@ export const photoService = {
     taskId: string,
     userId: string,
     file: File,
-    photoType: "check_in" | "progress" | "completion",
-    location?: { lat: number; lng: number }
+    photoType: "check_in" | "progress" | "completion"
   ): Promise<TaskPhoto> {
     const photo_url = await storageService.uploadTaskPhoto(taskId, file);
 

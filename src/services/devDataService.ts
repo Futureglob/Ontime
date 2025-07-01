@@ -1,6 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { faker } from "@faker-js/faker";
-import { hash } from "bcryptjs";
 
 const BATCH_SIZE = 10;
 
@@ -82,7 +82,7 @@ export const devDataService = {
         const { data, error } = await supabase.from("profiles").insert(batch).select();
         if (error) {
           console.error("Error inserting profile batch:", error.message);
-        } else {
+        } else if (data) {
           seededProfiles = [...seededProfiles, ...data];
         }
       }
@@ -92,40 +92,42 @@ export const devDataService = {
       if (seededProfiles.length > 0 && seededClients.length > 0) {
         const tasks = [];
         for (let i = 0; i < 100; i++) {
-          const created_by = faker.helpers.arrayElement(
+          const created_by_profile = faker.helpers.arrayElement(
             seededProfiles.filter((p) => p.role !== "employee")
-          ).user_id;
-          const assigned_to = faker.helpers.arrayElement(
+          );
+          const assigned_to_profile = faker.helpers.arrayElement(
             seededProfiles.filter((p) => p.role === "employee")
-          ).user_id;
-          const client_id = faker.helpers.arrayElement(seededClients).id;
+          );
+          const client = faker.helpers.arrayElement(seededClients);
 
-          tasks.push({
-            organization_id: organizationId,
-            client_id: client_id,
-            title: faker.lorem.sentence(5),
-            description: faker.lorem.paragraph(),
-            status: faker.helpers.arrayElement([
-              "assigned",
-              "in_progress",
-              "completed",
-              "on_hold",
-            ]),
-            priority: faker.helpers.arrayElement(["low", "medium", "high"]),
-            assigned_to: assigned_to,
-            created_by: created_by,
-            due_date: faker.date.future().toISOString(),
-            location_address: faker.location.streetAddress(true),
-            location_lat: faker.location.latitude(),
-            location_lng: faker.location.longitude(),
-          });
+          if (created_by_profile && assigned_to_profile && client) {
+            tasks.push({
+              organization_id: organizationId,
+              client_id: client.id,
+              title: faker.lorem.sentence(5),
+              description: faker.lorem.paragraph(),
+              status: faker.helpers.arrayElement([
+                "assigned",
+                "in_progress",
+                "completed",
+                "on_hold",
+              ]),
+              priority: faker.helpers.arrayElement(["low", "medium", "high"]),
+              assigned_to: assigned_to_profile.user_id,
+              created_by: created_by_profile.user_id,
+              due_date: faker.date.future().toISOString(),
+              location_address: faker.location.streetAddress(true),
+              location_lat: faker.location.latitude(),
+              location_lng: faker.location.longitude(),
+            });
+          }
         }
-        const {  seededTasks, error: taskError } = await supabase
+        const { data: seededTasks, error: taskError } = await supabase
           .from("tasks")
           .insert(tasks)
           .select();
         if (taskError) throw taskError;
-        console.log(`${seededTasks.length} tasks seeded.`);
+        console.log(`${seededTasks?.length || 0} tasks seeded.`);
       }
 
       console.log("Database seed complete.");

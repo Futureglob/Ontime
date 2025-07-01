@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { profileService } from "./profileService";
 
@@ -12,10 +13,6 @@ export const authService = {
     if (error) throw error;
     if (data.error) throw new Error(data.error);
 
-    // After successful PIN login, Supabase doesn't automatically create a session.
-    // We need to sign in the user programmatically to get a JWT.
-    // This requires a trusted server-side call.
-    // For now, we'll just return the user profile.
     const profile = await profileService.getProfileByEmployeeId(employeeId, organizationId);
     return { user: profile, session: null }; // No session from PIN login
   },
