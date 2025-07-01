@@ -58,6 +58,7 @@ export type Database = {
           pin_locked_until: string | null
           pin_reset_requested: boolean | null
           pin_reset_requested_at: string | null
+          avatar_url: string | null
         }
         Insert: {
           id: string
@@ -77,6 +78,7 @@ export type Database = {
           pin_locked_until?: string | null
           pin_reset_requested?: boolean | null
           pin_reset_requested_at?: string | null
+          avatar_url?: string | null
         }
         Update: {
           id?: string
@@ -96,6 +98,7 @@ export type Database = {
           pin_locked_until?: string | null
           pin_reset_requested?: boolean | null
           pin_reset_requested_at?: string | null
+          avatar_url?: string | null
         }
         Relationships: [
           {
@@ -410,7 +413,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_user_pin: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: {
+          pin: string
+        }
+      }
+      login_with_pin: {
+        Args: {
+          p_employee_id: string
+          p_pin: string
+        }
+        Returns: Json
+      }
+      reset_user_pin: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -17,8 +17,8 @@ import { Task, Profile } from "@/types";
 interface ChatConversation {
   task_id: string;
   task: Task & {
-    assigned_to_profile?: { full_name: string; designation: string; avatar_url?: string };
-    assigned_by_profile?: { full_name: string; designation: string; avatar_url?: string };
+    assigned_to_profile?: Profile;
+    assigned_by_profile?: Profile;
   };
   lastMessage?: {
     content: string;
@@ -108,7 +108,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
     }
   };
 
-  const getOtherParticipant = (conversationTask: Task & { assigned_to_profile?: { full_name: string; designation: string; avatar_url?: string }; assigned_by_profile?: { full_name: string; designation: string; avatar_url?: string } }) => {
+  const getOtherParticipant = (conversationTask: Task & { assigned_to_profile?: Profile | null; assigned_by_profile?: Profile | null; }) => {
     if (!user) return null;
     
     if (user.id === conversationTask.assignee_id) {
@@ -148,7 +148,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
         acc[key].tasks.push(chat);
       }
       return acc;
-    }, {} as Record<string, { profile: { full_name: string; designation: string; avatar_url?: string } | null; tasks: ChatConversation[] }>);
+    }, {} as Record<string, { profile: Profile | null | undefined; tasks: ChatConversation[] }>);
     return Object.values(groups);
   };
 
@@ -226,7 +226,7 @@ export default function ChatList({ onSelectConversation, selectedTaskId }: ChatL
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarImage src={profile?.avatar_url} />
+                        <AvatarImage src={profile?.avatar_url || undefined} />
                         <AvatarFallback>
                           {profile?.full_name?.charAt(0) || "U"}
                         </AvatarFallback>

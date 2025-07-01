@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EnrichedTask, Task, Profile, Client } from "@/types";
 
 interface TaskFormData {
   title: string;
@@ -23,11 +24,14 @@ interface TaskFormData {
 }
 
 interface TaskFormProps {
-  onSubmit: (formData: TaskFormData) => Promise<void>;
+  task?: Task | null;
+  users: Profile[];
+  onSuccess: () => void;
   onCancel: () => void;
 }
 
-export default function TaskForm({ onSubmit, onCancel }: TaskFormProps) {
+export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormProps) {
+  const { currentProfile } = useAuth();
   const [formData, setFormData] = useState({
     title: "",
     description: "",

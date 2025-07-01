@@ -73,17 +73,22 @@ export const messageService = {
       throw error;
     }
 
-    return (data || []).map((task: Record<string, any>) => ({
-      task,
+    type TaskWithChatData = Task & {
+        messages: { count: number }[];
+        participants: Profile | null;
+    };
+
+    return (data as TaskWithChatData[] || []).map((task) => ({
+      task: task as Task,
       lastMessage: null,
       unreadCount: task.messages[0]?.count || 0,
-      participants: [task.participants].filter(Boolean),
+      participants: [task.participants].filter(Boolean) as Profile[],
     }));
   },
 
   subscribeToTaskMessages(
     taskId: string,
-    onMessage: (payload: Record<string, any>) => void
+    onMessage: (payload: RealtimePostgresChangesPayload<Message>) => void
   ) {
     return supabase
       .channel(`messages:task=${taskId}`)

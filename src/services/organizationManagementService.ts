@@ -1,5 +1,6 @@
     import { supabase } from "@/integrations/supabase/client";
     import { authService } from "./authService";
+    import { User } from "@supabase/supabase-js";
 
     interface OrganizationFromDB {
       id: string;
@@ -283,7 +284,7 @@
         }
       },
 
-      async signUpUser(email: string, password: string, organizationId: string): Promise<{ user: any; error: any }> {
+      async signUpUser(email: string, password: string, organizationId: string): Promise<{ user: User | null; error: Error | null }> {
         try {
           const { data, error } = await supabase.auth.signUp({
             email: email,
@@ -306,7 +307,7 @@
           return { user: data.user, error: null };
         } catch (error) {
           console.error("Error signing up user:", error);
-          return { user: null, error: error };
+          return { user: null, error: error as Error };
         }
       }
     };

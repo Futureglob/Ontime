@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Share2, Copy, Check } from "lucide-react";
-import { Task } from "@/types/database";
+import { EnrichedTask } from "@/types";
 import { messageService } from "@/services/messageService";
 
 interface WhatsAppShareProps {
-  task: Task;
+  task: EnrichedTask;
   onClose: () => void;
 }
 
@@ -23,7 +22,7 @@ export default function WhatsAppShare({ task, onClose }: WhatsAppShareProps) {
   const handleShare = () => {
     const message = shareType === "update" ? defaultMessage : customMessage;
     const whatsappUrl = messageService.generateWhatsAppLink(
-      task.assigned_to_profile?.mobile_number,
+      task.assigned_to_profile?.mobile_number || undefined,
       message
     );
     window.open(whatsappUrl, "_blank");
@@ -63,7 +62,7 @@ export default function WhatsAppShare({ task, onClose }: WhatsAppShareProps) {
   };
 
   return (
-    <Dialog open={true} onOpenChange={() => {}}>
+    <Dialog open={true} onOpenChange={onClose}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700">
           <Share2 className="h-4 w-4 mr-2" />
@@ -114,7 +113,7 @@ export default function WhatsAppShare({ task, onClose }: WhatsAppShareProps) {
           <div className="flex flex-col gap-2">
             <Button onClick={handleShare} className="w-full bg-green-600 hover:bg-green-700">
               <ExternalLink className="h-4 w-4 mr-2" />
-              Send to {task.assigned_to_profile?.mobile_number}
+              Send to {task.assigned_to_profile?.mobile_number || "User"}
             </Button>
             
             <Button variant="outline" onClick={() => setShareType("custom")} className="w-full">

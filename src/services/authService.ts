@@ -62,7 +62,7 @@ export const authService = {
     if (error) {
       return { error: new AuthError(error.message, 500) };
     }
-    return { pin: (data as any)?.pin, error: null };
+    return { pin: data?.pin, error: null };
   },
 
   async resetUserPin(userId: string): Promise<{ error: AuthError | null }> {
