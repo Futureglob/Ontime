@@ -50,8 +50,9 @@ export default function ProfileSettings() {
       setCurrentProfile(updatedProfile);
 
       toast({ title: "Success", description: "Profile updated successfully." });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "An unknown error occurred";
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  Home,
   Users,
   Briefcase,
   Settings,
@@ -16,10 +14,7 @@ import {
   User,
   Users2,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import Image from "next/image";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Profile } from "@/types/database";
 

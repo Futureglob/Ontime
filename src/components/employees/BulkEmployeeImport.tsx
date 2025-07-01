@@ -3,12 +3,11 @@ import { useDropzone } from "react-dropzone";
 import * as XLSX from "xlsx";
 import { useAuth } from "@/contexts/AuthContext";
 import organizationManagementService from "@/services/organizationManagementService";
-import authService from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { UploadCloud, FileText, AlertTriangle, CheckCircle } from "lucide-react";
+import { UploadCloud, FileText, AlertTriangle } from "lucide-react";
 
 interface BulkEmployeeImportProps {
   onSuccess: () => void;
@@ -43,7 +42,7 @@ export default function BulkEmployeeImport({ onSuccess }: BulkEmployeeImportProp
           const workbook = XLSX.read(data, { type: "binary" });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json = XLSX.utils.sheet_to_json<any>(worksheet);
+          const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
           
           const requiredFields = ["email", "fullName", "role", "employeeId"];
           if (json.length > 0 && !requiredFields.every(field => field in json[0])) {
@@ -59,8 +58,9 @@ export default function BulkEmployeeImport({ onSuccess }: BulkEmployeeImportProp
             mobileNumber: row.mobileNumber ? String(row.mobileNumber) : undefined,
           }));
           setEmployees(parsedEmployees);
-        } catch (e: any) {
-          setError(`Error parsing file: ${e.message}`);
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : "An unknown error occurred";
+          setError(`Error parsing file: ${message}`);
           setEmployees([]);
           setFileName(null);
         }
@@ -97,8 +97,9 @@ export default function BulkEmployeeImport({ onSuccess }: BulkEmployeeImportProp
           organizationId: profile.organization_id,
         });
         successCount++;
-      } catch (e: any) {
-        console.error(`Failed to import ${employee.email}:`, e);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "An unknown error occurred";
+        console.error(`Failed to import ${employee.email}:`, message);
         errorCount++;
       }
     }

@@ -174,8 +174,8 @@ const analyticsService = {
     };
   },
 
-  async getCreditUsage(organizationId: string): Promise<CreditUsage> {
-    // Placeholder implementation since credits columns don't exist
+  async getCreditUsage(): Promise<CreditUsage> {
+    // Placeholder implementation since credits columns don"t exist
     return { used: 0, limit: 1000, remaining: 1000, usagePercentage: 0 };
   }
 };

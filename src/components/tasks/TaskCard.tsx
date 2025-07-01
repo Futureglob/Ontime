@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { EnrichedTask } from "@/types/database";
 import { format } from "date-fns";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface TaskCardProps {
   task: EnrichedTask;
@@ -11,8 +10,6 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task, onClick }: TaskCardProps) {
-  const { profile } = useAuth();
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed": return "bg-green-500";
