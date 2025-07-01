@@ -1,7 +1,5 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import authService from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +11,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
-  const { setCurrentProfile } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
@@ -24,28 +22,24 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      const result = await authService.login(email, password);
-
-      if (result.profile) {
-        setCurrentProfile(result.profile);
+      const result = await login(email, password);
+      
+      // Check if user is super admin
+      if (result.user?.user_metadata?.role === "super_admin") {
+        // Super admin redirect is handled in AuthContext
         toast({ title: "Login successful!" });
         if (onLoginSuccess) {
           onLoginSuccess();
-        } else {
-          if (result.profile.role === "super_admin") {
-            router.push("/superadmin");
-          } else {
-            router.push("/tasks");
-          }
         }
+        return;
+      }
+
+      // Regular user login
+      toast({ title: "Login successful!" });
+      if (onLoginSuccess) {
+        onLoginSuccess();
       } else {
-        // If no profile found, still allow login but redirect to profile setup
-        toast({ title: "Login successful! Please complete your profile." });
-        if (onLoginSuccess) {
-          onLoginSuccess();
-        } else {
-          router.push("/profile");
-        }
+        router.push("/tasks");
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
