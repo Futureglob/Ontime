@@ -6,21 +6,38 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SuperAdminLoginProps {
-  onLogin: (email: string, password: string) => Promise<void>;
-  loading?: boolean;
-  error?: string;
+  onSuccess: () => void;
 }
 
-export default function SuperAdminLogin({ onLogin, loading, error }: SuperAdminLoginProps) {
+export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onLogin(email, password);
+    setLoading(true);
+    setError("");
+
+    try {
+      const { error } = await signIn(email, password);
+      if (error) {
+        setError(error.message);
+      } else {
+        onSuccess();
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
