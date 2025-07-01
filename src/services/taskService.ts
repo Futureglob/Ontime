@@ -38,6 +38,23 @@ const taskService = {
     };
   },
 
+  transformTaskData(data: Record<string, unknown>): Task {
+    return {
+      id: data.id as string,
+      title: data.title as string,
+      description: data.description as string,
+      status: data.status as Task["status"],
+      priority: data.priority as Task["priority"],
+      assigned_to: data.assigned_to as string,
+      organization_id: data.organization_id as string,
+      created_by: data.created_by as string,
+      due_date: data.due_date as string,
+      location: data.location as string,
+      created_at: data.created_at as string,
+      updated_at: data.updated_at as string
+    };
+  },
+
   async getTasks(organizationId: string): Promise<EnrichedTask[]> {
     try {
       if (!organizationId) return [];
@@ -172,19 +189,15 @@ const taskService = {
     }
   },
 
-  async createTask(taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>): Promise<Task> {
+  async createTask(taskData: Omit<Task, "id" | "created_at" | "updated_at">): Promise<Task> {
     const { data, error } = await supabase
-      .from('tasks')
-      .insert([taskData])
+      .from("tasks")
+      .insert(taskData)
       .select()
       .single();
 
     if (error) throw error;
-    return {
-      ...data,
-      status: data.status as TaskStatus,
-      priority: data.priority as TaskPriority
-    };
+    return this.transformTaskData(data);
   },
 
   async updateTask(taskId: string, updates: Partial<Task>): Promise<Task> {

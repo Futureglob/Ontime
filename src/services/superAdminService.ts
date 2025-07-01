@@ -2,17 +2,17 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Organization } from "@/types/database";
 
 const superAdminService = {
-  transformOrganizationData(data: any): Organization {
+  transformOrganizationData(data: Record<string, unknown>): Organization {
     return {
-      id: data.id,
-      name: data.name,
-      logo_url: data.logo_url,
-      primary_color: data.primary_color,
-      secondary_color: data.secondary_color,
-      owner_id: data.owner_id || "",
-      is_active: data.is_active !== false,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      id: data.id as string,
+      name: data.name as string,
+      logo_url: data.logo_url as string,
+      primary_color: data.primary_color as string,
+      secondary_color: data.secondary_color as string,
+      owner_id: data.owner_id as string,
+      is_active: data.is_active as boolean,
+      created_at: data.created_at as string,
+      updated_at: data.updated_at as string
     };
   },
 

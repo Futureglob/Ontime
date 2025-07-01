@@ -63,16 +63,16 @@ const profileService = {
     };
   },
 
-  async updateProfile(profileId: string, updates: Partial<Profile>): Promise<Profile> {
+  async updateProfile(userId: string, profileData: Partial<Profile>): Promise<Profile> {
     const { data, error } = await supabase
       .from("profiles")
-      .update(updates)
-      .eq("id", profileId)
+      .update(profileData)
+      .eq("user_id", userId)
       .select()
       .single();
 
     if (error) throw error;
-    return this.transformProfileData(data);
+    return data as Profile;
   },
 };
 
