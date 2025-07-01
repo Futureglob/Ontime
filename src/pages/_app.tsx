@@ -4,7 +4,7 @@ import type { NextPage } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import "@/styles/globals.css";
 
-export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
+export type NextPageWithLayout<P = Record<string, unknown>, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
 };
 
