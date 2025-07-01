@@ -9,7 +9,7 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface SuperAdminLoginProps {
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {

@@ -42,6 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
+        // Immediate redirect for super admin on session check
+        if (currentUser?.user_metadata?.role === "super_admin") {
+          setCurrentProfile(null);
+          setLoading(false);
+          window.location.replace("/superadmin");
+          return;
+        }
+
         if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
           const profile = await profileService.getProfile(currentUser.id);
           setCurrentProfile(profile);
@@ -65,6 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
+
+        // Immediate redirect for super admin on auth state change
+        if (currentUser?.user_metadata?.role === "super_admin") {
+          setCurrentProfile(null);
+          setLoading(false);
+          window.location.replace("/superadmin");
+          return;
+        }
 
         if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
           const profile = await profileService.getProfile(currentUser.id);

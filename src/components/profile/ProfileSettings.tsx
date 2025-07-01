@@ -6,57 +6,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { Profile } from "@/types/Profile";
+import { profileService } from "@/services/profileService";
 
 export default function ProfileSettings() {
-  const { currentProfile } = useAuth();
+  const { currentProfile, user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(currentProfile);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    full_name: "",
-    designation: "",
-    mobile_number: "",
-    bio: "",
-    skills: "",
-    emergency_contact: "",
-    address: ""
-  });
 
   useEffect(() => {
-    if (currentProfile) {
-      setFormData({
-        full_name: currentProfile.full_name || "",
-        designation: currentProfile.designation || "",
-        mobile_number: currentProfile.mobile_number || "",
-        bio: currentProfile.bio || "",
-        skills: currentProfile.skills || "",
-        emergency_contact: currentProfile.emergency_contact || "",
-        address: currentProfile.address || ""
-      });
-    }
+    setProfile(currentProfile);
   }, [currentProfile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !profile) return;
+
     setLoading(true);
-    
     try {
-      // TODO: Implement profile update logic
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
+      await profileService.updateProfile(user.id, profile);
+      toast({ title: "Success", description: "Profile updated successfully." });
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    if (!profile) return;
+    setProfile(prev => ({
       ...prev,
       [field]: value
     }));
@@ -80,7 +60,7 @@ export default function ProfileSettings() {
                 <Label htmlFor="full_name">Full Name</Label>
                 <Input
                   id="full_name"
-                  value={formData.full_name}
+                  value={profile?.full_name || ""}
                   onChange={(e) => handleInputChange("full_name", e.target.value)}
                   placeholder="Enter your full name"
                 />
@@ -90,7 +70,7 @@ export default function ProfileSettings() {
                 <Label htmlFor="designation">Designation</Label>
                 <Input
                   id="designation"
-                  value={formData.designation}
+                  value={profile?.designation || ""}
                   onChange={(e) => handleInputChange("designation", e.target.value)}
                   placeholder="Enter your designation"
                 />
@@ -100,7 +80,7 @@ export default function ProfileSettings() {
                 <Label htmlFor="mobile_number">Mobile Number</Label>
                 <Input
                   id="mobile_number"
-                  value={formData.mobile_number}
+                  value={profile?.mobile_number || ""}
                   onChange={(e) => handleInputChange("mobile_number", e.target.value)}
                   placeholder="Enter your mobile number"
                 />
@@ -110,7 +90,7 @@ export default function ProfileSettings() {
                 <Label htmlFor="emergency_contact">Emergency Contact</Label>
                 <Input
                   id="emergency_contact"
-                  value={formData.emergency_contact}
+                  value={profile?.emergency_contact || ""}
                   onChange={(e) => handleInputChange("emergency_contact", e.target.value)}
                   placeholder="Enter emergency contact"
                 />
@@ -121,7 +101,7 @@ export default function ProfileSettings() {
               <Label htmlFor="address">Address</Label>
               <Textarea
                 id="address"
-                value={formData.address}
+                value={profile?.address || ""}
                 onChange={(e) => handleInputChange("address", e.target.value)}
                 placeholder="Enter your address"
                 rows={3}
@@ -132,7 +112,7 @@ export default function ProfileSettings() {
               <Label htmlFor="bio">Bio</Label>
               <Textarea
                 id="bio"
-                value={formData.bio}
+                value={profile?.bio || ""}
                 onChange={(e) => handleInputChange("bio", e.target.value)}
                 placeholder="Tell us about yourself"
                 rows={4}
@@ -143,7 +123,7 @@ export default function ProfileSettings() {
               <Label htmlFor="skills">Skills</Label>
               <Textarea
                 id="skills"
-                value={formData.skills}
+                value={profile?.skills || ""}
                 onChange={(e) => handleInputChange("skills", e.target.value)}
                 placeholder="List your skills (comma separated)"
                 rows={3}
