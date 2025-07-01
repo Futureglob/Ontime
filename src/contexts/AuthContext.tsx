@@ -120,8 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentUser?.user_metadata?.role === "super_admin") {
       setUser(currentUser);
       setCurrentProfile(null);
-      // Force immediate redirect to super admin page
-      window.location.replace("/superadmin");
+      // Force immediate redirect to super admin page - use replace to avoid back button issues
+      if (typeof window !== 'undefined') {
+        window.location.href = "/superadmin";
+      }
       return data;
     }
     

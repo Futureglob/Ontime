@@ -30,7 +30,9 @@ export default function SuperAdminLogin({ }: SuperAdminLoginProps) {
       // Check if user is super admin immediately after login
       if (result.user?.user_metadata?.role === "super_admin") {
         // Force immediate redirect without calling onSuccess
-        window.location.replace("/superadmin");
+        if (typeof window !== 'undefined') {
+          window.location.href = "/superadmin";
+        }
         return;
       } else {
         setError("Access denied. Super admin credentials required.");
