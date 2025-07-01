@@ -43,26 +43,6 @@ Description: ${task.description || 'No description'}`;
     }
   };
 
-  const generateMessage = () => {
-    if (!task) return "";
-
-    const taskTitle = `*Task:* ${task.title}`;
-    const taskDesc = task.description ? `*Description:* ${task.description}` : "";
-    const taskStatus = `*Status:* ${task.status}`;
-    const taskPriority = `*Priority:* ${task.priority}`;
-    const taskDueDate = task.due_date ? `*Due Date:* ${new Date(task.due_date).toLocaleDateString()}` : "";
-
-    const messageParts = [
-      taskTitle,
-      taskDesc,
-      taskStatus,
-      taskPriority,
-      taskDueDate,
-    ];
-
-    return messageParts.join("\n");
-  };
-
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogTrigger asChild>
