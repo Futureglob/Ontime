@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -44,7 +43,7 @@ export interface CreditUsage {
 
 const analyticsService = {
   async getTaskOverview(organizationId: string): Promise<TaskOverview> {
-    const {  tasks, error } = await supabase
+    const { data: tasks, error } = await supabase
       .from("tasks")
       .select("status, created_at, completed_at, due_date")
       .eq("organization_id", organizationId);
@@ -52,14 +51,14 @@ const analyticsService = {
     if (error) throw error;
 
     const now = new Date();
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.status === "completed").length;
-    const inProgressTasks = tasks.filter(t => t.status === "in_progress").length;
-    const pendingTasks = tasks.filter(t => t.status === "pending").length;
-    const overdueTasks = tasks.filter(t => t.status !== "completed" && t.due_date && new Date(t.due_date) < now).length;
+    const totalTasks = tasks?.length || 0;
+    const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
+    const inProgressTasks = tasks?.filter(t => t.status === "in_progress").length || 0;
+    const pendingTasks = tasks?.filter(t => t.status === "pending").length || 0;
+    const overdueTasks = tasks?.filter(t => t.status !== "completed" && t.due_date && new Date(t.due_date) < now).length || 0;
     const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
-    const completedTasksWithTimes = tasks.filter(t => t.status === "completed" && t.created_at && t.completed_at);
+    const completedTasksWithTimes = tasks?.filter(t => t.status === "completed" && t.created_at && t.completed_at) || [];
     const totalCompletionTime = completedTasksWithTimes.reduce((acc, t) => {
       const start = new Date(t.created_at as string).getTime();
       const end = new Date(t.completed_at as string).getTime();
@@ -79,7 +78,7 @@ const analyticsService = {
   },
 
   async getEmployeePerformance(organizationId: string): Promise<EmployeePerformance[]> {
-    const {  profiles, error: profileError } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select("id, full_name, avatar_url")
       .eq("organization_id", organizationId);
@@ -88,7 +87,7 @@ const analyticsService = {
 
     const performanceData: EmployeePerformance[] = await Promise.all(
       (profiles || []).map(async (p: Partial<Profile>) => {
-        const {  tasks, error: taskError } = await supabase
+        const { data: tasks, error: taskError } = await supabase
           .from("tasks")
           .select("status, due_date")
           .eq("assigned_to", p.id as string);
@@ -104,9 +103,9 @@ const analyticsService = {
         };
 
         const now = new Date();
-        const completed = tasks.filter(t => t.status === "completed").length;
-        const pending = tasks.filter(t => t.status === "pending").length;
-        const overdue = tasks.filter(t => t.status !== "completed" && t.due_date && new Date(t.due_date) < now).length;
+        const completed = tasks?.filter(t => t.status === "completed").length || 0;
+        const pending = tasks?.filter(t => t.status === "pending").length || 0;
+        const overdue = tasks?.filter(t => t.status !== "completed" && t.due_date && new Date(t.due_date) < now).length || 0;
         
         // Dummy efficiency calculation
         const efficiency = completed > 0 ? Math.random() * 10 : 0;
@@ -127,7 +126,7 @@ const analyticsService = {
   },
 
   async getLocationAnalytics(organizationId: string): Promise<LocationAnalytics> {
-    const {  tasks, error } = await supabase
+    const { data: tasks, error } = await supabase
       .from("tasks")
       .select("location_lat, location_lng")
       .eq("organization_id", organizationId)
@@ -136,9 +135,9 @@ const analyticsService = {
     if (error) throw error;
 
     // Dummy data for now as we don't have distance/duration data
-    const totalDistance = tasks.length * (Math.random() * 10 + 5);
-    const averageDistance = tasks.length > 0 ? totalDistance / tasks.length : 0;
-    const averageDuration = tasks.length > 0 ? Math.random() * 30 + 15 : 0;
+    const totalDistance = (tasks?.length || 0) * (Math.random() * 10 + 5);
+    const averageDistance = (tasks?.length || 0) > 0 ? totalDistance / (tasks?.length || 1) : 0;
+    const averageDuration = (tasks?.length || 0) > 0 ? Math.random() * 30 + 15 : 0;
 
     return {
       totalDistance,
@@ -176,26 +175,8 @@ const analyticsService = {
   },
 
   async getCreditUsage(organizationId: string): Promise<CreditUsage> {
-    // The columns `credits_used` and `credits_limit` do not exist on the `organizations` table.
-    // This is a placeholder implementation.
-    // To implement this fully, you need to add these columns to the `organizations` table in Supabase.
-    console.warn("Credit usage is not fully implemented. Missing columns in 'organizations' table.");
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("credits_used, credits_limit")
-      .eq("id", organizationId)
-      .single();
-
-    if (error || !data) {
-      return { used: 0, limit: 1000, remaining: 1000, usagePercentage: 0 };
-    }
-    
-    const used = data.credits_used || 0;
-    const limit = data.credits_limit || 1000;
-    const remaining = limit - used;
-    const usagePercentage = limit > 0 ? (used / limit) * 100 : 0;
-
-    return { used, limit, remaining, usagePercentage };
+    // Placeholder implementation since credits columns don't exist
+    return { used: 0, limit: 1000, remaining: 1000, usagePercentage: 0 };
   }
 };
 

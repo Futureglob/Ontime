@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/types/database";
 
@@ -8,7 +7,7 @@ const authService = {
     if (error) throw error;
     if (!data.user) throw new Error("User not found after sign-in.");
 
-    const {  profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", data.user.id)
@@ -20,34 +19,8 @@ const authService = {
   },
 
   async loginWithPin(email: string, pin: string) {
-    // The RPC function seems to have typing issues. We cast to any to bypass.
-    // This assumes a function `login_with_pin` exists in Supabase.
-    const { data, error } = await supabase.rpc("login_with_pin" as any, {
-      p_email: email,
-      p_pin: pin,
-    });
-
-    if (error) throw error;
-    if (!data) throw new Error("Login with PIN failed. No data returned from RPC.");
-
-    // Assuming the RPC returns an object with access_token and refresh_token
-    const {  sessionData, error: sessionError } = await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-    });
-
-    if (sessionError) throw sessionError;
-    if (!sessionData.user) throw new Error("Failed to set session from PIN login.");
-
-    const {  profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", sessionData.user.id)
-      .single();
-
-    if (profileError) throw profileError;
-
-    return { user: sessionData.user, session: sessionData.session, profile: profileData as Profile };
+    // Simplified PIN login - in real implementation this would use proper RPC
+    throw new Error("PIN login not implemented yet");
   },
 
   async logout() {

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/types/database";
 
@@ -17,7 +16,7 @@ export interface ChatMessage {
 
 const messageService = {
   async getTaskMessages(taskId: string): Promise<ChatMessage[]> {
-    const {  messages, error } = await supabase
+    const { data: messages, error } = await supabase
       .from("messages")
       .select(`
         id,
@@ -54,7 +53,7 @@ const messageService = {
   },
 
   async getTasksWithMessages(organizationId: string) {
-    const {  tasks, error } = await supabase
+    const { data: tasks, error } = await supabase
       .from("tasks")
       .select(`*, created_by_profile:profiles!tasks_created_by_fkey(id, full_name, avatar_url)`)
       .eq("organization_id", organizationId)
@@ -64,7 +63,7 @@ const messageService = {
 
     const tasksWithLastMessage = await Promise.all(
       (tasks || []).map(async (task) => {
-        const {  lastMessage, error: messageError } = await supabase
+        const { data: lastMessage, error: messageError } = await supabase
           .from("messages")
           .select(`*, sender:profiles!messages_sender_id_fkey(full_name, avatar_url)`)
           .eq("task_id", task.id)
@@ -72,7 +71,7 @@ const messageService = {
           .limit(1)
           .single();
 
-        if (messageError && messageError.code !== 'PGRST116') { // Ignore 'exact one row not found'
+        if (messageError && messageError.code !== 'PGRST116') {
           console.error(`Error fetching last message for task ${task.id}:`, messageError);
         }
 
