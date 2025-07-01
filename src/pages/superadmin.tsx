@@ -9,23 +9,32 @@ export default function SuperAdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user && currentProfile?.role !== "super_admin") {
-      router.push("/"); // Redirect if not super admin
+    // Only redirect if we have a user, profile is loaded, and they're not super admin
+    if (!loading && user && currentProfile && currentProfile.role !== "super_admin") {
+      console.log("Redirecting non-super-admin user:", currentProfile.role);
+      router.push("/");
     }
   }, [user, loading, currentProfile, router]);
 
-  const handleLoginSuccess = () => {
-    // The AuthContext will handle the user state change,
-    // and the useEffect above will trigger the redirect to the dashboard.
-  };
-
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="p-6">Loading...</div>;
   }
 
-  if (!user || currentProfile?.role !== "super_admin") {
-    return <SuperAdminLogin onSuccess={handleLoginSuccess} />;
+  // If no user, show login
+  if (!user) {
+    return <SuperAdminLogin onSuccess={() => {}} />;
   }
 
+  // If user exists but no profile yet, show loading
+  if (!currentProfile) {
+    return <div className="p-6">Loading profile...</div>;
+  }
+
+  // If user exists but not super admin, show access denied
+  if (currentProfile.role !== "super_admin") {
+    return <div className="p-6">Access Denied. Super Admin privileges required.</div>;
+  }
+
+  // User is super admin, show dashboard
   return <SuperAdminDashboard />;
 }

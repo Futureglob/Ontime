@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import superAdminService from "@/services/superAdminService";
@@ -19,7 +18,6 @@ import {
   User, 
   Users, 
   MessageSquare, 
-  MapPin, 
   UserCheck,
   Building2,
   Power,
@@ -49,6 +47,33 @@ interface SystemStats {
   active_users: number;
 }
 
+interface EmployeeData {
+  id: string;
+  full_name: string;
+  role: string;
+  status: string;
+}
+
+interface TaskData {
+  id: string;
+  title: string;
+  status: string;
+  assigned_to: string;
+}
+
+interface ClientData {
+  id: string;
+  name: string;
+  contact_person: string;
+}
+
+interface AnalyticsData {
+  totalTasks: number;
+  completedTasks: number;
+  activeEmployees: number;
+  totalClients: number;
+}
+
 export default function SuperAdminDashboard() {
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -67,10 +92,10 @@ export default function SuperAdminDashboard() {
   const [orgToToggle, setOrgToToggle] = useState<Organization | null>(null);
 
   // Organization data states
-  const [orgEmployees, setOrgEmployees] = useState<any[]>([]);
-  const [orgTasks, setOrgTasks] = useState<any[]>([]);
-  const [orgClients, setOrgClients] = useState<any[]>([]);
-  const [orgAnalytics, setOrgAnalytics] = useState<any>(null);
+  const [orgEmployees, setOrgEmployees] = useState<EmployeeData[]>([]);
+  const [orgTasks, setOrgTasks] = useState<TaskData[]>([]);
+  const [orgClients, setOrgClients] = useState<ClientData[]>([]);
+  const [orgAnalytics, setOrgAnalytics] = useState<AnalyticsData | null>(null);
 
   const fetchData = async () => {
     try {
@@ -94,7 +119,7 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const fetchOrganizationData = async (orgId: string) => {
+  const fetchOrganizationData = async () => {
     try {
       // Mock data for now - replace with actual service calls
       setOrgEmployees([
@@ -129,7 +154,7 @@ export default function SuperAdminDashboard() {
     if (selectedOrgId) {
       const org = organizations.find(o => o.id === selectedOrgId);
       setSelectedOrg(org || null);
-      fetchOrganizationData(selectedOrgId);
+      fetchOrganizationData();
     } else {
       setSelectedOrg(null);
       setOrgEmployees([]);
@@ -141,7 +166,9 @@ export default function SuperAdminDashboard() {
 
   const handleSignOut = async () => {
     try {
+      console.log("Attempting to sign out...");
       await signOut();
+      console.log("Sign out successful, redirecting...");
       router.push("/");
     } catch (error) {
       console.error("Error signing out:", error);
