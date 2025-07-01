@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import type { Profile } from "@/types/database";
 
 const authService = {
   async signUp(email: string, password: string, metadata?: Record<string, unknown>) {
@@ -34,7 +33,6 @@ const authService = {
     
     if (error) throw error;
     
-    // Try to get profile
     let profile = null;
     if (data.user) {
       try {
@@ -44,17 +42,7 @@ const authService = {
           .eq("user_id", data.user.id)
           .maybeSingle();
         
-        if (!profileData) {
-          // Try with id column
-          const { data: profileData2 } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", data.user.id)
-            .maybeSingle();
-          profile = profileData2;
-        } else {
-          profile = profileData;
-        }
+        profile = profileData;
       } catch (err) {
         console.error("Error fetching profile:", err);
       }
@@ -75,12 +63,6 @@ const authService = {
   async resetPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
-  },
-
-  async loginWithPin(email: string, pin: string) {
-    // For now, treat PIN login as regular password login
-    // This would need to be implemented based on your PIN system
-    return this.login(email, pin);
   },
 
   async getSession() {

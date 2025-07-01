@@ -1,15 +1,19 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Users, CheckCircle, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, CheckCircle, Clock, AlertCircle } from "lucide-react";
 
 export default function DashboardOverview() {
-  const { currentProfile } = useAuth();
+  const { currentProfile, user } = useAuth();
 
-  if (!currentProfile) {
+  if (!user) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading dashboard...</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Welcome to OnTime</h2>
+          <p className="text-gray-600 mb-4">Please log in to access your dashboard</p>
+        </div>
       </div>
     );
   }
@@ -17,13 +21,15 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Badge variant="outline">
-          {currentProfile.role.charAt(0).toUpperCase() + currentProfile.role.slice(1)}
-        </Badge>
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-gray-600">
+            Welcome back, {currentProfile?.full_name || user.email}
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
@@ -37,12 +43,12 @@ export default function DashboardOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Tasks pending</p>
+            <p className="text-xs text-muted-foreground">Active tasks</p>
           </CardContent>
         </Card>
 
@@ -53,7 +59,7 @@ export default function DashboardOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Tasks completed</p>
+            <p className="text-xs text-muted-foreground">Finished tasks</p>
           </CardContent>
         </Card>
 
@@ -64,24 +70,21 @@ export default function DashboardOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1</div>
-            <p className="text-xs text-muted-foreground">Active members</p>
+            <p className="text-xs text-muted-foreground">Active users</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Welcome to OnTime</CardTitle>
+            <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">
-              Welcome, {currentProfile.full_name}! You are logged in as {currentProfile.role} for {currentProfile.organization_id}.
-            </p>
-            <div className="mt-4 space-y-2">
-              <p className="text-sm"><strong>Employee ID:</strong> {currentProfile.employee_id}</p>
-              <p className="text-sm"><strong>Designation:</strong> {currentProfile.designation}</p>
-              <p className="text-sm"><strong>Status:</strong> {currentProfile.is_active ? "Active" : "Inactive"}</p>
+            <div className="text-center py-8 text-gray-500">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No recent activity</p>
+              <p className="text-sm">Start by creating your first task</p>
             </div>
           </CardContent>
         </Card>
@@ -90,18 +93,16 @@ export default function DashboardOverview() {
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {currentProfile.role === "admin" && (
-                <p className="text-sm text-muted-foreground">• Manage employees and tasks</p>
-              )}
-              {currentProfile.role === "manager" && (
-                <p className="text-sm text-muted-foreground">• Assign and track tasks</p>
-              )}
-              <p className="text-sm text-muted-foreground">• View your assigned tasks</p>
-              <p className="text-sm text-muted-foreground">• Update task progress</p>
-              <p className="text-sm text-muted-foreground">• Communicate with team</p>
-            </div>
+          <CardContent className="space-y-4">
+            <Button className="w-full" variant="outline">
+              Create New Task
+            </Button>
+            <Button className="w-full" variant="outline">
+              Add Team Member
+            </Button>
+            <Button className="w-full" variant="outline">
+              View Reports
+            </Button>
           </CardContent>
         </Card>
       </div>

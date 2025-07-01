@@ -1,28 +1,40 @@
 
-        import { useAuth } from "@/contexts/AuthContext";
-        import DashboardLayout from "@/components/layout/DashboardLayout";
-        import DashboardOverview from "@/components/dashboard/DashboardOverview";
-        import LoginForm from "@/components/auth/LoginForm";
+import { useAuth } from "@/contexts/AuthContext";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import DashboardOverview from "@/components/dashboard/DashboardOverview";
+import LoginForm from "@/components/auth/LoginForm";
 
-        export default function HomePage() {
-          const { user, loading } = useAuth();
+export default function HomePage() {
+  const { user, loading } = useAuth();
 
-          if (loading) {
-            return (
-              <div className="flex h-screen items-center justify-center">
-                <p>Loading...</p>
-              </div>
-            );
-          }
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-          if (!user) {
-            return <LoginForm />;
-          }
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full space-y-8 p-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900">OnTime</h2>
+            <p className="mt-2 text-gray-600">Sign in to your account</p>
+          </div>
+          <LoginForm />
+        </div>
+      </div>
+    );
+  }
 
-          return (
-            <DashboardLayout>
-              <DashboardOverview />
-            </DashboardLayout>
-          );
-        }
-      
+  return (
+    <DashboardLayout>
+      <DashboardOverview />
+    </DashboardLayout>
+  );
+}
