@@ -36,23 +36,7 @@ export default function ProfilePage() {
   return <ProfileSettings />;
 }
 
-// Conditionally apply layout based on user type
+// Only apply layout for non-super admin users
 ProfilePage.getLayout = function getLayout(page: ReactElement) {
-  // This function runs after the component, so we need to check auth state here
-  return (
-    <ConditionalLayout>
-      {page}
-    </ConditionalLayout>
-  );
+  return <DashboardLayout>{page}</DashboardLayout>;
 };
-
-function ConditionalLayout({ children }: { children: ReactElement }) {
-  const { isSuperAdmin, loading } = useAuth();
-  
-  // Don't apply dashboard layout for super admin or while loading
-  if (loading || isSuperAdmin) {
-    return children;
-  }
-  
-  return <DashboardLayout>{children}</DashboardLayout>;
-}
