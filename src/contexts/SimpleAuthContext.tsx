@@ -18,13 +18,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>({
-    id: "1",
-    email: "admin@ontime.com",
-    role: "super_admin",
-    name: "Admin User",
-    organization_id: "org1"
-  });
+  const [user, setUser] = useState<User | null>(null);
 
   const login = async (email: string) => {
     // Mock login - in real app this would call Supabase
