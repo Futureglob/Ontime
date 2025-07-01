@@ -18,33 +18,41 @@ export const clientService = {
     })) as Client[];
   },
 
-  async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
+  transformClientData(data: Record<string, unknown>): Client {
+    return {
+      id: data.id as string,
+      organization_id: data.organization_id as string,
+      name: data.name as string,
+      email: data.email as string,
+      phone: data.phone as string,
+      address: data.address as string,
+      is_active: data.is_active !== false,
+      created_at: data.created_at as string,
+      updated_at: data.updated_at as string
+    };
+  },
+
+  async createClient(clientData: Omit<Client, "id" | "created_at" | "updated_at">): Promise<Client> {
     const { data, error } = await supabase
-      .from('clients')
-      .insert([{ ...clientData, is_active: true }])
+      .from("clients")
+      .insert(clientData)
       .select()
       .single();
 
     if (error) throw error;
-    return { 
-      ...data, 
-      is_active: (data as any).is_active ?? true 
-    } as Client;
+    return this.transformClientData(data);
   },
 
   async updateClient(clientId: string, updates: Partial<Client>): Promise<Client> {
     const { data, error } = await supabase
-      .from('clients')
+      .from("clients")
       .update(updates)
-      .eq('id', clientId)
+      .eq("id", clientId)
       .select()
       .single();
 
     if (error) throw error;
-    return { 
-      ...data, 
-      is_active: (data as any).is_active ?? true 
-    } as Client;
+    return this.transformClientData(data);
   },
 
   async deleteClient(clientId: string): Promise<void> {

@@ -232,6 +232,35 @@ const analyticsService = {
   async getCreditUsage(): Promise<CreditUsage> {
     // Placeholder implementation since credits columns don't exist
     return { used: 0, limit: 1000, remaining: 1000, usagePercentage: 0 };
+  },
+
+  async getTaskAnalytics(organizationId: string): Promise<TaskAnalytics> {
+    const { data: tasks, error } = await supabase
+      .from("tasks")
+      .select("status, priority, created_at")
+      .eq("organization_id", organizationId);
+
+    if (error) throw error;
+
+    const tasksByStatus = (tasks || []).reduce((acc: Record<string, number>, task) => {
+      acc[task.status] = (acc[task.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const tasksByPriority = (tasks || []).reduce((acc: Record<string, number>, task) => {
+      acc[task.priority] = (acc[task.priority] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      totalTasks: tasks?.length || 0,
+      completedTasks: tasksByStatus.completed || 0,
+      pendingTasks: tasksByStatus.pending || 0,
+      inProgressTasks: tasksByStatus.in_progress || 0,
+      tasksByStatus,
+      tasksByPriority,
+      completionRate: tasks?.length ? ((tasksByStatus.completed || 0) / tasks.length) * 100 : 0
+    };
   }
 };
 
