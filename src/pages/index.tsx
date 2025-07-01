@@ -12,7 +12,9 @@ export default function HomePage() {
     if (!loading && user) {
       if (isSuperAdmin) {
         // Force immediate redirect for super admin
-        window.location.replace("/superadmin");
+        if (typeof window !== 'undefined') {
+          window.location.href = "/superadmin";
+        }
       } else {
         router.replace("/dashboard");
       }

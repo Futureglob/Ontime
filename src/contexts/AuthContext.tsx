@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/router";
@@ -104,9 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     const currentUser = data.user;
     setUser(currentUser);
     
-    // If super admin, don't fetch profile - let the redirect happen naturally
+    // If super admin, don't fetch profile and redirect immediately
     if (currentUser?.user_metadata?.role === "super_admin") {
       setCurrentProfile(null);
+      // Force immediate redirect for super admin
+      if (typeof window !== 'undefined') {
+        window.location.href = "/superadmin";
+      }
       return data;
     }
     
