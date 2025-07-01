@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 const authService = {
@@ -39,12 +38,27 @@ const authService = {
         const { data: profileData } = await supabase
           .from("profiles")
           .select("*")
-          .eq("user_id", data.user.id)
+          .eq("id", data.user.id)
           .maybeSingle();
         
-        profile = profileData;
+        // If user has no profile but is a super admin (based on metadata), create profile
+        if (!profileData && data.user.user_metadata?.role === "super_admin") {
+          const { data: newProfile } = await supabase
+            .from("profiles")
+            .insert([{
+              id: data.user.id,
+              role: "super_admin",
+              email: data.user.email
+            }])
+            .select()
+            .single();
+          
+          profile = newProfile;
+        } else {
+          profile = profileData;
+        }
       } catch (err) {
-        console.error("Error fetching profile:", err);
+        console.error("Error fetching/creating profile:", err);
       }
     }
     
