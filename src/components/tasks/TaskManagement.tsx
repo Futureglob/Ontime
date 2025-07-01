@@ -18,7 +18,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Database } from "@/integrations/supabase/types";
 import { EnrichedTask, Task } from "@/types";
-import { Dialog, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 

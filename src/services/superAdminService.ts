@@ -219,7 +219,7 @@ export const superAdminService = {
     }
 
     // 2. Create the admin user
-    const {  authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: orgData.admin_email,
       password: orgData.admin_password,
       options: {
