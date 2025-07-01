@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -58,9 +57,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Try different column names to handle schema variations
-      let data, error;
-      
       // First try with user_id
       const result1 = await supabase
         .from("profiles")
