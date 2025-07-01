@@ -5,19 +5,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { superAdminService, OrganizationForSuperAdminView } from "@/services/superAdminService";
+import superAdminService from "@/services/superAdminService";
+import type { Organization } from "@/types/database";
 
 interface EditOrganizationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOrganizationUpdated: () => void;
-  organization: OrganizationForSuperAdminView | null;
+  onSuccess: () => void;
+  organization: Organization | null;
 }
 
 export default function EditOrganizationModal({ 
   isOpen, 
   onClose, 
-  onOrganizationUpdated, 
+  onSuccess, 
   organization 
 }: EditOrganizationModalProps) {
   const [loading, setLoading] = useState(false);
@@ -60,7 +61,7 @@ export default function EditOrganizationModal({
         is_active: formData.is_active
       });
       
-      onOrganizationUpdated();
+      onSuccess();
       onClose();
     } catch (err: unknown) {
       if (err instanceof Error) {

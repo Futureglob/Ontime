@@ -8,9 +8,10 @@ import superAdminService from "@/services/superAdminService";
 interface AddOrganizationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-export default function AddOrganizationModal({ isOpen, onClose }: AddOrganizationModalProps) {
+export default function AddOrganizationModal({ isOpen, onClose, onSuccess }: AddOrganizationModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     adminEmail: "",
@@ -24,6 +25,7 @@ export default function AddOrganizationModal({ isOpen, onClose }: AddOrganizatio
     try {
       setLoading(true);
       await superAdminService.createOrganization(formData);
+      onSuccess();
       onClose();
       setFormData({ name: "", adminEmail: "", adminPassword: "", adminName: "" });
     } catch (error) {
