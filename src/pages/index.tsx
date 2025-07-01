@@ -11,7 +11,8 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading && user) {
       if (isSuperAdmin) {
-        router.replace("/superadmin");
+        // Force immediate redirect for super admin
+        window.location.replace("/superadmin");
       } else {
         router.replace("/profile");
       }
