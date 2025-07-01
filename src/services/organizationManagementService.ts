@@ -25,11 +25,11 @@ export const organizationManagementService = {
     }
   ) {
     // 1. Create the auth user
-    const {  authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: employeeData.email,
       password: `password_${Math.random().toString(36).slice(-8)}`, // Generate a random temporary password
       options: {
-         {
+        data: {
           full_name: employeeData.fullName,
           role: employeeData.role,
           organization_id: organizationId,
@@ -58,7 +58,7 @@ export const organizationManagementService = {
       is_active: true,
     };
 
-    const {  profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .insert(profilePayload)
       .select()

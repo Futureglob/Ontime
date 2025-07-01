@@ -133,7 +133,7 @@ export const superAdminService = {
 
   async getOrganizations(): Promise<OrganizationForSuperAdminView[]> {
     try {
-      const {  orgs, error: orgsError } = await supabase
+      const { data: orgs, error: orgsError } = await supabase
         .from("organizations")
         .select("*")
         .order("created_at", { ascending: false });
@@ -208,7 +208,7 @@ export const superAdminService = {
     admin_mobile?: string;
   }): Promise<OrganizationForSuperAdminView> {
     // 1. Create the organization
-    const {  newOrg, error: orgError } = await supabase
+    const { data: newOrg, error: orgError } = await supabase
       .from("organizations")
       .insert({ name: orgData.name, logo_url: orgData.logo_url })
       .select()
@@ -219,11 +219,11 @@ export const superAdminService = {
     }
 
     // 2. Create the admin user
-    const {  authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: orgData.admin_email,
       password: orgData.admin_password,
       options: {
-         {
+        data: {
           full_name: orgData.admin_name,
           role: "org_admin",
           organization_id: newOrg.id,
