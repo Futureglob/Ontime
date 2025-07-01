@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import taskService from "@/services/taskService";
 import clientService from "@/services/clientService";
@@ -23,10 +23,11 @@ export default function TaskManagement() {
   useEffect(() => {
     if (currentProfile?.organization_id) {
       fetchTasks();
+      fetchDropdownData();
     }
   }, [currentProfile]);
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       const organizationTasks = await taskService.getTasks(currentProfile!.organization_id);
@@ -36,7 +37,7 @@ export default function TaskManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentProfile]);
 
   const fetchDropdownData = useCallback(async () => {
     if (currentProfile) {
@@ -49,10 +50,10 @@ export default function TaskManagement() {
         setEmployees(fetchedEmployees);
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
-        toast({ title: "Error", description: `Failed to fetch  ${message}`, variant: "destructive" });
+        console.error("Failed to fetch dropdown data:", message);
       }
     }
-  }, [currentProfile, toast]);
+  }, [currentProfile]);
 
   const handleCreateTask = async (values: Record<string, unknown>) => {
     try {
@@ -61,7 +62,7 @@ export default function TaskManagement() {
         ...values,
         organization_id: currentProfile!.organization_id,
         created_by: currentProfile!.user_id
-      } as any);
+      } as Omit<Task, "id" | "created_at" | "updated_at">);
       await fetchTasks();
       setIsCreateModalOpen(false);
     } catch (error) {
@@ -76,7 +77,7 @@ export default function TaskManagement() {
     
     try {
       setSubmitting(true);
-      await taskService.updateTask(selectedTask.id, values as any);
+      await taskService.updateTask(selectedTask.id, values as Partial<Task>);
       await fetchTasks();
       setIsEditModalOpen(false);
       setSelectedTask(null);

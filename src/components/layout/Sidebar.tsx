@@ -11,10 +11,8 @@ import {
   MapPin,
   Settings,
   Building2,
-  UserCircle,
   LogOut
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Profile } from "@/types/database";
 
 interface SidebarProps {
