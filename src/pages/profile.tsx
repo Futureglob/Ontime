@@ -13,17 +13,23 @@ export default function ProfilePage() {
       if (!user) {
         router.replace("/");
       } else if (isSuperAdmin) {
-        // Force immediate redirect for super admin
-        window.location.href = "/superadmin";
+        // Force immediate redirect for super admin - use window.location for immediate redirect
+        window.location.replace("/superadmin");
+        return;
       }
     }
   }, [user, loading, isSuperAdmin, router]);
+
+  // Prevent any rendering for super admin
+  if (isSuperAdmin) {
+    return <div className="flex items-center justify-center min-h-screen">Redirecting to Super Admin...</div>;
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  if (!user || isSuperAdmin) {
+  if (!user) {
     return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>;
   }
 

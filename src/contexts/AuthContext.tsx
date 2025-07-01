@@ -91,9 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUser = data.user;
     setUser(currentUser);
     
-    // If super admin, don't fetch profile - redirect immediately
+    // If super admin, don't fetch profile and force immediate redirect
     if (currentUser?.user_metadata?.role === "super_admin") {
       setCurrentProfile(null);
+      // Force immediate redirect to super admin page
+      setTimeout(() => {
+        window.location.replace("/superadmin");
+      }, 100);
       return data;
     }
     
