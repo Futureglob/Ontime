@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/router";
 
 interface SuperAdminLoginProps {
   onSuccess: () => void;
@@ -20,6 +21,7 @@ export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {
   const [error, setError] = useState("");
   
   const { login } = useAuth();
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +29,7 @@ export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {
     setLoading(true);
     try {
       await login(email, password);
+      router.push("/superadmin");
       onSuccess();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
