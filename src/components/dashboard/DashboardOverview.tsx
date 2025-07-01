@@ -41,42 +41,48 @@ export default function DashboardOverview() {
   });
   const [recentTasks, setRecentTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [completedTasks, setCompletedTasks] = useState(0);
+  const [pendingTasks, setPendingTasks] = useState(0);
+  const [inProgressTasks, setInProgressTasks] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (currentProfile) {
-        setLoading(true);
-        try {
-          const tasks = await taskService.getTasksForUser();
-          
-          const completedTasks = tasks.filter(t => t.status === 'completed').length;
-          const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
-          const overdueTasks = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date()).length;
-
-          setStats({
-            totalTasks: tasks.length,
-            completedTasks,
-            pendingTasks,
-            overdueTasks,
-            teamMembers: 0,
-            unreadMessages: 0,
-          });
-
-          setRecentTasks(tasks.slice(0, 5));
-        } catch (error) {
-          console.error("Failed to fetch dashboard data:", error);
-        } finally {
-          setLoading(false);
-        }
+    const loadDashboardData = async () => {
+      if (!currentProfile) return;
+      
+      setLoading(true);
+      try {
+        const [tasksData, totalTasksCount] = await Promise.all([
+          taskService.getTasksForUser(currentProfile.id),
+          taskService.getTaskCount()
+        ]);
+        
+        setTasks(tasksData);
+        setTotalTasks(totalTasksCount);
+        
+        // Calculate stats
+        const completedCount = tasksData.filter(t => t.status === 'completed').length;
+        const pendingCount = tasksData.filter(t => t.status === 'pending').length;
+        const inProgressCount = tasksData.filter(t => t.status === 'in_progress').length;
+        
+        setCompletedTasks(completedCount);
+        setPendingTasks(pendingCount);
+        setInProgressTasks(inProgressCount);
+        
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
+    loadDashboardData();
   }, [currentProfile]);
 
   const getCompletionPercentage = () => {
-    if (stats.totalTasks === 0) return 0;
-    return Math.round((stats.completedTasks / stats.totalTasks) * 100);
+    if (totalTasks === 0) return 0;
+    return Math.round((completedTasks / totalTasks) * 100);
   };
 
   const getPriorityColor = (priority: string | null) => {
@@ -165,7 +171,7 @@ export default function DashboardOverview() {
             <CheckSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTasks}</div>
+            <div className="text-2xl font-bold">{totalTasks}</div>
             <p className="text-xs text-muted-foreground">
               {getCompletionPercentage()}% completed
             </p>
@@ -177,7 +183,7 @@ export default function DashboardOverview() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingTasks}</div>
+            <div className="text-2xl font-bold">{pendingTasks}</div>
             <p className="text-xs text-muted-foreground">
               Awaiting action
             </p>
@@ -189,7 +195,7 @@ export default function DashboardOverview() {
             <AlertCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.overdueTasks}</div>
+            <div className="text-2xl font-bold text-red-600">{inProgressTasks}</div>
             <p className="text-xs text-muted-foreground">
               Need immediate attention
             </p>
@@ -224,8 +230,8 @@ export default function DashboardOverview() {
             </div>
             <Progress value={getCompletionPercentage()} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{stats.completedTasks} completed</span>
-              <span>{stats.totalTasks} total</span>
+              <span>{completedTasks} completed</span>
+              <span>{totalTasks} total</span>
             </div>
           </div>
         </CardContent>

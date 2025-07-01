@@ -20,11 +20,17 @@ export default function WhatsAppShare({ task, onClose }: WhatsAppShareProps) {
   const defaultMessage = messageService.generateTaskUpdateMessage(task);
 
   const handleShare = () => {
-    const message = shareType === "update" ? defaultMessage : customMessage;
-    const whatsappUrl = messageService.generateWhatsAppLink(
-      task.assigned_to_profile?.mobile_number || undefined,
-      message
-    );
+    const message = `Task Update: ${task.title}
+
+Status: ${task.status}
+Priority: ${task.priority}
+Due: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}
+
+Location: ${task.location || 'Not specified'}
+
+Description: ${task.description || 'No description'}`;
+    
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
     onClose();
   };

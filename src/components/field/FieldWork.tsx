@@ -28,23 +28,29 @@ export default function FieldWork() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
   const [isPhotoCaptureOpen, setIsPhotoCaptureOpen] = useState(false);
-
-  const loadTasks = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const fetchedTasks = await taskService.getTasks();
-      setTasks(fetchedTasks.filter(t => t.task_type === 'field_work'));
-    } catch (error) {
-      console.error("Failed to load field tasks:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const [currentProfile, setCurrentProfile] = useState(user);
 
   useEffect(() => {
+    const loadTasks = async () => {
+      if (!currentProfile) return;
+      
+      setLoading(true);
+      try {
+        const tasksData = await taskService.getTasksForUser(currentProfile.id);
+        const fieldTasks = tasksData.filter(task => 
+          task.assignee_id === currentProfile.id && 
+          ['assigned', 'in_progress'].includes(task.status)
+        );
+        setTasks(fieldTasks);
+      } catch (error) {
+        console.error('Error loading field tasks:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadTasks();
-  }, [loadTasks]);
+  }, [currentProfile]);
 
   const handleTakePhoto = (task: EnrichedTask) => {
     setSelectedTask(task);

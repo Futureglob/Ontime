@@ -54,9 +54,31 @@ export const taskService = {
 
     if (error) {
       console.error("Error fetching task:", error);
-      return null;
+      throw error;
     }
     return data;
+  },
+
+  async getTasksForUser(userId: string): Promise<EnrichedTask[]> {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select(
+        `
+        *,
+        assigned_to_profile:profiles!tasks_assignee_id_fkey(*),
+        created_by_profile:profiles!tasks_created_by_fkey(*),
+        client:clients(*),
+        photos:task_photos(*)
+      `
+      )
+      .or(`assignee_id.eq.${userId},created_by.eq.${userId}`)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching user tasks:", error);
+      throw error;
+    }
+    return data || [];
   },
 
   async createTask(task: TaskInsert): Promise<Task | null> {

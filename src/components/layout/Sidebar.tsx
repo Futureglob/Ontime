@@ -98,6 +98,25 @@ export default function Sidebar() {
   }, [currentProfile]);
 
   useEffect(() => {
+    const loadTaskCount = async () => {
+      if (!currentProfile) return;
+      
+      try {
+        const tasks = await taskService.getTasksForUser(currentProfile.id);
+        const pendingCount = tasks.filter(task => 
+          task.assignee_id === currentProfile.id && 
+          ['assigned', 'pending'].includes(task.status)
+        ).length;
+        setTaskCount(pendingCount);
+      } catch (error) {
+        console.error('Error loading task count:', error);
+      }
+    };
+
+    loadTaskCount();
+  }, [currentProfile]);
+
+  useEffect(() => {
     loadData();
   }, [loadData]);
 
