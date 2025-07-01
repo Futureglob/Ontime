@@ -34,7 +34,7 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
 
     fetchMessages();
 
-    const subscription = realtimeService.subscribeToTaskMessages(taskId, (newMessageData) => {
+    const subscription = realtimeService.subscribeToTaskMessages(taskId, (newMessageData: ChatMessage) => {
       setMessages((prevMessages) => [...prevMessages, newMessageData]);
     });
 

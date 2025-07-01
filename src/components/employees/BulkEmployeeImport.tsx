@@ -71,14 +71,19 @@ export default function BulkEmployeeImport({ onSuccess }: BulkEmployeeImportProp
         mobile_number: row.phone || "",
       }));
 
-      const result = await organizationManagementService.bulkImportEmployees(
-        currentProfile.organization_id,
-        employeesToImport
-      );
+      // Use createEmployee for each employee instead of bulkImportEmployees
+      const results = [];
+      for (const employee of employeesToImport) {
+        const result = await organizationManagementService.createEmployee(
+          currentProfile.organization_id,
+          employee
+        );
+        results.push(result);
+      }
 
       toast({
         title: "Import Complete",
-        description: `${result.length} employees imported successfully.`,
+        description: `${results.length} employees imported successfully.`,
       });
 
       onSuccess();
