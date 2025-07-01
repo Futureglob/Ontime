@@ -44,7 +44,7 @@ export default function ProfileSettings() {
         title: "Profile Updated",
         description: "Your profile has been updated successfully.",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",

@@ -23,7 +23,11 @@ export interface Profile {
   employee_id?: string;
   full_name: string;
   designation?: string;
-  mobile_number?: string;
+  mobile_number: string | null;
+  bio: string | null;
+  skills: string | null;
+  address: string | null;
+  emergency_contact: string | null;
   role: UserRole;
   is_active: boolean;
   pin?: string;
