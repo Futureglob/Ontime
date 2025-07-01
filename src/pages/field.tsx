@@ -1,27 +1,18 @@
-
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import FieldWork from "@/components/field/FieldWork";
 
 export default function FieldPage() {
-  const { user, loading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/auth/login");
+    if (!isAuthenticated) {
+      router.push("/");
     }
-  }, [user, loading, router]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
+  }, [isAuthenticated, router]);
 
   if (!user) {
     return null;
