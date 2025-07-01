@@ -1,119 +1,127 @@
-import { supabase } from "@/integrations/supabase/client";
-import {
-  Message,
-  MessageWithSender,
-  ChatConversation,
-  EnrichedTask,
-} from "@/types";
 
-export const messageService = {
-  async getTaskMessages(taskId: string): Promise<MessageWithSender[]> {
-    const { data, error } = await supabase
+import { supabase } from "@/integrations/supabase/client";
+import type { MessageWithSender } from "@/types/database";
+
+export interface ChatMessage {
+  id: string;
+  content: string;
+  sender: {
+    full_name: string;
+    designation: string;
+    avatar_url?: string;
+  };
+  created_at: string;
+  is_read: boolean;
+  message_type: string;
+}
+
+const messageService = {
+  async getTaskMessages(taskId: string): Promise<ChatMessage[]> {
+    const { data: messages, error } = await supabase
       .from("messages")
-      .select(
-        `
-        *,
+      .select(`
+        id,
+        content,
+        created_at,
+        is_read,
+        message_type,
         sender:profiles!messages_sender_id_fkey(
           full_name,
-          avatar_url,
-          designation
+          designation,
+          avatar_url
         )
-      `
-      )
+      `)
       .eq("task_id", taskId)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching messages:", error);
-      throw error;
-    }
-    return data as unknown as MessageWithSender[];
+    if (error) throw error;
+
+    return messages?.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      created_at: msg.created_at,
+      is_read: msg.is_read,
+      message_type: msg.message_type,
+      sender: {
+        full_name: (msg.sender as any)?.full_name || "Unknown",
+        designation: (msg.sender as any)?.designation || "",
+        avatar_url: (msg.sender as any)?.avatar_url
+      }
+    })) || [];
   },
 
-  async getConversations(userId: string): Promise<ChatConversation[]> {
-    const {  tasks, error: tasksError } = await supabase
+  async getTasksWithMessages(organizationId: string) {
+    const { data: tasks, error } = await supabase
       .from("tasks")
-      .select(
-        `
-        *,
-        client:clients!tasks_client_id_fkey(*),
-        assigned_to_profile:profiles!tasks_assigned_to_fkey(*),
-        created_by_profile:profiles!tasks_created_by_fkey(*)
-      `
-      )
-      .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
+      .select(`
+        id,
+        title,
+        status,
+        priority,
+        assigned_to,
+        created_by,
+        due_date,
+        organization_id,
+        client_id,
+        description,
+        location_lat,
+        location_lng,
+        location_address,
+        created_at,
+        updated_at,
+        completed_at,
+        created_by_profile:profiles!tasks_created_by_fkey(
+          id,
+          full_name,
+          avatar_url
+        )
+      `)
+      .eq("organization_id", organizationId)
       .order("updated_at", { ascending: false });
 
-    if (tasksError) {
-      console.error("Error fetching tasks for conversations:", tasksError);
-      throw tasksError;
-    }
+    if (error) throw error;
 
-    if (!tasks || tasks.length === 0) {
-      return [];
-    }
-
-    const conversations: ChatConversation[] = await Promise.all(
-      tasks.map(async (task) => {
-        const enrichedTask = task as EnrichedTask;
-
-        const {  lastMessage, error: lastMessageError } = await supabase
+    const tasksWithLastMessage = await Promise.all(
+      (tasks || []).map(async (task) => {
+        const { data: lastMessage } = await supabase
           .from("messages")
-          .select(
-            `
-            *,
-            sender:profiles!messages_sender_id_fkey(full_name, avatar_url)
-          `
-          )
+          .select(`
+            id,
+            content,
+            created_at,
+            is_read,
+            message_type,
+            sender:profiles!messages_sender_id_fkey(
+              full_name,
+              avatar_url
+            )
+          `)
           .eq("task_id", task.id)
           .order("created_at", { ascending: false })
           .limit(1)
           .single();
 
-        const { count, error: countError } = await supabase
-          .from("messages")
-          .select("*", { count: "exact", head: true })
-          .eq("task_id", task.id)
-          .eq("is_read", false)
-          .not("sender_id", "eq", userId);
-
-        if (lastMessageError && lastMessageError.code !== 'PGRST116') { // Ignore 'single row not found'
-          console.error(`Error fetching last message for task ${task.id}:`, lastMessageError);
-        }
-        if (countError) {
-           console.error(`Error fetching unread count for task ${task.id}:`, countError);
-        }
-
         return {
-          task_id: enrichedTask.id,
-          task: enrichedTask,
-          lastMessage:
-            (lastMessage as unknown as MessageWithSender) ||
-            ({
-              id: "",
-              task_id: enrichedTask.id,
-              sender_id: "",
-              content: "No messages yet",
-              created_at: enrichedTask.created_at,
-              is_read: true,
-              message_type: "text",
-              sender: { full_name: "System", avatar_url: "" },
-            } as MessageWithSender),
-          unreadCount: count || 0,
+          ...task,
+          lastMessage: lastMessage ? {
+            id: lastMessage.id,
+            content: lastMessage.content,
+            created_at: lastMessage.created_at,
+            is_read: lastMessage.is_read,
+            message_type: lastMessage.message_type,
+            sender: {
+              full_name: (lastMessage.sender as any)?.full_name || "Unknown",
+              avatar_url: (lastMessage.sender as any)?.avatar_url
+            }
+          } : null
         };
       })
     );
 
-    return conversations.filter(c => c.lastMessage.id || c.lastMessage.content === "No messages yet");
+    return tasksWithLastMessage;
   },
 
-  async sendMessage(
-    taskId: string,
-    senderId: string,
-    receiverId: string,
-    content: string,
-    messageType: string = "text"
-  ): Promise<Message> {
+  async sendMessage(taskId: string, senderId: string, content: string, messageType: string = "text") {
     const { data, error } = await supabase
       .from("messages")
       .insert({
@@ -121,33 +129,56 @@ export const messageService = {
         sender_id: senderId,
         content,
         message_type: messageType,
+        is_read: false
       })
       .select()
       .single();
 
-    if (error) {
-      console.error("Error sending message:", error);
-      throw error;
-    }
-
-    await supabase
-      .from("tasks")
-      .update({ updated_at: new Date().toISOString() })
-      .eq("id", taskId);
-
+    if (error) throw error;
     return data;
   },
 
-  async markMessagesAsRead(taskId: string, userId: string): Promise<void> {
+  async markMessageAsRead(messageId: string) {
+    const { error } = await supabase
+      .from("messages")
+      .update({ is_read: true })
+      .eq("id", messageId);
+
+    if (error) throw error;
+    return true;
+  },
+
+  async markAllTaskMessagesAsRead(taskId: string, userId: string) {
     const { error } = await supabase
       .from("messages")
       .update({ is_read: true })
       .eq("task_id", taskId)
-      .not("sender_id", "eq", userId);
+      .neq("sender_id", userId);
 
-    if (error) {
-      console.error("Error marking messages as read:", error);
-      throw error;
-    }
+    if (error) throw error;
+    return true;
   },
+
+  async getUnreadMessageCount(userId: string) {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("id", { count: "exact" })
+      .eq("is_read", false)
+      .neq("sender_id", userId);
+
+    if (error) throw error;
+    return data?.length || 0;
+  },
+
+  async deleteMessage(messageId: string) {
+    const { error } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", messageId);
+
+    if (error) throw error;
+    return true;
+  }
 };
+
+export default messageService;
