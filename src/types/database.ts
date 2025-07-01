@@ -67,4 +67,12 @@ export interface TaskSummary {
   pending: number;
   overdue: number;
 }
+
+export interface TaskPhoto {
+  id: string;
+  task_id: string;
+  photo_url: string;
+  caption?: string;
+  created_at: string;
+}
       

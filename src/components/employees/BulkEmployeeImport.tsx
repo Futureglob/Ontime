@@ -60,6 +60,8 @@ export default function BulkEmployeeImport({ onSuccess }: BulkEmployeeImportProp
   };
 
   const onSubmit = async () => {
+    if (!currentProfile) return;
+    
     setIsSubmitting(true);
     try {
       const employeesToImport = data.map((row) => ({
