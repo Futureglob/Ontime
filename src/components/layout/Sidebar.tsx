@@ -98,7 +98,7 @@ export default function Sidebar() {
       setTaskCount(pendingCount);
       setNotificationCount(notifications.length);
     } catch (error) {
-      console.error("Error loading sidebar ", error);
+      console.error("Error loading sidebar data:", error);
       setTaskCount(0);
       setNotificationCount(0);
     }
@@ -107,10 +107,6 @@ export default function Sidebar() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  const handleNavigation = (href: string) => {
-    router.push(href);
-  };
 
   const handleLogout = async () => {
     try {

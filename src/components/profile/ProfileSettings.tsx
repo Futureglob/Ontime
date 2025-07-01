@@ -54,6 +54,7 @@ export default function ProfileSettings() {
             setAvatarPreview(userProfile.avatar_url);
           }
         } catch (error) {
+          console.error("Error fetching profile:", error);
           toast({ title: "Error", description: "Failed to fetch profile.", variant: "destructive" });
         } finally {
           setLoading(false);
@@ -71,7 +72,7 @@ export default function ProfileSettings() {
     }
   };
 
-  const onSubmit = async ( ProfileFormValues) => {
+  const onSubmit = async (data: ProfileFormValues) => {
     if (!user || !profile) return;
 
     try {
@@ -88,7 +89,8 @@ export default function ProfileSettings() {
       const updatedProfile = await profileService.updateProfile(profile.id, updatedProfileData);
       setProfile(updatedProfile);
       toast({ title: "Success", description: "Profile updated successfully." });
-    } catch (err) {
+    } catch (error) {
+      console.error("Error updating profile:", error);
       toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
     }
   };

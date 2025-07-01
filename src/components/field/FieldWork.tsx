@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { taskService } from "@/services/taskService";
-import { Task } from "@/types/database";
+import { EnrichedTask } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,11 +15,6 @@ import { Search, Map } from "lucide-react";
 import FieldTaskCard from "./FieldTaskCard";
 import PhotoCapture from "./PhotoCapture";
 
-type EnrichedTask = Task & {
-  assignee_name?: string;
-  client_name?: string;
-};
-
 export default function FieldWork() {
   const { currentProfile } = useAuth();
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
@@ -28,7 +23,6 @@ export default function FieldWork() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
   const [isPhotoCaptureOpen, setIsPhotoCaptureOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const loadTasks = useCallback(async () => {
     if (!currentProfile) return;
