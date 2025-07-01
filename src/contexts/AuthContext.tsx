@@ -32,20 +32,33 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const router = useRouter();
 
+  // Add debugging for super admin check
   const isSuperAdmin = user?.user_metadata?.role === "super_admin";
+  
+  // Debug logging
+  useEffect(() => {
+    console.log("🔍 AuthContext Debug:", {
+      user: user?.email,
+      role: user?.user_metadata?.role,
+      isSuperAdmin,
+      loading
+    });
+  }, [user, isSuperAdmin, loading]);
 
   useEffect(() => {
     async function checkUserSession() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log("🔍 Session check:", session?.user?.user_metadata?.role);
         setSession(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
         if (currentUser?.user_metadata?.role === "super_admin") {
+          console.log("✅ Super admin detected in session check");
           setCurrentProfile(null);
           setLoading(false);
-          return; // Don't redirect here, let the pages handle it
+          return;
         }
         
         if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
@@ -67,15 +80,17 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     checkUserSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        console.log("🔍 Auth state change:", event, session?.user?.user_metadata?.role);
         setSession(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
         if (currentUser?.user_metadata?.role === "super_admin") {
+          console.log("✅ Super admin detected in auth change");
           setCurrentProfile(null);
           setLoading(false);
-          return; // Don't redirect here, let the pages handle it
+          return;
         }
 
         if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
