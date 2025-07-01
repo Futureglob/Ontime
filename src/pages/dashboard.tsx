@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
-import type { ReactElement } from "react";
 
 export default function DashboardPage() {
   const { user, loading, isSuperAdmin } = useAuth();
@@ -27,18 +26,10 @@ export default function DashboardPage() {
     return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>;
   }
 
-  return <DashboardOverview />;
+  // Apply layout directly in the component for non-super admin users
+  return (
+    <DashboardLayout>
+      <DashboardOverview />
+    </DashboardLayout>
+  );
 }
-
-// Conditionally apply layout based on user type
-DashboardPage.getLayout = function getLayout(page: ReactElement) {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { isSuperAdmin, loading } = useAuth();
-  
-  // Don't apply dashboard layout for super admin or while loading
-  if (loading || isSuperAdmin) {
-    return page;
-  }
-  
-  return <DashboardLayout>{page}</DashboardLayout>;
-};

@@ -11,11 +11,11 @@ interface AuthContextType {
   loading: boolean;
   currentProfile: Profile | null;
   isSuperAdmin: boolean;
-  login: (email: string, pass: string) => Promise<{ user: User; session: Session }>;
-  logout: () => Promise<void>;
+  login: (email: string, pass: string) => Promise;
+  logout: () => Promise;
 }
 
-const AuthContext = createContext<AuthContextType>({
+const AuthContext = createContext({
   user: null,
   session: null,
   loading: true,
@@ -26,10 +26,10 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
+  const [currentProfile, setCurrentProfile] = useState(null);
   const router = useRouter();
 
   const isSuperAdmin = user?.user_metadata?.role === "super_admin";
@@ -40,21 +40,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         const currentUser = session?.user ?? null;
-        
-        // Check for super admin FIRST before setting user state
-        if (currentUser?.user_metadata?.role === "super_admin") {
-          setUser(currentUser);
-          setCurrentProfile(null);
-          setLoading(false);
-          // Only redirect if not already on superadmin page
-          if (typeof window !== 'undefined' && !window.location.pathname.includes('/superadmin')) {
-            window.location.replace("/superadmin");
-          }
-          return;
-        }
-        
         setUser(currentUser);
 
+        if (currentUser?.user_metadata?.role === "super_admin") {
+          setCurrentProfile(null);
+          setLoading(false);
+          return; // Don't redirect here, let the pages handle it
+        }
+        
         if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
           const profile = await profileService.getProfile(currentUser.id);
           setCurrentProfile(profile);
@@ -77,20 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (_event, session) => {
         setSession(session);
         const currentUser = session?.user ?? null;
+        setUser(currentUser);
 
-        // Check for super admin FIRST before setting user state
         if (currentUser?.user_metadata?.role === "super_admin") {
-          setUser(currentUser);
           setCurrentProfile(null);
           setLoading(false);
-          // Only redirect if not already on superadmin page
-          if (typeof window !== 'undefined' && !window.location.pathname.includes('/superadmin')) {
-            window.location.replace("/superadmin");
-          }
-          return;
+          return; // Don't redirect here, let the pages handle it
         }
-
-        setUser(currentUser);
 
         if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
           const profile = await profileService.getProfile(currentUser.id);
@@ -115,19 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
     
     const currentUser = data.user;
+    setUser(currentUser);
     
-    // If super admin, don't fetch profile and force immediate redirect
+    // If super admin, don't fetch profile - let the redirect happen naturally
     if (currentUser?.user_metadata?.role === "super_admin") {
-      setUser(currentUser);
       setCurrentProfile(null);
-      // Force immediate redirect to super admin page - use replace to avoid back button issues
-      if (typeof window !== 'undefined') {
-        window.location.href = "/superadmin";
-      }
       return data;
     }
     
-    setUser(currentUser);
     if (currentUser) {
       const profile = await profileService.getProfile(currentUser.id);
       setCurrentProfile(profile);
@@ -153,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return {children};
 }
 
 export const useAuth = () => {
