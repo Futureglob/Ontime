@@ -1,8 +1,10 @@
+
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import ProfileSettings from "@/components/profile/ProfileSettings";
+import type { ReactElement } from "react";
 
 export default function ProfilePage() {
   const { user, loading, isSuperAdmin } = useAuth();
@@ -34,7 +36,23 @@ export default function ProfilePage() {
   return <ProfileSettings />;
 }
 
-// Don't apply layout for super admin users
-ProfilePage.getLayout = function getLayout(page: React.ReactElement) {
-  return <DashboardLayout>{page}</DashboardLayout>;
+// Conditionally apply layout based on user type
+ProfilePage.getLayout = function getLayout(page: ReactElement) {
+  // This function runs after the component, so we need to check auth state here
+  return (
+    <ConditionalLayout>
+      {page}
+    </ConditionalLayout>
+  );
 };
+
+function ConditionalLayout({ children }: { children: ReactElement }) {
+  const { isSuperAdmin, loading } = useAuth();
+  
+  // Don't apply dashboard layout for super admin or while loading
+  if (loading || isSuperAdmin) {
+    return children;
+  }
+  
+  return <DashboardLayout>{children}</DashboardLayout>;
+}
