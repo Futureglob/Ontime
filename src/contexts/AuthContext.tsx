@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/router";
@@ -11,11 +12,11 @@ interface AuthContextType {
   loading: boolean;
   currentProfile: Profile | null;
   isSuperAdmin: boolean;
-  login: (email: string, pass: string) => Promise;
-  logout: () => Promise;
+  login: (email: string, pass: string) => Promise<{ user: User; session: Session }>;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext({
+const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
@@ -25,11 +26,11 @@ const AuthContext = createContext({
   logout: async () => {}
 });
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
+export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentProfile, setCurrentProfile] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const router = useRouter();
 
   const isSuperAdmin = user?.user_metadata?.role === "super_admin";
@@ -124,17 +125,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/");
   };
 
-  const value = {
-    user,
-    session,
-    loading,
-    currentProfile,
-    isSuperAdmin,
-    login,
-    logout
-  };
-
-  return {children};
+  return (
+    <AuthContext.Provider value={{
+      user,
+      session,
+      loading,
+      currentProfile,
+      isSuperAdmin,
+      login,
+      logout
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => {

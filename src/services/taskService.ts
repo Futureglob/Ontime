@@ -2,39 +2,39 @@ import { supabase } from "@/integrations/supabase/client";
 import { Task, EnrichedTask, TaskStatus, TaskPriority, Profile, Client } from "@/types/database";
 
 const taskService = {
-  transformProfileData(data: any): Profile {
+  transformProfileData(data: Record<string, unknown>): Profile {
     return {
-      id: data.id,
-      user_id: data.user_id || data.id,
-      organization_id: data.organization_id || undefined,
-      employee_id: data.employee_id || undefined,
-      full_name: data.full_name,
-      designation: data.designation || undefined,
-      mobile_number: data.mobile_number,
-      bio: data.bio || null,
-      skills: data.skills || null,
-      address: data.address || null,
-      emergency_contact: data.emergency_contact || null,
-      role: data.role,
-      is_active: data.is_active,
-      pin: data.pin || undefined,
-      avatar_url: data.avatar_url || undefined,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      id: data.id as string,
+      user_id: (data.user_id || data.id) as string,
+      organization_id: data.organization_id as string || undefined,
+      employee_id: data.employee_id as string || undefined,
+      full_name: data.full_name as string,
+      designation: data.designation as string || undefined,
+      mobile_number: data.mobile_number as string,
+      bio: data.bio as string || null,
+      skills: data.skills as string || null,
+      address: data.address as string || null,
+      emergency_contact: data.emergency_contact as string || null,
+      role: data.role as UserRole,
+      is_active: data.is_active as boolean,
+      pin: data.pin as string || undefined,
+      avatar_url: data.avatar_url as string || undefined,
+      created_at: data.created_at as string,
+      updated_at: data.updated_at as string
     };
   },
 
-  transformClientData(data: any): Client {
+  transformClientData(data: Record<string, unknown>): Client {
     return {
-      id: data.id,
-      organization_id: data.organization_id,
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      address: data.address,
+      id: data.id as string,
+      organization_id: data.organization_id as string,
+      name: data.name as string,
+      email: data.email as string,
+      phone: data.phone as string,
+      address: data.address as string,
       is_active: data.is_active !== false,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      created_at: data.created_at as string,
+      updated_at: data.updated_at as string
     };
   },
 
