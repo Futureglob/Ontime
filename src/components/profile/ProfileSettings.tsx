@@ -22,9 +22,8 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfileSettings() {
-  const { user } = useAuth();
+  const { user, currentProfile, setCurrentProfile } = useAuth();
   const { toast } = useToast();
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -39,30 +38,17 @@ export default function ProfileSettings() {
   });
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (user) {
-        try {
-          setLoading(true);
-          const userProfile = await profileService.getProfile(user.id);
-          setProfile(userProfile);
-          if (userProfile) {
-            form.reset({
-              full_name: userProfile.full_name,
-              designation: userProfile.designation || "",
-              mobile_number: userProfile.mobile_number || "",
-            });
-            setAvatarPreview(userProfile.avatar_url);
-          }
-        } catch (error) {
-          console.error("Error fetching profile:", error);
-          toast({ title: "Error", description: "Failed to fetch profile.", variant: "destructive" });
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    fetchProfile();
-  }, [user, form, toast]);
+    if (currentProfile) {
+      setLoading(true);
+      form.reset({
+        full_name: currentProfile.full_name,
+        designation: currentProfile.designation || "",
+        mobile_number: currentProfile.mobile_number || "",
+      });
+      setAvatarPreview(currentProfile.avatar_url);
+      setLoading(false);
+    }
+  }, [currentProfile, form]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -72,11 +58,11 @@ export default function ProfileSettings() {
     }
   };
 
-  const onSubmit = async (data: ProfileFormValues) => {
-    if (!user || !profile) return;
+  const onSubmit = async ( ProfileFormValues) => {
+    if (!user || !currentProfile) return;
 
     try {
-      let avatar_url = profile.avatar_url;
+      let avatar_url = currentProfile.avatar_url;
       if (avatarFile) {
         avatar_url = await storageService.uploadProfilePhoto(user.id, avatarFile);
       }
@@ -86,8 +72,8 @@ export default function ProfileSettings() {
         avatar_url,
       };
 
-      const updatedProfile = await profileService.updateProfile(profile.id, updatedProfileData);
-      setProfile(updatedProfile);
+      const updatedProfile = await profileService.updateProfile(currentProfile.id, updatedProfileData);
+      setCurrentProfile(updatedProfile); // Update profile in context
       toast({ title: "Success", description: "Profile updated successfully." });
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -99,7 +85,7 @@ export default function ProfileSettings() {
     return <div>Loading profile...</div>;
   }
 
-  if (!profile) {
+  if (!currentProfile) {
     return <div>Could not load profile.</div>;
   }
 
@@ -115,7 +101,7 @@ export default function ProfileSettings() {
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarPreview || undefined} />
-                <AvatarFallback>{profile.full_name?.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{currentProfile.full_name?.charAt(0)}</AvatarFallback>
               </Avatar>
               <Input type="file" accept="image/*" onChange={handleAvatarChange} />
             </div>

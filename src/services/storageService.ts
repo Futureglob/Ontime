@@ -1,96 +1,72 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
-export interface UploadResult {
-  url: string;
-  path: string;
-}
+const BUCKETS = {
+  avatars: "avatars",
+  taskPhotos: "task_photos",
+};
 
 export const storageService = {
-  async uploadTaskPhoto(file: File, taskId: string, photoType: string): Promise<UploadResult> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${taskId}/${photoType}_${Date.now()}.${fileExt}`;
-    
+  async uploadFile(
+    bucket: string,
+    filePath: string,
+    file: File
+  ): Promise<string> {
     const { data, error } = await supabase.storage
-      .from('task-photos')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('task-photos')
-      .getPublicUrl(data.path);
-
-    return {
-      url: publicUrl,
-      path: data.path
-    };
-  },
-
-  async uploadOrganizationLogo(file: File, organizationId: string): Promise<UploadResult> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${organizationId}/logo.${fileExt}`;
-    
-    const { data, error } = await supabase.storage
-      .from('organization-logos')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
-
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('organization-logos')
-      .getPublicUrl(data.path);
-
-    return {
-      url: publicUrl,
-      path: data.path
-    };
-  },
-
-  async uploadProfilePhoto(file: File, userId: string): Promise<UploadResult> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/profile.${fileExt}`;
-    
-    const { data, error } = await supabase.storage
-      .from('profile-photos')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
-
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('profile-photos')
-      .getPublicUrl(data.path);
-
-    return {
-      url: publicUrl,
-      path: data.path
-    };
-  },
-
-  async deleteFile(bucket: string, path: string): Promise<void> {
-    const { error } = await supabase.storage
       .from(bucket)
-      .remove([path]);
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
 
-    if (error) throw error;
+    if (error) {
+      console.error(`Error uploading to ${bucket}:`, error);
+      throw error;
+    }
+
+    const {
+       { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(data.path);
+
+    return publicUrl;
+  },
+
+  async uploadProfilePhoto(userId: string, file: File): Promise<string> {
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${userId}.${fileExt}`;
+    return this.uploadFile(BUCKETS.avatars, filePath, file);
+  },
+
+  async uploadTaskPhoto(taskId: string, file: File): Promise<string> {
+    const fileName = `${taskId}/${new Date().toISOString()}-${file.name}`;
+    return this.uploadFile(BUCKETS.taskPhotos, fileName, file);
+  },
+
+  async deleteFile(publicUrl: string): Promise<void> {
+    try {
+      const url = new URL(publicUrl);
+      const pathWithBucket = url.pathname.split("/public/")[1];
+      const [bucket, ...pathParts] = pathWithBucket.split("/");
+      const path = pathParts.join("/");
+
+      if (!bucket || !path) {
+        console.error("Could not determine bucket or path from URL:", publicUrl);
+        return;
+      }
+
+      const { error } = await supabase.storage.from(bucket).remove([path]);
+
+      if (error) {
+        console.error("Error deleting file from storage:", error);
+      }
+    } catch (e) {
+      console.error("Invalid URL for file deletion:", publicUrl, e);
+    }
   },
 
   getPublicUrl(bucket: string, path: string): string {
-    const { data } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
-  }
+    const {
+       { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(path);
+    return publicUrl;
+  },
 };
-
-export default storageService;
