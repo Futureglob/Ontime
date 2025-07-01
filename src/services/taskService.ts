@@ -16,65 +16,44 @@ export type SimpleTask = Task;
 
 
 export const taskService = {
-  // Simplified to fetch tasks without joins to prevent crashes
-  async getTasks(): Promise<SimpleTask[]> {
+  async getTasks(organizationId: string): Promise<EnrichedTask[]> {
     const { data, error } = await supabase
       .from("tasks")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select(
+        `
+        *,
+        assigned_to_profile:profiles!tasks_assignee_id_fkey(*),
+        created_by_profile:profiles!tasks_created_by_fkey(*),
+        client:clients(*),
+        photos:task_photos(*)
+      `
+      )
+      .eq("organization_id", organizationId);
 
     if (error) {
-      console.error("Error fetching tasks:", error.message);
-      return [];
+      console.error("Error fetching tasks:", error);
+      throw error;
     }
     return data || [];
   },
 
-  // Simplified for now
-  async getTasksForUser(): Promise<SimpleTask[]> {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error("User not found", authError);
-      return [];
-    }
-    const userId = user.id;
-
+  async getTask(taskId: string): Promise<EnrichedTask | null> {
     const { data, error } = await supabase
       .from("tasks")
-      .select("*")
-      .eq("assigned_to", userId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching user tasks:", error.message);
-      return [];
-    }
-    return data || [];
-  },
-
-  async getTasksForOrganization(organizationId: string): Promise<SimpleTask[]> {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching org tasks:", error.message);
-      return [];
-    }
-    return data || [];
-  },
-
-  async getTaskById(id: string): Promise<SimpleTask | null> {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("id", id)
+      .select(
+        `
+        *,
+        assigned_to_profile:profiles!tasks_assignee_id_fkey(*),
+        created_by_profile:profiles!tasks_created_by_fkey(*),
+        client:clients(*),
+        photos:task_photos(*)
+      `
+      )
+      .eq("id", taskId)
       .single();
 
     if (error) {
-      console.error("Error fetching task by id:", error.message);
+      console.error("Error fetching task:", error);
       return null;
     }
     return data;
@@ -123,26 +102,6 @@ export const taskService = {
 
     if (error) {
       console.error("Error getting task count:", error.message);
-      return 0;
-    }
-    return count || 0;
-  },
-
-  async getTaskCountForUser(): Promise<number> {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error("User not found", authError);
-      return 0;
-    }
-    const userId = user.id;
-
-    const { count, error } = await supabase
-      .from("tasks")
-      .select("id", { count: "exact", head: true })
-      .eq("assigned_to", userId);
-
-    if (error) {
-      console.error("Error getting user task count:", error.message);
       return 0;
     }
     return count || 0;

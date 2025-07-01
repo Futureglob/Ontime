@@ -66,7 +66,8 @@ export default function TaskManagement() {
   }, [loadTasks, fetchUsers]);
 
   const handleEditTask = (task: EnrichedTask) => {
-    const { assigned_to_profile: _assigned_to_profile, created_by_profile: _created_by_profile, client: _client, photos: _photos, ...rest } = task;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { assigned_to_profile, created_by_profile, client, photos, ...rest } = task;
     setSelectedTask(rest);
     setShowForm(true);
   };

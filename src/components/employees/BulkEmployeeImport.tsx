@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,7 @@ import {
 import { organizationManagementService } from "@/services/organizationManagementService";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { authService } from "@/services/authService";
 
 interface BulkEmployeeImportProps {
   onImportComplete: () => void;
@@ -188,7 +188,7 @@ Mike Johnson,EMP003,Technician,+1234567892,employee,`;
           continue;
         }
         
-        const { pin, error: pinError } = await organizationManagementService.generateUserPin(user.id);
+        const { pin, error: pinError } = await authService.generatePinForUser(user.id);
         if (pinError) {
             results.push({ success: false, employee, error: pinError.message });
             continue;

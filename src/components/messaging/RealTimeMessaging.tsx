@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { messageService, MessageWithSender } from "@/services/messageService";
+import { taskService } from "@/services/taskService";
+import { EnrichedTask } from "@/types";
 
 interface RealTimeMessagingProps {
   taskId: string;
@@ -22,16 +24,20 @@ interface RealTimeMessagingProps {
 export default function RealTimeMessaging({ taskId }: RealTimeMessagingProps) {
   const { user, currentProfile } = useAuth();
   const [messages, setMessages] = useState<MessageWithSender[]>([]);
+  const [task, setTask] = useState<EnrichedTask | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [searchTerm] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const loadMessages = useCallback(async (taskId: string) => {
+  const loadData = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const taskMessages = await messageService.getTaskMessages(taskId);
-      setMessages(taskMessages);
+      const [taskData, messagesData] = await Promise.all([
+        taskService.getTask(id),
+        messageService.getTaskMessages(id),
+      ]);
+      setTask(taskData);
+      setMessages(messagesData);
     } catch (error) {
       console.error("Error loading messages:", error);
     } finally {
@@ -39,15 +45,15 @@ export default function RealTimeMessaging({ taskId }: RealTimeMessagingProps) {
     }
   }, []);
 
-  const markMessagesAsRead = useCallback(async (taskId: string) => {
+  const markMessagesAsRead = useCallback(async (id: string) => {
     if (!user) return;
     
     try {
-      await messageService.markMessagesAsRead(taskId, user.id);
+      await messageService.markMessagesAsRead(id, user.id);
       
       setMessages(prev =>
         prev.map(msg =>
-          msg.task_id === taskId && msg.receiver_id === user.id ? { ...msg, is_read: true } : msg
+          msg.task_id === id && msg.receiver_id === user.id ? { ...msg, is_read: true } : msg
         )
       );
     } catch (error) {
@@ -57,9 +63,9 @@ export default function RealTimeMessaging({ taskId }: RealTimeMessagingProps) {
 
   useEffect(() => {
     if (user && currentProfile) {
-      loadMessages(taskId);
+      loadData(taskId);
     }
-  }, [user, currentProfile, taskId, loadMessages]);
+  }, [user, currentProfile, taskId, loadData]);
 
   useEffect(() => {
     if (user && currentProfile) {
@@ -90,12 +96,19 @@ export default function RealTimeMessaging({ taskId }: RealTimeMessagingProps) {
   }, [taskId, user, currentProfile]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !taskId || !user) return;
+    if (!newMessage.trim() || !taskId || !user || !task) return;
+
+    const receiverId = user.id === task.assignee_id ? task.created_by : task.assignee_id;
+    if (!receiverId) {
+      console.error("Could not determine the receiver of the message.");
+      return;
+    }
 
     try {
       await messageService.sendMessage(
         taskId,
         user.id,
+        receiverId,
         newMessage.trim()
       );
       setNewMessage("");
@@ -116,7 +129,7 @@ export default function RealTimeMessaging({ taskId }: RealTimeMessagingProps) {
   };
 
   const filteredMessages = messages.filter(msg =>
-    msg.content?.toLowerCase().includes(searchTerm.toLowerCase())
+    msg.content?.toLowerCase().includes(newMessage.toLowerCase())
   );
 
   if (loading) {

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,18 +11,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EnrichedTask, Task, Profile, Client } from "@/types";
+import { Task, Profile } from "@/types";
+import { taskService } from "@/services/taskService";
+import { Textarea } from "@/components/ui/textarea";
 
-interface TaskFormData {
-  title: string;
-  description: string;
-  priority: string;
-  dueDate: string;
-  assigneeId: string;
-  location: string;
-  clientId: string;
-  taskType: string;
-}
 
 interface TaskFormProps {
   task?: Task | null;
@@ -33,26 +26,64 @@ interface TaskFormProps {
 export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormProps) {
   const { currentProfile } = useAuth();
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    priority: "medium",
-    dueDate: "",
-    assigneeId: "",
-    location: "",
-    clientId: "",
-    taskType: "maintenance"
+    title: task?.title || "",
+    description: task?.description || "",
+    priority: task?.priority || "medium",
+    dueDate: task?.due_date || "",
+    assigneeId: task?.assignee_id || "",
+    location: task?.location || "",
+    clientId: task?.client_id || "",
+    taskType: task?.task_type || "maintenance"
   });
 
-  const [clients] = useState([
-    { id: "1", name: "ABC Construction" },
-    { id: "2", name: "XYZ Trading" },
-    { id: "3", name: "Tech Solutions LLC" }
-  ]);
+  const [clients, setClients] = useState<{ id: string; name: string; }[]>([]);
+
+  useEffect(() => {
+    if (task) {
+      setFormData({
+        title: task.title || "",
+        description: task.description || "",
+        priority: task.priority || "medium",
+        dueDate: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : "",
+        assigneeId: task.assignee_id || "",
+        location: task.location || "",
+        clientId: task.client_id || "",
+        taskType: task.task_type || "maintenance"
+      });
+    }
+  }, [task]);
+
+  useEffect(() => {
+    // In a real app, you'd fetch this from a service
+    setClients([
+      { id: "1", name: "ABC Construction" },
+      { id: "2", name: "XYZ Trading" },
+      { id: "3", name: "Tech Solutions LLC" }
+    ]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentProfile) return;
+
     try {
-      await onSubmit(formData);
+      const taskData = {
+        ...formData,
+        due_date: formData.dueDate || null,
+        assignee_id: formData.assigneeId || null,
+        client_id: formData.clientId || null,
+      };
+
+      if (task) {
+        await taskService.updateTask(task.id, taskData);
+      } else {
+        await taskService.createTask({
+          ...taskData,
+          organization_id: currentProfile.organization_id,
+          created_by: currentProfile.id,
+        });
+      }
+      onSuccess();
     } catch (error) {
       console.error("Error submitting task:", error);
     }
@@ -61,7 +92,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Create New Task</CardTitle>
+        <CardTitle>{task ? "Edit Task" : "Create New Task"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -76,6 +107,22 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
               />
             </div>
             
+            <div>
+              <Label htmlFor="assigneeId">Assign To</Label>
+              <Select value={formData.assigneeId} onValueChange={(value) => setFormData(prev => ({ ...prev, assigneeId: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select User" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label htmlFor="priority">Priority</Label>
               <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}>
@@ -92,7 +139,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
             </div>
             
             <div>
-              <Label htmlFor="clientId">Client *</Label>
+              <Label htmlFor="clientId">Client</Label>
               <Select value={formData.clientId} onValueChange={(value) => setFormData(prev => ({ ...prev, clientId: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Client" />
@@ -145,7 +192,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
           
           <div>
             <Label htmlFor="description">Description</Label>
-            <textarea
+            <Textarea
               id="description"
               className="w-full p-2 border rounded-md"
               rows={3}
@@ -157,7 +204,7 @@ export default function TaskForm({ task, users, onSuccess, onCancel }: TaskFormP
           
           <div className="flex gap-3 pt-4">
             <Button type="submit" className="flex-1">
-              Create Task
+              {task ? "Update Task" : "Create Task"}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
               Cancel
