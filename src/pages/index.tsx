@@ -11,17 +11,25 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading && user) {
       if (isSuperAdmin) {
-        router.push("/superadmin");
+        router.replace("/superadmin");
       } else {
-        router.push("/profile");
+        router.replace("/profile");
       }
     }
   }, [user, loading, isSuperAdmin, router]);
 
-  if (loading || user) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         Loading...
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Redirecting...
       </div>
     );
   }
