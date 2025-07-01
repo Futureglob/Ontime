@@ -60,7 +60,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         .single();
 
       if (error) throw error;
-      setCurrentProfile(data);
+      setCurrentProfile(data as Profile);
     } catch (error) {
       console.error("Error fetching profile:", error);
       setCurrentProfile(null);
