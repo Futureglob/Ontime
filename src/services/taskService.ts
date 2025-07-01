@@ -213,7 +213,7 @@ const taskService = {
     if (error) throw error;
     return {
       ...data,
-      location: data.location_address || data.location || "",
+      location: data.location_address || "",
       status: data.status as TaskStatus,
       priority: data.priority as TaskPriority
     };

@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,10 +12,12 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/");
+      return;
     }
     // Redirect super admin to their dashboard immediately
     if (!loading && user && isSuperAdmin) {
       window.location.replace("/superadmin");
+      return;
     }
   }, [user, loading, isSuperAdmin, router]);
 
