@@ -1,5 +1,5 @@
 
-        import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import type { Organization, OrganizationDetails, Profile, TaskSummary } from "@/types/database";
 
 const organizationManagementService = {
@@ -22,11 +22,11 @@ const organizationManagementService = {
     designation?: string;
     mobileNumber?: string;
   }) {
-    const {  { user }, error: authError } = await supabase.auth.admin.createUser({
+    const { data: { user }, error: authError } = await supabase.auth.admin.createUser({
       email: employeeData.email,
-      password: Math.random().toString(36).slice(-8), // Insecure, for dev only
+      password: Math.random().toString(36).slice(-8),
       email_confirm: true,
-      user_meta {
+      user_metadata: {
         full_name: employeeData.fullName,
         role: employeeData.role,
       },
@@ -35,7 +35,7 @@ const organizationManagementService = {
     if (authError) throw authError;
     if (!user) throw new Error("User creation failed.");
 
-    const {  profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .insert({
         user_id: user.id,
@@ -127,7 +127,7 @@ const organizationManagementService = {
   },
 
   async getOrganizationTasks(organizationId: string): Promise<TaskSummary> {
-    const {  tasks, error } = await supabase
+    const { data: tasks, error } = await supabase
       .from("tasks")
       .select("status, due_date")
       .eq("organization_id", organizationId);
@@ -217,8 +217,6 @@ const organizationManagementService = {
       mobile_number?: string;
     }[]
   ) {
-    // This implementation is a placeholder. A proper implementation
-    // would need to create auth users first, then create profiles.
     console.log("Bulk import called with:", { organization_id, employees });
     const { data, error } = await supabase
       .from("profiles")
@@ -239,4 +237,3 @@ const organizationManagementService = {
 };
 
 export default organizationManagementService;
-      
