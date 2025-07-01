@@ -61,11 +61,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Try to get profile by user_id (auth.users id)
+      // Try to get profile by id (which matches auth.users id)
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("user_id", userId)
+        .eq("id", userId)
         .maybeSingle();
       
       if (error && error.code !== "PGRST116") {
@@ -76,7 +76,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         // Transform the data to match our Profile type
         const profileData: Profile = {
           id: data.id,
-          user_id: data.user_id || data.id,
+          user_id: data.id, // Use id as user_id since they're the same
           organization_id: data.organization_id || undefined,
           employee_id: data.employee_id || undefined,
           full_name: data.full_name,
@@ -94,10 +94,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           updated_at: data.updated_at
         };
         setCurrentProfile(profileData);
+        console.log("Profile loaded successfully:", profileData);
         return;
       }
       
       // If no profile found, set to null
+      console.log("No profile found for user:", userId);
       setCurrentProfile(null);
     } catch (error) {
       console.error("Error fetching profile:", error);
