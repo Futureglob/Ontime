@@ -1,5 +1,5 @@
 
-    import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Organization, Profile } from "@/types";
 
 export const organizationManagementService = {
@@ -158,4 +158,3 @@ export const organizationManagementService = {
     return data;
   },
 };
-  

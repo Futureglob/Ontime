@@ -1,5 +1,5 @@
 
-    import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { faker } from "@faker-js/faker";
 
 export interface SuperAdmin {
@@ -214,12 +214,12 @@ export const superAdminService = {
       .select()
       .single();
 
-    if (orgError) {
-      throw new Error(`Failed to create organization: ${orgError.message}`);
+    if (orgError || !newOrg) {
+      throw new Error(`Failed to create organization: ${orgError?.message}`);
     }
 
     // 2. Create the admin user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const {  authData, error: authError } = await supabase.auth.signUp({
       email: orgData.admin_email,
       password: orgData.admin_password,
       options: {
@@ -278,4 +278,3 @@ export const superAdminService = {
 };
 
 export default superAdminService;
-  
