@@ -31,7 +31,7 @@ interface DashboardStats {
 export default function DashboardOverview() {
   const { currentProfile, logout } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats] = useState<DashboardStats>({
     totalTasks: 0,
     completedTasks: 0,
     pendingTasks: 0,
@@ -41,7 +41,6 @@ export default function DashboardOverview() {
   });
   const [recentTasks, setRecentTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [totalTasks, setTotalTasks] = useState(0);
   const [completedTasks, setCompletedTasks] = useState(0);
   const [pendingTasks, setPendingTasks] = useState(0);
@@ -58,7 +57,7 @@ export default function DashboardOverview() {
           taskService.getTaskCount()
         ]);
         
-        setTasks(tasksData);
+        setRecentTasks(tasksData.slice(0, 5));
         setTotalTasks(totalTasksCount);
         
         // Calculate stats
@@ -71,7 +70,7 @@ export default function DashboardOverview() {
         setInProgressTasks(inProgressCount);
         
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
+        console.error('Error loading dashboard ', error);
       } finally {
         setLoading(false);
       }

@@ -85,35 +85,20 @@ export default function Sidebar() {
 
     try {
       const [tasks, notifications] = await Promise.all([
-        taskService.getTasksForUser(),
+        taskService.getTasksForUser(currentProfile.id),
         notificationService.getUnreadNotifications(),
       ]);
-      setTaskCount(tasks.length);
+      const pendingCount = tasks.filter(task => 
+        task.assignee_id === currentProfile.id && 
+        ['assigned', 'pending'].includes(task.status)
+      ).length;
+      setTaskCount(pendingCount);
       setNotificationCount(notifications.length);
     } catch (error) {
-      console.error("Error loading sidebar data:", error);
+      console.error("Error loading sidebar ", error);
       setTaskCount(0);
       setNotificationCount(0);
     }
-  }, [currentProfile]);
-
-  useEffect(() => {
-    const loadTaskCount = async () => {
-      if (!currentProfile) return;
-      
-      try {
-        const tasks = await taskService.getTasksForUser(currentProfile.id);
-        const pendingCount = tasks.filter(task => 
-          task.assignee_id === currentProfile.id && 
-          ['assigned', 'pending'].includes(task.status)
-        ).length;
-        setTaskCount(pendingCount);
-      } catch (error) {
-        console.error('Error loading task count:', error);
-      }
-    };
-
-    loadTaskCount();
   }, [currentProfile]);
 
   useEffect(() => {

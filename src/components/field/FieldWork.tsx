@@ -21,36 +21,35 @@ type EnrichedTask = Task & {
 };
 
 export default function FieldWork() {
-  const { user } = useAuth();
+  const { currentProfile } = useAuth();
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
   const [isPhotoCaptureOpen, setIsPhotoCaptureOpen] = useState(false);
-  const [currentProfile, setCurrentProfile] = useState(user);
+
+  const loadTasks = useCallback(async () => {
+    if (!currentProfile) return;
+    
+    setLoading(true);
+    try {
+      const tasksData = await taskService.getTasksForUser(currentProfile.id);
+      const fieldTasks = tasksData.filter(task => 
+        task.assignee_id === currentProfile.id && 
+        ['assigned', 'in_progress'].includes(task.status)
+      );
+      setTasks(fieldTasks);
+    } catch (error) {
+      console.error('Error loading field tasks:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProfile]);
 
   useEffect(() => {
-    const loadTasks = async () => {
-      if (!currentProfile) return;
-      
-      setLoading(true);
-      try {
-        const tasksData = await taskService.getTasksForUser(currentProfile.id);
-        const fieldTasks = tasksData.filter(task => 
-          task.assignee_id === currentProfile.id && 
-          ['assigned', 'in_progress'].includes(task.status)
-        );
-        setTasks(fieldTasks);
-      } catch (error) {
-        console.error('Error loading field tasks:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadTasks();
-  }, [currentProfile]);
+  }, [loadTasks]);
 
   const handleTakePhoto = (task: EnrichedTask) => {
     setSelectedTask(task);

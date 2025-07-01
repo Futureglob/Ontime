@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Share2, Copy, Check } from "lucide-react";
 import { EnrichedTask } from "@/types";
-import { messageService } from "@/services/messageService";
 
 interface WhatsAppShareProps {
   task: EnrichedTask;
@@ -14,13 +13,7 @@ interface WhatsAppShareProps {
 }
 
 export default function WhatsAppShare({ task, onClose }: WhatsAppShareProps) {
-  const [customMessage, setCustomMessage] = useState("");
-  const [shareType, setShareType] = useState<"update" | "custom">("update");
-
-  const defaultMessage = messageService.generateTaskUpdateMessage(task);
-
-  const handleShare = () => {
-    const message = `Task Update: ${task.title}
+  const defaultMessage = `Task Update: ${task.title}
 
 Status: ${task.status}
 Priority: ${task.priority}
@@ -29,8 +22,11 @@ Due: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}
 Location: ${task.location || 'Not specified'}
 
 Description: ${task.description || 'No description'}`;
-    
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+  const [customMessage, setCustomMessage] = useState(defaultMessage);
+  const [shareType, setShareType] = useState<"update" | "custom">("update");
+
+  const handleShare = () => {
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(customMessage)}`;
     window.open(whatsappUrl, "_blank");
     onClose();
   };
