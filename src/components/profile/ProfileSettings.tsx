@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Profile } from "@/types/Profile";
-import { profileService } from "@/services/profileService";
+import type { Profile } from "@/types/database";
+import profileService from "@/services/profileService";
 
 export default function ProfileSettings() {
   const { currentProfile, user } = useAuth();
@@ -36,10 +36,10 @@ export default function ProfileSettings() {
 
   const handleInputChange = (field: string, value: string) => {
     if (!profile) return;
-    setProfile(prev => ({
+    setProfile(prev => prev ? ({
       ...prev,
       [field]: value
-    }));
+    }) : null);
   };
 
   return (

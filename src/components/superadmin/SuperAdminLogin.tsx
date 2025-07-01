@@ -12,7 +12,7 @@ interface SuperAdminLoginProps {
   onSuccess?: () => void;
 }
 
-export default function SuperAdminLogin({ onSuccess }: SuperAdminLoginProps) {
+export default function SuperAdminLogin({ }: SuperAdminLoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
