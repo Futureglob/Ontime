@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Task, EnrichedTask, Profile, Client } from "@/types/database";
+import { Task, EnrichedTask } from "@/types/database";
 
 export const taskService = {
   async getTasks(organizationId: string): Promise<EnrichedTask[]> {
@@ -35,12 +35,23 @@ export const taskService = {
         .select('*')
         .in('id', clientIds);
 
-      // Combine the data
+      // Combine the data with proper type casting
       const enrichedTasks: EnrichedTask[] = tasks.map(task => ({
         ...task,
-        assigned_to_profile: profiles?.find(p => p.id === task.assigned_to),
-        created_by_profile: profiles?.find(p => p.id === task.created_by),
-        client: clients?.find(c => c.id === task.client_id)
+        status: task.status as any,
+        priority: task.priority as any,
+        assigned_to_profile: profiles?.find(p => p.id === task.assigned_to) ? {
+          ...profiles.find(p => p.id === task.assigned_to)!,
+          role: profiles.find(p => p.id === task.assigned_to)!.role as any
+        } : undefined,
+        created_by_profile: profiles?.find(p => p.id === task.created_by) ? {
+          ...profiles.find(p => p.id === task.created_by)!,
+          role: profiles.find(p => p.id === task.created_by)!.role as any
+        } : undefined,
+        client: clients?.find(c => c.id === task.client_id) ? {
+          ...clients.find(c => c.id === task.client_id)!,
+          is_active: clients.find(c => c.id === task.client_id)!.is_active ?? true
+        } : undefined
       }));
 
       return enrichedTasks;
@@ -68,9 +79,20 @@ export const taskService = {
 
     return {
       ...task,
-      assigned_to_profile: assignedProfile?.data || undefined,
-      created_by_profile: createdByProfile?.data || undefined,
-      client: client?.data || undefined
+      status: task.status as any,
+      priority: task.priority as any,
+      assigned_to_profile: assignedProfile?.data ? {
+        ...assignedProfile.data,
+        role: assignedProfile.data.role as any
+      } : undefined,
+      created_by_profile: createdByProfile?.data ? {
+        ...createdByProfile.data,
+        role: createdByProfile.data.role as any
+      } : undefined,
+      client: client?.data ? {
+        ...client.data,
+        is_active: client.data.is_active ?? true
+      } : undefined
     };
   },
 
@@ -88,7 +110,11 @@ export const taskService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      status: data.status as any,
+      priority: data.priority as any
+    };
   },
 
   async updateTask(taskId: string, updates: Partial<Task>): Promise<Task> {
@@ -100,7 +126,11 @@ export const taskService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      status: data.status as any,
+      priority: data.priority as any
+    };
   },
 
   async deleteTask(taskId: string): Promise<void> {

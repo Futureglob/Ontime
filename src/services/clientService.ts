@@ -11,10 +11,10 @@ export const clientService = {
 
     if (error) throw error;
     
-    // Add default is_active if missing
+    // Add default is_active if missing and cast to proper type
     return (data || []).map(client => ({
       ...client,
-      is_active: client.is_active ?? true
+      is_active: (client as any).is_active ?? true
     })) as Client[];
   },
 
@@ -26,7 +26,10 @@ export const clientService = {
       .single();
 
     if (error) throw error;
-    return { ...data, is_active: data.is_active ?? true } as Client;
+    return { 
+      ...data, 
+      is_active: (data as any).is_active ?? true 
+    } as Client;
   },
 
   async updateClient(clientId: string, updates: Partial<Client>): Promise<Client> {
@@ -38,7 +41,10 @@ export const clientService = {
       .single();
 
     if (error) throw error;
-    return { ...data, is_active: data.is_active ?? true } as Client;
+    return { 
+      ...data, 
+      is_active: (data as any).is_active ?? true 
+    } as Client;
   },
 
   async deleteClient(clientId: string): Promise<void> {
