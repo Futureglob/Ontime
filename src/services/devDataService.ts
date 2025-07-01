@@ -27,70 +27,93 @@ const devDataService = {
     ];
 
     for (const employee of employees) {
-      // Check if user exists
-      const {  { user } } = await supabase.auth.admin.createUser({
-        email: employee.email,
-        password: "password",
-        email_confirm: true,
-        user_meta { full_name: employee.fullName },
-      });
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.admin.createUser({
+          email: employee.email,
+          password: "password",
+          email_confirm: true,
+          user_metadata: { full_name: employee.fullName },
+        });
 
-      if (user) {
-        // Check if profile exists
-        const {  profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-
-        if (!profile) {
-          await supabase.from("profiles").insert({
-            user_id: user.id,
-            organization_id: organizationId,
-            full_name: employee.fullName,
-            role: employee.role,
-            employee_id: employee.employeeId,
-          });
+        if (authError) {
+          console.error(`Failed to create user ${employee.email}:`, authError);
+          continue;
         }
+
+        if (user) {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+
+          if (profileError && profileError.code === 'PGRST116') {
+            await supabase.from("profiles").insert({
+              user_id: user.id,
+              organization_id: organizationId,
+              full_name: employee.fullName,
+              role: employee.role,
+              employee_id: employee.employeeId,
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing employee ${employee.email}:`, error);
       }
     }
 
-    // Seed clients
-    const {  clients } = await supabase.from("clients").insert([
+    try {
+      const { data: clients, error: clientError } = await supabase.from("clients").insert([
         { name: "Dev Client A", contact_person: "Mr. A", organization_id: organizationId },
         { name: "Dev Client B", contact_person: "Ms. B", organization_id: organizationId },
-    ]).select();
+      ]).select();
 
-    // Seed tasks
-    const {  profiles } = await supabase.from("profiles").select("id, role").eq("organization_id", organizationId);
-    const adminProfile = profiles?.find(p => p.role === 'admin');
-    const employeeProfile = profiles?.find(p => p.role === 'employee');
+      if (clientError) {
+        console.error("Failed to create clients:", clientError);
+        return true;
+      }
 
-    if (adminProfile && employeeProfile && clients) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, role")
+        .eq("organization_id", organizationId);
+
+      if (profilesError) {
+        console.error("Failed to fetch profiles:", profilesError);
+        return true;
+      }
+
+      const adminProfile = profiles?.find(p => p.role === 'admin');
+      const employeeProfile = profiles?.find(p => p.role === 'employee');
+
+      if (adminProfile && employeeProfile && clients && clients.length > 0) {
         await supabase.from("tasks").insert([
-            { 
-                title: "Setup development environment", 
-                description: "Install all dependencies and run the project.",
-                client_id: clients[0].id,
-                assigned_to: employeeProfile.id,
-                created_by: adminProfile.id,
-                organization_id: organizationId,
-                status: 'pending',
-                priority: 'high',
-                due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
-            },
-            { 
-                title: "Review project documentation", 
-                description: "Read through the README and other docs.",
-                client_id: clients[1].id,
-                assigned_to: employeeProfile.id,
-                created_by: adminProfile.id,
-                organization_id: organizationId,
-                status: 'in_progress',
-                priority: 'medium',
-                due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-            },
+          { 
+            title: "Setup development environment", 
+            description: "Install all dependencies and run the project.",
+            client_id: clients[0].id,
+            assigned_to: employeeProfile.id,
+            created_by: adminProfile.id,
+            organization_id: organizationId,
+            status: 'pending',
+            priority: 'high',
+            due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+          },
+          { 
+            title: "Review project documentation", 
+            description: "Read through the README and other docs.",
+            client_id: clients[1]?.id || clients[0].id,
+            assigned_to: employeeProfile.id,
+            created_by: adminProfile.id,
+            organization_id: organizationId,
+            status: 'in_progress',
+            priority: 'medium',
+            due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          },
         ]);
+      }
+    } catch (error) {
+      console.error("Error seeding clients and tasks:", error);
     }
 
     console.log("Database seeding complete.");
@@ -99,4 +122,3 @@ const devDataService = {
 };
 
 export default devDataService;
-  
