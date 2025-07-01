@@ -7,6 +7,7 @@ export type Organization = Database["public"]["Tables"]["organizations"]["Row"];
 export type Client = Database["public"]["Tables"]["clients"]["Row"];
 export type TaskPhoto = Database["public"]["Tables"]["task_photos"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
+export type Credits = Database["public"]["Tables"]["credits"]["Row"];
 
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
 
@@ -16,10 +17,13 @@ export type EnrichedTask = Task & {
   client?: Client | null;
   photos?: TaskPhoto[];
   task_type?: string | null;
+  location?: {
+    lat: number;
+    lng: number;
+    address?: string;
+  } | null;
 };
 
-// This User type seems to be a custom client-side model. It's different from Profile.
-// It should be reviewed and reconciled with the Profile type in the future.
 export interface User {
   id: string;
   name: string;
@@ -44,6 +48,33 @@ export interface ChatMessage {
   timestamp: Date;
   type: "text" | "image" | "location";
   attachments?: string[];
+}
+
+export interface MessageWithSender {
+  id: string;
+  task_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  is_read: boolean;
+  message_type: string | null;
+  sender: {
+    id: string;
+    full_name: string;
+    avatar_url?: string;
+  };
+}
+
+export interface ChatConversation {
+  task_id: string;
+  task: EnrichedTask;
+  lastMessage: MessageWithSender;
+  unreadCount: number;
+}
+
+export interface TaskWithChatData extends Task {
+  messages: { count: number }[];
+  participants: Profile;
 }
 
 export interface PerformanceMetrics {
@@ -76,15 +107,6 @@ export interface Photo {
   user_id: string;
   url: string;
   created_at: string;
-}
-
-export interface Credits {
-  id: string;
-  organization_id: string;
-  total_credits: number;
-  used_credits: number;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface CreditTransaction {
