@@ -1,8 +1,30 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Organization, Profile } from "@/types";
+import type { Database } from "@/integrations/supabase/types";
 
-export const organizationManagementService = {
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type Task = Database["public"]["Tables"]["tasks"]["Row"];
+type Organization = Database["public"]["Tables"]["organizations"]["Row"];
+
+export interface OrganizationDetails extends Organization {
+  userCount: number;
+  taskCount: number;
+  completedTasks: number;
+}
+
+export interface OrganizationUser extends Profile {
+  email?: string;
+  status?: string;
+}
+
+export interface TaskSummary {
+  total: number;
+  completed: number;
+  pending: number;
+  overdue: number;
+}
+
+const organizationManagementService = {
   async getEmployees(organizationId: string): Promise<Profile[]> {
     const { data, error } = await supabase
       .from("profiles")
@@ -13,64 +35,40 @@ export const organizationManagementService = {
     return data || [];
   },
 
-  async addEmployee(
-    organizationId: string,
-    employeeData: {
-      email: string;
-      fullName: string;
-      role: string;
-      employeeId: string;
-      designation?: string;
-      mobileNumber?: string;
-    }
-  ) {
-    // 1. Create the auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+  async addEmployee(employeeData: {
+    email: string;
+    fullName: string;
+    role: string;
+    employeeId: string;
+    designation?: string;
+    mobileNumber?: string;
+  }) {
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: employeeData.email,
-      password: `password_${Math.random().toString(36).slice(-8)}`, // Generate a random temporary password
-      options: {
-        data: {
-          full_name: employeeData.fullName,
-          role: employeeData.role,
-          organization_id: organizationId,
-        },
-      },
+      password: Math.random().toString(36).slice(-8),
+      email_confirm: true,
+      user_metadata: {
+        full_name: employeeData.fullName,
+        role: employeeData.role
+      }
     });
 
-    if (authError) {
-      console.error("Error creating auth user:", authError);
-      throw new Error(`Failed to create user: ${authError.message}`);
-    }
-
-    if (!authData.user) {
-      throw new Error("User was not created in authentication system.");
-    }
-
-    // 2. Create the profile
-    const profilePayload = {
-      user_id: authData.user.id,
-      organization_id: organizationId,
-      full_name: employeeData.fullName,
-      role: employeeData.role,
-      employee_id: employeeData.employeeId,
-      designation: employeeData.designation,
-      mobile_number: employeeData.mobileNumber,
-      is_active: true,
-    };
+    if (authError) throw authError;
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .insert(profilePayload)
+      .insert({
+        user_id: authData.user.id,
+        full_name: employeeData.fullName,
+        employee_id: employeeData.employeeId,
+        role: employeeData.role,
+        designation: employeeData.designation || "",
+        mobile_number: employeeData.mobileNumber || ""
+      })
       .select()
       .single();
 
-    if (profileError) {
-      console.error("Error creating profile:", profileError);
-      // Optional: Clean up the created auth user if profile creation fails
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      throw new Error(`Failed to create profile: ${profileError.message}`);
-    }
-
+    if (profileError) throw profileError;
     return profile;
   },
 
@@ -86,55 +84,14 @@ export const organizationManagementService = {
     return data;
   },
 
-  async bulkImportEmployees(organizationId: string, employees: Record<string, any>[]) {
-    const results = {
-      success: [] as Profile[],
-      errors: [] as { employee: Record<string, any>, error: string }[],
-    };
+  async deleteEmployee(employeeId: string) {
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", employeeId);
 
-    for (const emp of employees) {
-      try {
-        const newEmployee = await this.addEmployee(organizationId, {
-          email: emp.email,
-          fullName: emp.full_name,
-          role: emp.role,
-          employeeId: emp.employee_id,
-          designation: emp.designation,
-          mobileNumber: emp.mobile_number,
-        });
-        results.success.push(newEmployee);
-      } catch (error: any) {
-        results.errors.push({ employee: emp, error: error.message });
-      }
-    }
-
-    return results;
-  },
-
-  async generatePinForEmployee(userId: string): Promise<string> {
-    const { data, error } = await supabase.rpc("generate_user_pin", {
-      p_user_id: userId,
-    });
-
-    if (error) {
-      console.error("Error in generate_user_pin RPC:", error);
-      throw error;
-    }
-    
-    if (data && (data as any).error) {
-      throw new Error((data as any).error);
-    }
-
-    if (typeof data === 'string') {
-        return data;
-    }
-
-    if (!data || !(data as any).pin) {
-        console.error("Invalid response from generate_user_pin RPC:", data);
-        throw new Error("Failed to generate PIN: Invalid response from server.");
-    }
-
-    return (data as any).pin;
+    if (error) throw error;
+    return true;
   },
 
   async getOrganizationSettings(organizationId: string) {
@@ -143,6 +100,7 @@ export const organizationManagementService = {
       .select("*")
       .eq("id", organizationId)
       .single();
+
     if (error) throw error;
     return data;
   },
@@ -154,7 +112,111 @@ export const organizationManagementService = {
       .eq("id", organizationId)
       .select()
       .single();
+
     if (error) throw error;
     return data;
   },
+
+  async getOrganizationDetails(organizationId: string): Promise<OrganizationDetails> {
+    const [orgResult, usersResult, tasksResult] = await Promise.all([
+      supabase.from("organizations").select("*").eq("id", organizationId).single(),
+      supabase.from("profiles").select("id").eq("organization_id", organizationId),
+      supabase.from("tasks").select("id, status").eq("organization_id", organizationId)
+    ]);
+
+    if (orgResult.error) throw orgResult.error;
+    if (usersResult.error) throw usersResult.error;
+    if (tasksResult.error) throw tasksResult.error;
+
+    const userCount = usersResult.data?.length || 0;
+    const taskCount = tasksResult.data?.length || 0;
+    const completedTasks = tasksResult.data?.filter(t => t.status === "completed").length || 0;
+
+    return {
+      ...orgResult.data,
+      userCount,
+      taskCount,
+      completedTasks
+    };
+  },
+
+  async getOrganizationTasks(organizationId: string): Promise<TaskSummary> {
+    const { data: tasks, error } = await supabase
+      .from("tasks")
+      .select("status, due_date")
+      .eq("organization_id", organizationId);
+
+    if (error) throw error;
+
+    const now = new Date();
+    const total = tasks?.length || 0;
+    const completed = tasks?.filter(t => t.status === "completed").length || 0;
+    const pending = tasks?.filter(t => t.status === "pending").length || 0;
+    const overdue = tasks?.filter(t => 
+      t.status !== "completed" && new Date(t.due_date) < now
+    ).length || 0;
+
+    return { total, completed, pending, overdue };
+  },
+
+  async generatePinForUser(userId: string) {
+    const { data, error } = await supabase.rpc("generate_user_pin", {
+      user_id: userId
+    });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async sendPasswordResetEmail(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+    return true;
+  },
+
+  async toggleUserStatus(userId: string, isActive: boolean) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ is_active: isActive })
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateUserRole(userId: string, role: string) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ role })
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteUser(userId: string) {
+    const { error } = await supabase.auth.admin.deleteUser(userId);
+    if (error) throw error;
+    return true;
+  },
+
+  async exportOrganizationData(organizationId: string) {
+    const [profiles, tasks, clients] = await Promise.all([
+      supabase.from("profiles").select("*").eq("organization_id", organizationId),
+      supabase.from("tasks").select("*").eq("organization_id", organizationId),
+      supabase.from("clients").select("*").eq("organization_id", organizationId)
+    ]);
+
+    return {
+      profiles: profiles.data || [],
+      tasks: tasks.data || [],
+      clients: clients.data || []
+    };
+  }
 };
+
+export default organizationManagementService;
