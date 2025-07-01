@@ -1,76 +1,49 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import messageService from "@/services/messageService";
 import realtimeService from "@/services/realtimeService";
 import { useAuth } from "@/contexts/AuthContext";
+import taskService from "@/services/taskService";
+import type { EnrichedTask } from "@/types/database";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 
 interface ChatListProps {
-  onSelectTask: (taskId: string) => void;
+  onSelectChat: (taskId: string) => void;
 }
 
-interface TaskWithMessage {
-  id: string;
-  title: string;
-  lastMessage: {
-    content: string;
-    created_at: string;
-    sender: {
-      full_name: string;
-    };
-  } | null;
-}
+export default function ChatList({ onSelectChat }: ChatListProps) {
+  const [tasks, setTasks] = useState<EnrichedTask[]>([]);
+  const { currentProfile } = useAuth();
 
-export default function ChatList({ onSelectTask }: ChatListProps) {
-  const { profile } = useAuth();
-  const [tasks, setTasks] = useState<TaskWithMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-
-  const fetchTasks = async () => {
-    if (!profile?.organization_id) return;
-    try {
-      setLoading(true);
-      const fetchedTasks = await messageService.getTasksWithMessages(profile.organization_id);
-      setTasks(fetchedTasks as any); // Cast needed due to complex return type
-    } catch (error) {
-      console.error("Error fetching tasks with messages:", error);
-    } finally {
-      setLoading(false);
+  const fetchTasks = useCallback(async () => {
+    if (currentProfile) {
+      try {
+        const fetchedTasks = await taskService.getTasksForUser(currentProfile.id);
+        setTasks(fetchedTasks);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      }
     }
-  };
+  }, [currentProfile]);
 
   useEffect(() => {
     fetchTasks();
-  }, [profile]);
+  }, [fetchTasks]);
 
   useEffect(() => {
-    if (!profile?.organization_id) return;
-
-    const subscription = realtimeService.subscribeToTaskUpdates(
-      profile.organization_id,
-      (payload) => {
-        // Refetch when any task in the org is updated
+    if (currentProfile) {
+      const subscription = realtimeService.subscribeToTaskChanges(currentProfile.organization_id, (_payload) => {
         fetchTasks();
-      }
-    );
+      });
 
-    // This is a simplified approach. A more robust solution would be to also
-    // subscribe to all message updates and update the list accordingly.
-    // For now, we rely on task updates to refresh the chat list.
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [currentProfile, fetchTasks]);
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [profile?.organization_id]);
-
-  const handleSelectTask = (taskId: string) => {
-    setSelectedTaskId(taskId);
-    onSelectTask(taskId);
-  };
-
-  if (loading) {
-    return <div>Loading chats...</div>;
+  if (!tasks.length) {
+    return <div className="p-4 text-center text-gray-500">No active chats.</div>;
   }
 
   return (
@@ -82,7 +55,7 @@ export default function ChatList({ onSelectTask }: ChatListProps) {
         {tasks.map((task) => (
           <div
             key={task.id}
-            onClick={() => handleSelectTask(task.id)}
+            onClick={() => onSelectChat(task.id)}
             className={`p-4 border-b cursor-pointer hover:bg-muted/50 ${
               selectedTaskId === task.id ? "bg-muted" : ""
             }`}

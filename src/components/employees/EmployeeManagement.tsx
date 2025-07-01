@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import organizationManagementService from "@/services/organizationManagementService";
 import type { Profile } from "@/types/database";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function EmployeeManagement() {
-  const { profile } = useAuth();
+  const { currentProfile } = useAuth();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,28 +32,28 @@ export default function EmployeeManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Profile | undefined>(undefined);
   const [employeeToDelete, setEmployeeToDelete] = useState<Profile | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
 
-  const fetchEmployees = async () => {
-    if (profile?.organization_id) {
+  const fetchEmployees = useCallback(async () => {
+    if (currentProfile?.organization_id) {
       try {
-        setLoading(true);
-        const data = await organizationManagementService.getEmployees(profile.organization_id);
-        setEmployees(data);
-      } catch (error) {
-        console.error("Error fetching employees:", error);
-        toast({ title: "Error", description: "Could not fetch employees.", variant: "destructive" });
-      } finally {
-        setLoading(false);
+        const fetchedEmployees = await organizationManagementService.getEmployees(currentProfile.organization_id);
+        setEmployees(fetchedEmployees);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "An unknown error occurred";
+        toast({ title: "Error", description: `Failed to fetch employees: ${message}`, variant: "destructive" });
       }
     }
-  };
+  }, [currentProfile, toast]);
 
   useEffect(() => {
     fetchEmployees();
-  }, [profile]);
+  }, [fetchEmployees]);
 
   const handleFormSubmit = async (values: any) => {
-    if (!profile?.organization_id) return;
+    if (!currentProfile?.organization_id) return;
     setIsSubmitting(true);
     try {
       if (selectedEmployee) {
@@ -71,7 +71,7 @@ export default function EmployeeManagement() {
         // Create logic
         await organizationManagementService.addEmployee({
           ...values,
-          organizationId: profile.organization_id,
+          organizationId: currentProfile.organization_id,
         });
         toast({ title: "Success", description: "Employee added successfully." });
       }
@@ -97,16 +97,21 @@ export default function EmployeeManagement() {
     }
   };
 
-  const handleEdit = (employee: Profile) => {
-    setSelectedEmployee(employee);
-    setIsFormOpen(true);
+  const handleAddSuccess = () => {
+    setIsAddModalOpen(false);
+    fetchEmployees();
   };
 
-  const handleAddNew = () => {
-    setSelectedEmployee(undefined);
-    setIsFormOpen(true);
+  const handleEdit = (employee: Profile) => {
+    setSelectedEmployee(employee);
+    setIsEditModalOpen(true);
   };
-  
+
+  const handleDelete = (employee: Profile) => {
+    setSelectedEmployee(employee);
+    setIsConfirmDeleteDialogOpen(true);
+  };
+
   const handleImportSuccess = () => {
     setIsImportOpen(false);
     fetchEmployees();
@@ -181,7 +186,7 @@ export default function EmployeeManagement() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEdit(employee)}>Edit</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setEmployeeToDelete(employee)} className="text-red-600">
+                          <DropdownMenuItem onClick={() => handleDelete(employee)} className="text-red-600">
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>

@@ -18,39 +18,24 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(true);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
-      try {
-        setLoading(true);
-        const fetchedMessages = await messageService.getTaskMessages(taskId);
-        setMessages(fetchedMessages);
-      } catch (error) {
-        console.error("Error fetching messages:", error);
-      } finally {
-        setLoading(false);
+      if (user) {
+        try {
+          const fetchedMessages = await messageService.getMessages(taskId);
+          setMessages(fetchedMessages);
+        } catch (error) {
+          console.error("Error fetching messages:", error);
+        }
       }
     };
 
-    if (taskId) {
-      fetchMessages();
-    }
-  }, [taskId]);
+    fetchMessages();
 
-  useEffect(() => {
-    if (!taskId || !user) return;
-
-    const subscription = realtimeService.subscribeToTaskMessages(
-      taskId,
-      () => {
-        // This is a simplified handler. A real implementation would need to
-        // fetch the full message details as the payload only contains the new data.
-        // For now, we'll just refetch all messages.
-        messageService.getTaskMessages(taskId).then(setMessages);
-      }
-    );
+    const subscription = realtimeService.subscribeToMessages(taskId, (newMessageData) => {
+      setMessages((prevMessages) => [...prevMessages, newMessageData]);
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -67,8 +52,7 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
     }
   }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !user || !profile) return;
 
     try {
@@ -80,9 +64,7 @@ export default function ChatInterface({ taskId }: ChatInterfaceProps) {
     }
   };
 
-  if (loading) {
-    return <div>Loading chat...</div>;
-  }
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex flex-col h-full">

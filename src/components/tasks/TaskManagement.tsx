@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import taskService from "@/services/taskService";
 import clientService from "@/services/clientService";
 import organizationManagementService from "@/services/organizationManagementService";
@@ -12,7 +12,7 @@ import TaskCard from "./TaskCard";
 import { useToast } from "@/hooks/use-toast";
 
 export default function TaskManagement() {
-  const { profile } = useAuth();
+  const { currentProfile } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -22,49 +22,47 @@ export default function TaskManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | undefined>(undefined);
 
-  const fetchTasks = async () => {
-    if (profile?.organization_id) {
+  const fetchTasks = useCallback(async () => {
+    if (currentProfile) {
       try {
-        setLoading(true);
-        const taskData = await taskService.getTasks(profile.organization_id);
-        setTasks(taskData);
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
-        toast({ title: "Error", description: "Could not fetch tasks.", variant: "destructive" });
-      } finally {
-        setLoading(false);
+        const fetchedTasks = await taskService.getTasksForOrganization(currentProfile.organization_id);
+        setTasks(fetchedTasks);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "An unknown error occurred";
+        toast({ title: "Error", description: `Failed to fetch tasks: ${message}`, variant: "destructive" });
       }
     }
-  };
+  }, [currentProfile, toast]);
 
-  const fetchDropdownData = async () => {
-    if (profile?.organization_id) {
+  const fetchDropdownData = useCallback(async () => {
+    if (currentProfile) {
       try {
-        const [clientData, employeeData] = await Promise.all([
-          clientService.getClients(profile.organization_id),
-          organizationManagementService.getEmployees(profile.organization_id)
+        const [fetchedClients, fetchedEmployees] = await Promise.all([
+          clientService.getClients(currentProfile.organization_id),
+          organizationManagementService.getEmployees(currentProfile.organization_id),
         ]);
-        setClients(clientData);
-        setEmployees(employeeData);
-      } catch (error) {
-        console.error("Error fetching dropdown ", error);
+        setClients(fetchedClients);
+        setEmployees(fetchedEmployees);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "An unknown error occurred";
+        toast({ title: "Error", description: `Failed to fetch  ${message}`, variant: "destructive" });
       }
     }
-  };
+  }, [currentProfile, toast]);
 
   useEffect(() => {
     fetchTasks();
     fetchDropdownData();
-  }, [profile]);
+  }, [fetchTasks, fetchDropdownData]);
 
   const handleFormSubmit = async (values: any) => {
-    if (!profile?.organization_id) return;
+    if (!currentProfile) return;
     setIsSubmitting(true);
     try {
       const taskData = {
         ...values,
-        organization_id: profile.organization_id,
-        created_by: profile.id,
+        organization_id: currentProfile.organization_id,
+        created_by: currentProfile.id,
       };
 
       if (selectedTask) {

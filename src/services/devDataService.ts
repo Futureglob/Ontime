@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 const devDataService = {
@@ -41,7 +40,23 @@ const devDataService = {
         }
 
         if (user) {
-          const { error: profileError } = await supabase
+          const {  existingProfile, error: profileError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .single();
+
+          if (profileError && profileError.code !== "PGRST116") { // Ignore "no rows found"
+            console.error("Error checking for existing profile:", profileError);
+            return;
+          }
+
+          if (existingProfile) {
+            console.log(`Profile for user ${user.id} already exists.`);
+            return;
+          }
+
+          const { error: insertError } = await supabase
             .from("profiles")
             .insert({
               user_id: user.id,
@@ -50,8 +65,8 @@ const devDataService = {
               role: employee.role,
               employee_id: employee.employeeId,
             });
-          if (profileError) {
-            console.error(`Failed to create profile for ${employee.email}:`, profileError);
+          if (insertError) {
+            console.error(`Failed to create profile for ${employee.email}:`, insertError);
           }
         }
       } catch (error) {

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Organization } from "@/types/database";
 
@@ -46,11 +45,24 @@ const superAdminService = {
     return data;
   },
 
-  async updateOrganization(orgId: string, updates: Partial<Organization>) {
+  async createOrganization(details: { name: string; adminEmail: string; adminFullName: string; }) {
+    const { data, error } = await supabase.rpc("create_organization_and_admin", {
+      org_name: details.name,
+      admin_email: details.adminEmail,
+      admin_full_name: details.adminFullName,
+    });
+
+    if (error) {
+      console.error("Error creating organization:", error);
+    }
+    return { data, error };
+  },
+
+  async updateOrganization(id: string, updates: Partial<OrganizationForSuperAdminView>) {
     const { data, error } = await supabase
       .from("organizations")
       .update(updates)
-      .eq("id", orgId)
+      .eq("id", id)
       .select()
       .single();
     if (error) throw error;
