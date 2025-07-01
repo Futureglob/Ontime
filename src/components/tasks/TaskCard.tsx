@@ -37,7 +37,7 @@ export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
           <p className="text-sm text-muted-foreground">Due: {new Date(task.due_date).toLocaleDateString()}</p>
         </div>
       </CardContent>
-      {currentProfile.role === "org_admin" && (
+      {currentProfile.role === "admin" && (
         <CardFooter className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => onEdit(task)}>Edit</Button>
           <Button variant="destructive" size="sm" onClick={() => onDelete(task)}>Delete</Button>

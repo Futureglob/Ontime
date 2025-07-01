@@ -1,14 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import organizationManagementService from "@/services/organizationManagementService";
-import type { OrganizationDetails, TaskSummary, OrganizationUser } from "@/services/organizationManagementService";
-import type { Organization } from "@/types/database";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import type { OrganizationDetails } from "@/types/database";
 
 interface OrganizationDetailsModalProps {
   isOpen: boolean;
