@@ -28,6 +28,7 @@ export default function FieldWork() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
   const [isPhotoCaptureOpen, setIsPhotoCaptureOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadTasks = useCallback(async () => {
     if (!currentProfile) return;
@@ -48,8 +49,23 @@ export default function FieldWork() {
   }, [currentProfile]);
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    const fetchTasks = async () => {
+      if (currentProfile) {
+        setLoading(true);
+        try {
+          const fetchedTasks = await taskService.getTasksByAssignee(currentProfile.id);
+          setTasks(fetchedTasks);
+        } catch (err) {
+          setError("Failed to fetch tasks.");
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchTasks();
+  }, [currentProfile]);
 
   const handleTakePhoto = (task: EnrichedTask) => {
     setSelectedTask(task);

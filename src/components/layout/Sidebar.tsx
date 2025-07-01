@@ -152,28 +152,25 @@ export default function Sidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto py-4">
-        <nav className="space-y-1 px-3">
-          {navigationItems.map((item) => {
-            const isActive = router.pathname === item.href || 
-                           (item.href !== "/" && router.pathname.startsWith(item.href));
-            
-            return (
-              <Button
-                key={item.name}
-                variant={isActive ? "secondary" : "ghost"}
-                className="w-full justify-start gap-3 h-10"
-                onClick={() => handleNavigation(item.href)}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.name}
-                {item.name === "Tasks" && taskCount > 0 && (
-                  <Badge variant="secondary" className="ml-auto">
-                    {taskCount}
-                  </Badge>
-                )}
-              </Button>
-            );
-          })}
+        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+          {navigationItems.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                router.pathname === item.href && "bg-muted text-primary"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.name}
+              {item.name === "Messages" && taskCount > 0 && (
+                <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                  {taskCount}
+                </Badge>
+              )}
+            </Link>
+          ))}
         </nav>
       </div>
 
@@ -204,6 +201,9 @@ export default function Sidebar() {
           <User className="h-4 w-4" />
           Logout
         </Button>
+      </div>
+      <div className="mt-auto p-4">
+        <RoleSwitcher />
       </div>
     </div>
   );
