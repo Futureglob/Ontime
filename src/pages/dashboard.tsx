@@ -30,22 +30,7 @@ export default function DashboardPage() {
   return <DashboardOverview />;
 }
 
-// Conditionally apply layout based on user type
+// Only apply layout for non-super admin users
 DashboardPage.getLayout = function getLayout(page: ReactElement) {
-  return (
-    <ConditionalLayout>
-      {page}
-    </ConditionalLayout>
-  );
+  return <DashboardLayout>{page}</DashboardLayout>;
 };
-
-function ConditionalLayout({ children }: { children: ReactElement }) {
-  const { isSuperAdmin, loading } = useAuth();
-  
-  // Don't apply dashboard layout for super admin or while loading
-  if (loading || isSuperAdmin) {
-    return children;
-  }
-  
-  return <DashboardLayout>{children}</DashboardLayout>;
-}
