@@ -1,32 +1,28 @@
-import { useEffect } from "react";
-import { useRouter } from "next/router";
-import { useAuth } from "@/contexts/SimpleAuthContext";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import Settings from "@/components/settings/Settings";
 
-export default function SettingsPage() {
-  const { user, isAuthenticated } = useAuth();
-  const router = useRouter();
+        import { useAuth } from "@/contexts/AuthContext";
+        import DashboardLayout from "@/components/layout/DashboardLayout";
+        import Settings from "@/components/settings/Settings";
+        import LoginForm from "@/components/auth/LoginForm";
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/");
-    }
-  }, [isAuthenticated, router]);
+        export default function SettingsPage() {
+          const { user, loading } = useAuth();
 
-  if (!user) {
-    return null;
-  }
+          if (loading) {
+            return (
+              <div className="flex h-screen items-center justify-center">
+                <p>Loading...</p>
+              </div>
+            );
+          }
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600">Manage your account and application settings</p>
-        </div>
-        <Settings />
-      </div>
-    </DashboardLayout>
-  );
-}
+          if (!user) {
+            return <LoginForm />;
+          }
+
+          return (
+            <DashboardLayout>
+              <Settings />
+            </DashboardLayout>
+          );
+        }
+      
