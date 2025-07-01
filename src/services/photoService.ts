@@ -65,7 +65,7 @@ export const photoService = {
 
   async deletePhoto(photoId: string): Promise<void> {
     // First, get the photo URL to delete from storage
-    const {  photo, error: fetchError } = await supabase
+    const {  data: photo, error: fetchError } = await supabase
       .from("task_photos")
       .select("photo_url")
       .eq("id", photoId)

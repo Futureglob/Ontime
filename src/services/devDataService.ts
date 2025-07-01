@@ -1,5 +1,5 @@
 
-    import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { faker } from "@faker-js/faker";
 
 const BATCH_SIZE = 10;
@@ -9,7 +9,6 @@ export const devDataService = {
     try {
       console.log("Starting database seed...");
 
-      // 1. Seed Clients
       const clients = Array.from({ length: 20 }, () => ({
         organization_id: organizationId,
         name: faker.company.name(),
@@ -17,14 +16,15 @@ export const devDataService = {
         phone: faker.phone.number(),
         address: faker.location.streetAddress(true),
       }));
-      const {  seededClients, error: clientError } = await supabase
+      
+      const { data: seededClients, error: clientError } = await supabase
         .from("clients")
         .insert(clients)
         .select();
+      
       if (clientError) throw clientError;
       console.log(`${seededClients.length} clients seeded.`);
 
-      // 2. Seed Employees (Users & Profiles)
       const employees = [];
       for (let i = 0; i < 50; i++) {
         const fullName = faker.person.fullName();
@@ -32,30 +32,28 @@ export const devDataService = {
           firstName: fullName.split(" ")[0],
           lastName: fullName.split(" ")[1],
         });
-        const password = "password123"; // Set a default password
+        const password = "password123";
         const role = faker.helpers.arrayElement([
           "employee",
           "task_manager",
           "org_admin",
         ]);
 
-        // Create Auth User
-        const {  authData, error: authError } =
-          await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-               {
-                full_name: fullName,
-                role: role,
-                organization_id: organizationId,
-              },
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              role: role,
+              organization_id: organizationId,
             },
-          });
+          },
+        });
 
         if (authError) {
           console.error(`Error creating auth user ${email}:`, authError.message);
-          continue; // Skip to next user if creation fails
+          continue;
         }
 
         if (authData.user) {
@@ -70,12 +68,11 @@ export const devDataService = {
             mobile_number: faker.phone.number(),
             role: role,
             is_active: true,
-            pin: pin, // Store plain pin, will be hashed by trigger
+            pin: pin,
           });
         }
       }
 
-      // Batch insert profiles
       let seededProfiles = [];
       for (let i = 0; i < employees.length; i += BATCH_SIZE) {
         const batch = employees.slice(i, i + BATCH_SIZE);
@@ -88,7 +85,6 @@ export const devDataService = {
       }
       console.log(`${seededProfiles.length} employees (profiles) seeded.`);
 
-      // 3. Seed Tasks
       if (seededProfiles.length > 0 && seededClients.length > 0) {
         const tasks = [];
         for (let i = 0; i < 100; i++) {
@@ -122,10 +118,12 @@ export const devDataService = {
             });
           }
         }
-        const {  seededTasks, error: taskError } = await supabase
+        
+        const { data: seededTasks, error: taskError } = await supabase
           .from("tasks")
           .insert(tasks)
           .select();
+        
         if (taskError) throw taskError;
         console.log(`${seededTasks?.length || 0} tasks seeded.`);
       }
@@ -142,4 +140,3 @@ export const devDataService = {
     }
   },
 };
-  

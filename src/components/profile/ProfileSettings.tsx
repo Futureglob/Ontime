@@ -57,7 +57,7 @@ export default function ProfileSettings() {
     }
   };
 
-  const onSubmit = async ( ProfileFormValues) => {
+  const onSubmit = async (data: ProfileFormValues) => {
     if (!user || !currentProfile) return;
 
     try {
@@ -72,7 +72,7 @@ export default function ProfileSettings() {
       };
 
       const updatedProfile = await profileService.updateProfile(currentProfile.id, updatedProfileData);
-      setCurrentProfile(updatedProfile); // Update profile in context
+      setCurrentProfile(updatedProfile);
       toast({ title: "Success", description: "Profile updated successfully." });
     } catch (error) {
       console.error("Error updating profile:", error);
