@@ -25,6 +25,12 @@ Description: ${task.description || 'No description'}`;
   const [customMessage, setCustomMessage] = useState(defaultMessage);
   const [shareType, setShareType] = useState<"update" | "custom">("update");
 
+  const location = task.location_lat && task.location_lng ? {
+    lat: task.location_lat,
+    lng: task.location_lng,
+    address: task.location_address
+  } : null;
+
   const handleShare = () => {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(customMessage)}`;
     window.open(whatsappUrl, "_blank");
@@ -78,6 +84,20 @@ Description: ${task.description || 'No description'}`;
               </p>
             )}
           </div>
+
+          {location && (
+            <div className="p-3 bg-muted rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-sm">Location</h4>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                📍 {location.address}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {location.lat}, {location.lng}
+              </p>
+            </div>
+          )}
 
           {/* Message Preview */}
           <div className="space-y-2">

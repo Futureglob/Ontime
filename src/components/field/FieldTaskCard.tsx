@@ -122,14 +122,8 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
     }
   };
 
-  const handleNavigate = () => {
-    if (task.location) {
-      const [lat, lng] = task.location.split(',').map(parseFloat);
-      if (!isNaN(lat) && !isNaN(lng)) {
-        window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
-      }
-    }
-  };
+  const hasLocation = task.location_lat && task.location_lng;
+  const locationText = hasLocation ? task.location_address || `${task.location_lat}, ${task.location_lng}` : "No location";
 
   const canAccept = task.status === "assigned";
   const canStart = task.status === "accepted";
@@ -184,10 +178,10 @@ export default function FieldTaskCard({ task }: FieldTaskCardProps) {
               <span>{task.client.name}</span>
             </div>
           )}
-          {task.location && (
-            <div className="flex items-center gap-2 cursor-pointer" onClick={handleNavigate}>
+          {hasLocation && (
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => hasLocation && window.open(`https://maps.google.com/?q=${task.location_lat},${task.location_lng}`, '_blank')}>
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span>{task.location}</span>
+              <span>{locationText}</span>
             </div>
           )}
           {task.due_date && (

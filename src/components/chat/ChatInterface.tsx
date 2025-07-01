@@ -216,6 +216,8 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
 
   const otherParticipant = getOtherParticipant();
 
+  const isCurrentUserAssigned = task.assigned_to === user?.id;
+
   if (!task) {
     return (
       <Card className="h-full flex items-center justify-center">
@@ -228,6 +230,8 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
       </Card>
     );
   }
+
+  const canSendMessage = task.assigned_to === user?.id || task.created_by === user?.id;
 
   return (
     <Card className="h-full flex flex-col">
@@ -394,7 +398,7 @@ export default function ChatInterface({ task, onClose }: ChatInterfaceProps) {
           
           <Button
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || !canSendMessage}
             size="sm"
           >
             <Send className="h-4 w-4" />
