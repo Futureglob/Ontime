@@ -1,27 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type Organization = Database["public"]["Tables"]["organizations"]["Row"];
-
-export interface OrganizationDetails extends Organization {
-  userCount: number;
-  taskCount: number;
-  completedTasks: number;
-}
-
-export interface OrganizationUser extends Profile {
-  email?: string;
-  status?: string;
-}
-
-export interface TaskSummary {
-  total: number;
-  completed: number;
-  pending: number;
-  overdue: number;
-}
+import { Profile } from "@/types/database";
 
 const organizationManagementService = {
   async getEmployees(organizationId: string): Promise<Profile[]> {
@@ -31,7 +9,7 @@ const organizationManagementService = {
       .eq("organization_id", organizationId);
 
     if (error) throw error;
-    return data || [];
+    return data as Profile[];
   },
 
   async addEmployee(employeeData: {
@@ -167,12 +145,14 @@ const organizationManagementService = {
     return { total, completed, pending, overdue };
   },
 
-  async generatePinForUser(userId: string) {
-    const { data, error } = await supabase.rpc("generate_user_pin", {
-      p_user_id: userId
+  async generateUserPin(userId: string) {
+    const { data, error } = await supabase.rpc("generate_user_pin" as any, {
+      user_id: userId,
     });
-
-    if (error) throw error;
+    if (error) {
+      console.error("Error generating user PIN:", error);
+      throw error;
+    }
     return data;
   },
 
@@ -224,6 +204,31 @@ const organizationManagementService = {
       tasks: tasks.data || [],
       clients: clients.data || []
     };
+  },
+
+  async bulkImportEmployees(
+    organization_id: string,
+    employees: {
+      email: string;
+      full_name: string;
+      role: string;
+      employee_id: string;
+      designation?: string;
+      mobile_number?: string;
+    }[]
+  ) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert(
+        employees.map(e => ({
+          organization_id: organization_id,
+          ...e,
+        }))
+      )
+      .select();
+
+    if (error) throw error;
+    return data as Profile[];
   }
 };
 

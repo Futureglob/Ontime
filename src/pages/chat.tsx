@@ -1,28 +1,5 @@
 
-        import { useAuth } from "@/contexts/AuthContext";
-        import DashboardLayout from "@/components/layout/DashboardLayout";
-        import ChatInterface from "@/components/chat/ChatInterface";
-        import LoginForm from "@/components/auth/LoginForm";
-
-        export default function ChatPage() {
-          const { user, loading } = useAuth();
-
-          if (loading) {
-            return (
-              <div className="flex h-screen items-center justify-center">
-                <p>Loading...</p>
-              </div>
-            );
-          }
-
-          if (!user) {
-            return <LoginForm />;
-          }
-
-          return (
-            <DashboardLayout>
-              <ChatInterface />
-            </DashboardLayout>
-          );
+        {
+          "file_contents": "import { useState } from \"react\";\nimport ChatList from \"@/components/chat/ChatList\";\nimport ChatInterface from \"@/components/chat/ChatInterface\";\nimport DashboardLayout from \"@/components/layout/DashboardLayout\";\n\nexport default function ChatPage() {\n  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);\n\n  return (\n    <DashboardLayout>\n      <div className=\"grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-80px)]\">\n        <div className=\"md:col-span-1 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-y-auto\">\n          <ChatList onSelectChat={setSelectedTaskId} />\n        </div>\n        <div className=\"md:col-span-2 bg-white dark:bg-gray-900 rounded-lg\">\n          {selectedTaskId ? (\n            <ChatInterface taskId={selectedTaskId} />\n          ) : (\n            <div className=\"flex items-center justify-center h-full\">\n              <p className=\"text-gray-500\">Select a chat to start messaging</p>\n            </div>\n          )}\n        </div>\n      </div>\n    </DashboardLayout>\n  );\n}\n"
         }
       

@@ -6,15 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Profile } from "@/types/database";
+import { Dialog, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormMessage } from "@/components/ui/form";
+import { Profile } from "@/types/database";
 
 const formSchema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
+  full_name: z.string().min(2, "Name is required"),
   email: z.string().email("Invalid email address"),
-  employeeId: z.string().min(1, "Employee ID is required"),
+  employee_id: z.string().min(1, "Employee ID is required"),
   role: z.enum(["admin", "manager", "employee"]),
   designation: z.string().optional(),
-  mobileNumber: z.string().optional(),
+  mobile_number: z.string().optional(),
 });
 
 type EmployeeFormValues = z.infer<typeof formSchema>;
@@ -30,24 +32,24 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, isSubmittin
   const { register, handleSubmit, control, formState: { errors }, reset } = useForm<EmployeeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "",
+      full_name: "",
       email: "",
-      employeeId: "",
+      employee_id: "",
       role: "employee",
       designation: "",
-      mobileNumber: "",
+      mobile_number: "",
     },
   });
 
   useEffect(() => {
     if (employee) {
       reset({
-        fullName: employee.full_name || "",
+        full_name: employee.full_name || "",
         email: "", // Email is not part of profile, should be fetched separately if needed for editing
-        employeeId: employee.employee_id || "",
+        employee_id: employee.employee_id || "",
         role: employee.role as "admin" | "manager" | "employee" || "employee",
         designation: employee.designation || "",
-        mobileNumber: employee.mobile_number || "",
+        mobile_number: employee.mobile_number || "",
       });
     }
   }, [employee, reset]);
@@ -56,8 +58,8 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, isSubmittin
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <Label htmlFor="fullName">Full Name</Label>
-        <Input id="fullName" {...register("fullName")} />
-        {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>}
+        <Input id="fullName" {...register("full_name")} />
+        {errors.full_name && <p className="text-red-500 text-sm mt-1">{errors.full_name.message}</p>}
       </div>
       
       <div>
@@ -70,8 +72,8 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, isSubmittin
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="employeeId">Employee ID</Label>
-          <Input id="employeeId" {...register("employeeId")} />
-          {errors.employeeId && <p className="text-red-500 text-sm mt-1">{errors.employeeId.message}</p>}
+          <Input id="employeeId" {...register("employee_id")} />
+          {errors.employee_id && <p className="text-red-500 text-sm mt-1">{errors.employee_id.message}</p>}
         </div>
         <div>
           <Label htmlFor="role">Role</Label>
@@ -102,7 +104,7 @@ export default function EmployeeForm({ employee, onSubmit, onCancel, isSubmittin
         </div>
         <div>
           <Label htmlFor="mobileNumber">Mobile Number</Label>
-          <Input id="mobileNumber" {...register("mobileNumber")} />
+          <Input id="mobileNumber" {...register("mobile_number")} />
         </div>
       </div>
 
