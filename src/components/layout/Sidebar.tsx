@@ -5,25 +5,24 @@ import {
   Home, 
   Users, 
   CheckSquare, 
-  MessageSquare, 
+  MessageCircle, 
   BarChart3, 
-  Settings,
   MapPin,
   Building2,
-  UserCircle,
+  User,
+  Settings,
   LogOut
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
 export default function Sidebar() {
-  const { currentProfile, signOut } = useAuth();
   const router = useRouter();
+  const { logout } = useAuth();
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      router.push("/");
+      await logout();
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -33,12 +32,12 @@ export default function Sidebar() {
     { icon: Home, label: "Dashboard", href: "/" },
     { icon: Users, label: "Employees", href: "/employees" },
     { icon: CheckSquare, label: "Tasks", href: "/tasks" },
-    { icon: MessageSquare, label: "Chat", href: "/chat" },
+    { icon: MessageCircle, label: "Chat", href: "/chat" },
     { icon: BarChart3, label: "Analytics", href: "/analytics" },
     { icon: MapPin, label: "Field Work", href: "/field" },
     { icon: Building2, label: "Clients", href: "/clients" },
     { icon: Building2, label: "Organization", href: "/organization" },
-    { icon: UserCircle, label: "Profile", href: "/profile" },
+    { icon: User, label: "Profile", href: "/profile" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];
 
@@ -75,14 +74,13 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t">
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start text-red-600"
+        <button
           onClick={handleSignOut}
+          className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full text-left"
         >
-          <LogOut className="mr-3 h-4 w-4" />
+          <LogOut className="h-5 w-5" />
           Sign Out
-        </Button>
+        </button>
       </div>
     </div>
   );

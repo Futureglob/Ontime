@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/router";
@@ -12,7 +11,7 @@ interface AuthContextType {
   loading: boolean;
   currentProfile: Profile | null;
   isSuperAdmin: boolean;
-  login: (email: string, pass: string) => Promise<any>;
+  login: (email: string, pass: string) => Promise<{ user: User; session: Session }>;
   logout: () => Promise<void>;
 }
 

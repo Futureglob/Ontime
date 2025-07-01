@@ -21,7 +21,8 @@ import {
   UserCheck,
   Building2,
   Power,
-  PowerOff
+  PowerOff,
+  LogOut
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import AddOrganizationModal from "./AddOrganizationModal";
@@ -75,7 +76,7 @@ interface AnalyticsData {
 }
 
 export default function SuperAdminDashboard() {
-  const { user, signOut } = useAuth();
+  const { logout } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -166,13 +167,9 @@ export default function SuperAdminDashboard() {
 
   const handleSignOut = async () => {
     try {
-      console.log("Attempting to sign out...");
-      await signOut();
-      console.log("Sign out successful, redirecting...");
-      router.push("/");
+      await logout();
     } catch (error) {
       console.error("Error signing out:", error);
-      toast({ title: "Error", description: "Failed to sign out.", variant: "destructive" });
     }
   };
 
@@ -212,7 +209,12 @@ export default function SuperAdminDashboard() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Super Admin Dashboard</h1>
-        <Button onClick={handleSignOut} variant="outline">
+        <Button
+          variant="outline"
+          onClick={handleSignOut}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="h-4 w-4" />
           Sign Out
         </Button>
       </div>
