@@ -22,38 +22,18 @@ export default function OrganizationDetailsModal({
         <DialogHeader>
           <DialogTitle>Organization Details</DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Organization Name</label>
-              <p className="text-sm">{organization.name}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-500">Created</label>
-              <p className="text-sm">{new Date(organization.created_at).toLocaleDateString()}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-500">Owner ID</label>
-              <p className="text-sm">{organization.owner_id || "N/A"}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-500">Logo URL</label>
-              <p className="text-sm">{organization.logo_url || "No logo"}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-500">Primary Color</label>
-              <p className="text-sm">{organization.primary_color || "Default"}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-500">Status</label>
-              <p className="text-sm">{organization.is_active ? "Active" : "Inactive"}</p>
-            </div>
+          <div>
+            <h3 className="font-semibold">Name</h3>
+            <p>{organization.name}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold">Status</h3>
+            <p>{organization.is_active ? "Active" : "Inactive"}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold">Created At</h3>
+            <p>{new Date(organization.created_at).toLocaleDateString()}</p>
           </div>
         </div>
       </DialogContent>

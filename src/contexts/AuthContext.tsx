@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
-        if (currentUser) {
+        if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
           const profile = await profileService.getProfile(currentUser.id);
           setCurrentProfile(profile);
         } else {
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
-        if (currentUser) {
+        if (currentUser && currentUser.user_metadata?.role !== "super_admin") {
           const profile = await profileService.getProfile(currentUser.id);
           setCurrentProfile(profile);
         } else {

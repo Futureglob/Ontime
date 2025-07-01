@@ -13,7 +13,8 @@ export default function ProfilePage() {
       if (!user) {
         router.replace("/");
       } else if (isSuperAdmin) {
-        router.replace("/superadmin");
+        // Force immediate redirect for super admin
+        window.location.href = "/superadmin";
       }
     }
   }, [user, loading, isSuperAdmin, router]);
