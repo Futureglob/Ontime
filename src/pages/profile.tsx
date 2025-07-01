@@ -5,14 +5,18 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import ProfileSettings from "@/components/profile/ProfileSettings";
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/");
     }
-  }, [user, loading, router]);
+    // Redirect super admin to their dashboard
+    if (!loading && user && isSuperAdmin) {
+      router.replace("/superadmin");
+    }
+  }, [user, loading, isSuperAdmin, router]);
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -20,6 +24,11 @@ export default function ProfilePage() {
 
   if (!user) {
     return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>;
+  }
+
+  // Prevent super admin from seeing profile page
+  if (isSuperAdmin) {
+    return <div className="flex items-center justify-center min-h-screen">Redirecting to Super Admin...</div>;
   }
 
   return <ProfileSettings />;
