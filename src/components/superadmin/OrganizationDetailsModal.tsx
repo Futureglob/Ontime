@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { OrganizationDetails } from "@/types/database";
 
 interface OrganizationDetailsModalProps {
@@ -13,51 +12,48 @@ interface OrganizationDetailsModalProps {
 export default function OrganizationDetailsModal({
   isOpen,
   onClose,
-  organization,
+  organization
 }: OrganizationDetailsModalProps) {
-  if (!organization) {
-    return null;
-  }
+  if (!organization) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{organization.name}</DialogTitle>
-          <DialogDescription>
-            Details for the organization.
-          </DialogDescription>
+          <DialogTitle>Organization Details</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 items-center gap-4">
-            <p className="text-sm font-medium text-muted-foreground">Status</p>
-            <Badge variant={organization.is_active ? "default" : "destructive"}>
-              {organization.is_active ? "Active" : "Inactive"}
-            </Badge>
-          </div>
-          <div className="grid grid-cols-2 items-center gap-4">
-            <p className="text-sm font-medium text-muted-foreground">Contact Person</p>
-            <p>{organization.contact_person}</p>
-          </div>
-          <div className="grid grid-cols-2 items-center gap-4">
-            <p className="text-sm font-medium text-muted-foreground">Contact Email</p>
-            <p>{organization.contact_email}</p>
-          </div>
-          <div className="grid grid-cols-2 items-center gap-4">
-            <p className="text-sm font-medium text-muted-foreground">Contact Phone</p>
-            <p>{organization.contact_phone}</p>
-          </div>
-          <div className="grid grid-cols-2 items-center gap-4">
-            <p className="text-sm font-medium text-muted-foreground">Address</p>
-            <p>{organization.address}</p>
-          </div>
-          <div className="grid grid-cols-2 items-center gap-4">
-            <p className="text-sm font-medium text-muted-foreground">Credits</p>
-            <p>{organization.credits}</p>
-          </div>
-          <div className="grid grid-cols-2 items-center gap-4">
-            <p className="text-sm font-medium text-muted-foreground">Created At</p>
-            <p>{new Date(organization.created_at).toLocaleDateString()}</p>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Organization Name</label>
+              <p className="text-sm">{organization.name}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-500">Created</label>
+              <p className="text-sm">{new Date(organization.created_at).toLocaleDateString()}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-500">Total Users</label>
+              <p className="text-sm">{organization.userCount}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-500">Total Tasks</label>
+              <p className="text-sm">{organization.taskCount}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-500">Completed Tasks</label>
+              <p className="text-sm">{organization.completedTasks}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-500">Status</label>
+              <p className="text-sm">{organization.is_active ? "Active" : "Inactive"}</p>
+            </div>
           </div>
         </div>
       </DialogContent>

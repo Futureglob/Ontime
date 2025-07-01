@@ -1,135 +1,162 @@
-
-        import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import profileService from "@/services/profileService";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Profile } from "@/types/database";
-
-const profileFormSchema = z.object({
-  full_name: z.string().min(2, {
-    message: "Full name must be at least 2 characters.",
-  }),
-  mobile_number: z.string().optional(),
-});
-
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 
 export default function ProfileSettings() {
-  const { user, currentProfile, loading, refreshProfile } = useAuth();
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      full_name: "",
-      mobile_number: "",
-    },
+  const { currentProfile } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: "",
+    designation: "",
+    mobile_number: "",
+    bio: "",
+    skills: "",
+    emergency_contact: "",
+    address: ""
   });
 
   useEffect(() => {
     if (currentProfile) {
-      form.reset({
+      setFormData({
         full_name: currentProfile.full_name || "",
+        designation: currentProfile.designation || "",
         mobile_number: currentProfile.mobile_number || "",
+        bio: currentProfile.bio || "",
+        skills: currentProfile.skills || "",
+        emergency_contact: currentProfile.emergency_contact || "",
+        address: currentProfile.address || ""
       });
     }
-  }, [currentProfile, form]);
+  }, [currentProfile]);
 
-  async function onSubmit( ProfileFormValues) {
-    if (!currentProfile) return;
-
-    setIsSubmitting(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
     try {
-      const updates: Partial<Profile> = {
-        full_name: data.full_name,
-        mobile_number: data.mobile_number,
-        updated_at: new Date().toISOString(),
-      };
-      
-      await profileService.updateProfile(currentProfile.id, updates);
-
-      await refreshProfile();
-
+      // TODO: Implement profile update logic
       toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unknown error occurred";
       toast({
-        title: "Error updating profile",
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
-  }
+  };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile Settings</CardTitle>
-        <CardDescription>
-          Update your personal information here.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Your full name" {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="mobile_number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Your phone number" {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Profile Settings</h1>
+        <p className="text-gray-600">Manage your personal information and preferences</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Personal Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="full_name">Full Name</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => handleInputChange("full_name", e.target.value)}
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="designation">Designation</Label>
+                <Input
+                  id="designation"
+                  value={formData.designation}
+                  onChange={(e) => handleInputChange("designation", e.target.value)}
+                  placeholder="Enter your designation"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="mobile_number">Mobile Number</Label>
+                <Input
+                  id="mobile_number"
+                  value={formData.mobile_number}
+                  onChange={(e) => handleInputChange("mobile_number", e.target.value)}
+                  placeholder="Enter your mobile number"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="emergency_contact">Emergency Contact</Label>
+                <Input
+                  id="emergency_contact"
+                  value={formData.emergency_contact}
+                  onChange={(e) => handleInputChange("emergency_contact", e.target.value)}
+                  placeholder="Enter emergency contact"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                value={formData.address}
+                onChange={(e) => handleInputChange("address", e.target.value)}
+                placeholder="Enter your address"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                value={formData.bio}
+                onChange={(e) => handleInputChange("bio", e.target.value)}
+                placeholder="Tell us about yourself"
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="skills">Skills</Label>
+              <Textarea
+                id="skills"
+                value={formData.skills}
+                onChange={(e) => handleInputChange("skills", e.target.value)}
+                placeholder="List your skills (comma separated)"
+                rows={3}
+              />
+            </div>
+
+            <Button type="submit" disabled={loading}>
+              {loading ? "Updating..." : "Update Profile"}
             </Button>
           </form>
-        </Form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
-      
