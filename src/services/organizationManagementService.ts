@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Organization, OrganizationDetails, Profile, UserRole } from "@/types/database";
 
