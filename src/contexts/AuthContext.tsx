@@ -106,10 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     // If super admin, don't fetch profile and redirect immediately
     if (currentUser?.user_metadata?.role === "super_admin") {
       setCurrentProfile(null);
-      // Force immediate redirect for super admin
-      if (typeof window !== 'undefined') {
-        window.location.href = "/superadmin";
-      }
+      // Use router.replace instead of window.location.href for better control
       return data;
     }
     
