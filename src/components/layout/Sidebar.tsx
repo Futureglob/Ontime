@@ -22,7 +22,6 @@ import { notificationService } from "@/services/notificationService";
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import RoleSwitcher from "@/components/dev/RoleSwitcher";
 
 const baseNavigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -200,9 +199,6 @@ export default function Sidebar() {
           <User className="h-4 w-4" />
           Logout
         </Button>
-      </div>
-      <div className="mt-auto p-4">
-        <RoleSwitcher />
       </div>
     </div>
   );
