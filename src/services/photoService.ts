@@ -1,64 +1,39 @@
-
 import { supabase } from "@/integrations/supabase/client";
-
-export type PhotoType = "check_in" | "progress" | "completion";
-
-export interface TaskPhoto {
-  id: string;
-  task_id: string | null;
-  photo_url: string;
-  photo_type: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  taken_at: string | null;
-  uploaded_at: string | null;
-}
-
-interface UploadMetadata {
-  type: PhotoType;
-  location?: { lat: number; lng: number };
-  timestamp: string;
-  notes?: string;
-}
+import { storageService } from "@/services/storageService";
+import type { TaskPhoto } from "@/types";
 
 export const photoService = {
   async uploadTaskPhoto(
     taskId: string,
+    userId: string,
     file: File,
-    meta: UploadMetadata
+    photoType: "check_in" | "progress" | "completion",
+    location?: { lat: number; lng: number }
   ): Promise<TaskPhoto> {
-    const filePath = `tasks/${taskId}/${Date.now()}-${file.name}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from("task_photos")
-      .upload(filePath, file);
+    const photo_url = await storageService.uploadTaskPhoto(taskId, file);
 
-    if (uploadError) throw uploadError;
-
-    const { data: urlData } = supabase.storage
-      .from("task_photos")
-      .getPublicUrl(filePath);
-
-    if (!urlData || !urlData.publicUrl) {
-        throw new Error("Could not get public URL for the uploaded file.");
-    }
+    const photoData = {
+      task_id: taskId,
+      user_id: userId,
+      photo_url,
+      photo_type: photoType,
+      // The following fields are not in the schema, so they are removed.
+      // latitude: location?.lat,
+      // longitude: location?.lng,
+    };
 
     const { data, error } = await supabase
       .from("task_photos")
-      .insert({
-        task_id: taskId,
-        photo_url: urlData.publicUrl,
-        photo_type: meta.type,
-        latitude: meta.location?.lat,
-        longitude: meta.location?.lng,
-        taken_at: meta.timestamp,
-      })
+      .insert(photoData)
       .select()
       .single();
 
-    if (error) throw error;
-    if (!data) throw new Error("Photo data not found after insert.");
-    return data;
+    if (error) {
+      console.error("Error inserting photo meta", error);
+      throw error;
+    }
+
+    return data as TaskPhoto;
   },
 
   async getTaskPhotos(taskId: string): Promise<TaskPhoto[]> {
@@ -66,74 +41,56 @@ export const photoService = {
       .from("task_photos")
       .select("*")
       .eq("task_id", taskId)
-      .order("taken_at", { ascending: false });
+      .order("created_at", { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+    if (error) {
+      console.error("Error fetching task photos:", error);
+      throw error;
+    }
+    return data as TaskPhoto[];
   },
 
-  async getPhotosByType(taskId: string, photoType: PhotoType): Promise<TaskPhoto[]> {
+  async getPhotosForUser(userId: string): Promise<TaskPhoto[]> {
     const { data, error } = await supabase
       .from("task_photos")
       .select("*")
-      .eq("task_id", taskId)
-      .eq("photo_type", photoType)
-      .order("taken_at", { ascending: false });
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+    if (error) {
+      console.error("Error fetching user photos:", error);
+      throw error;
+    }
+    return data as TaskPhoto[];
   },
 
   async deletePhoto(photoId: string): Promise<void> {
-    const { data: photo, error: fetchError } = await supabase
+    // First, get the photo URL to delete from storage
+    const {  photo, error: fetchError } = await supabase
       .from("task_photos")
       .select("photo_url")
       .eq("id", photoId)
       .single();
 
-    if (fetchError) throw fetchError;
-    if (!photo) throw new Error("Photo not found");
-
-    const url = new URL(photo.photo_url);
-    const filePath = url.pathname.substring(url.pathname.indexOf("task_photos/") + "task_photos/".length);
-    
-    const { error: storageError } = await supabase.storage
-      .from("task_photos")
-      .remove([filePath]);
-
-    if (storageError) {
-        console.error("Storage deletion failed:", storageError.message);
+    if (fetchError) {
+      console.error("Error fetching photo for deletion:", fetchError);
+      throw fetchError;
     }
 
-    const { error: dbError } = await supabase
-      .from("task_photos")
-      .delete()
-      .eq("id", photoId);
+    if (photo) {
+      // Delete the file from storage
+      await storageService.deleteFile(photo.photo_url);
 
-    if (dbError) throw dbError;
+      // Delete the record from the database
+      const { error: deleteError } = await supabase
+        .from("task_photos")
+        .delete()
+        .eq("id", photoId);
+
+      if (deleteError) {
+        console.error("Error deleting photo record:", deleteError);
+        throw deleteError;
+      }
+    }
   },
-
-  async uploadPhoto(file: File, taskId: string, type: string): Promise<string> {
-    const fileName = `${taskId}/${type}_${Date.now()}`;
-    const { data, error } = await supabase.storage
-      .from("task_photos")
-      .upload(fileName, file);
-
-    if (error) {
-      throw error;
-    }
-    if (!data) {
-        throw new Error("File upload failed, no data returned.");
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("task_photos")
-      .getPublicUrl(data.path);
-    
-    if (!urlData || !urlData.publicUrl) {
-      throw new Error("Could not get public URL for the uploaded file.");
-    }
-
-    return urlData.publicUrl;
-  }
 };
