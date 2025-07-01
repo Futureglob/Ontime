@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -53,11 +53,16 @@ export default function PhotoCapture({ task, onPhotoUploaded }: PhotoCaptureProp
     getCurrentLocation();
   }, []);
 
+  const uploadPendingPhotos = useCallback(() => {
+    const pendingPhotos = photos.filter(p => !p.uploaded && !p.uploading);
+    pendingPhotos.forEach(photo => uploadPhoto(photo));
+  }, [photos]);
+
   useEffect(() => {
     if (isOnline) {
       uploadPendingPhotos();
     }
-  }, [isOnline]);
+  }, [isOnline, uploadPendingPhotos]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -117,7 +122,7 @@ export default function PhotoCapture({ task, onPhotoUploaded }: PhotoCaptureProp
     try {
       const fileName = `${task.id}/${photo.id}_${photo.file.name}`;
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('task-photos')
         .upload(fileName, photo.file);
 
@@ -152,11 +157,6 @@ export default function PhotoCapture({ task, onPhotoUploaded }: PhotoCaptureProp
         p.id === photo.id ? { ...p, uploading: false } : p
       ));
     }
-  };
-
-  const uploadPendingPhotos = () => {
-    const pendingPhotos = photos.filter(p => !p.uploaded && !p.uploading);
-    pendingPhotos.forEach(photo => uploadPhoto(photo));
   };
 
   const removePhoto = (photoId: string) => {
