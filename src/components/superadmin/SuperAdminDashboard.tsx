@@ -76,7 +76,7 @@ interface AnalyticsData {
 }
 
 export default function SuperAdminDashboard() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);

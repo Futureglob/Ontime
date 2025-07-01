@@ -18,7 +18,7 @@ import { useRouter } from "next/router";
 
 export default function Sidebar() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, currentProfile } = useAuth();
 
   const handleSignOut = async () => {
     try {
